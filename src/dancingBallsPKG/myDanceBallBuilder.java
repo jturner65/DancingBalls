@@ -80,107 +80,133 @@ class myDanceBallMapper implements Runnable{
 }
 
 
-class myTrigPreCBuilder implements Callable<Boolean>{
-	ConcurrentSkipListMap<Float, Integer> allFreqsUsed;
-	DancingBallWin win;
-	float tpiInvF, sampleRate;
-	int sampleSize;
-	
-	public myTrigPreCBuilder(DancingBallWin _win, float _smplRate, ConcurrentSkipListMap<Float, Integer> _allFreqsUsed) {
-		win=_win;
-		allFreqsUsed = _allFreqsUsed;
-		sampleRate = _smplRate;
-		tpiInvF =  win.pa.TWO_PI/sampleRate;
-		sampleSize = win.songBufSize;		
-	}
+//class myTrigPreCBuilder implements Callable<Boolean>{
+//	ConcurrentSkipListMap<Float, Integer> allFreqsUsed;
+//	DancingBallWin win;
+//	float tpiInvF, sampleRate;
+//	int sampleSize;
+//	
+//	public myTrigPreCBuilder(DancingBallWin _win, float _smplRate, ConcurrentSkipListMap<Float, Integer> _allFreqsUsed) {
+//		win=_win;
+//		allFreqsUsed = _allFreqsUsed;
+//		sampleRate = _smplRate;
+//		tpiInvF =  win.pa.TWO_PI/sampleRate;
+//		sampleSize = win.songBufSize;		
+//	}
+//	
+//	//build map of either sin or cosine based precalcs of 2pi*freq*t/Fs where Fs is sample rate,
+//	//calculation relies on sample rate for tpiInvF == 2PI / sampleRate
+//	private ConcurrentSkipListMap<Float, Float[]> calcTrigMap(int sampSize, boolean isSine){
+//		ConcurrentSkipListMap<Float, Float[]> resMap = new ConcurrentSkipListMap<Float, Float[]>();
+//		if(isSine) {
+//			for (float freq : allFreqsUsed.keySet()) {
+//				Float[] tmpRes = new Float[sampSize];
+//				float angleFreq = tpiInvF * freq;
+//				for(int t=0;t<sampSize;++t) {	tmpRes[t] = (float) Math.sin(angleFreq * t);}	
+//				resMap.put(freq, tmpRes);
+//			}
+// 		} else {
+//			for (float freq : allFreqsUsed.keySet()) {
+//				Float[] tmpRes = new Float[sampSize];
+//				float angleFreq = tpiInvF * freq;
+//				for(int t=0;t<sampSize;++t) {	tmpRes[t] = (float) Math.cos(angleFreq * t);}	
+//				resMap.put(freq, tmpRes);
+//			} 			
+// 		}		
+//		return resMap;
+//	}//calcTrigMap	
 //
-	//build map of either sin or cosine based precalcs of 2pi*freq*t/Fs where Fs is sample rate,
-	private ConcurrentSkipListMap<Float, Float[]> calcTrigMap(int sampSize, boolean isSine){
-		ConcurrentSkipListMap<Float, Float[]> resMap = new ConcurrentSkipListMap<Float, Float[]>();
-		if(isSine) {
-			for (float freq : allFreqsUsed.keySet()) {
-				Float[] tmpRes = new Float[sampSize];
-				float angleFreq = tpiInvF * freq;
-				for(int t=0;t<sampSize;++t) {
-					tmpRes[t] = (float) Math.sin(angleFreq * t);
-				}	
-				resMap.put(freq, tmpRes);
-			}
- 		} else {
-			for (float freq : allFreqsUsed.keySet()) {
-				Float[] tmpRes = new Float[sampSize];
-				float angleFreq = tpiInvF * freq;
-				for(int t=0;t<sampSize;++t) {
-					tmpRes[t] = (float) Math.cos(angleFreq * t);
-				}	
-				resMap.put(freq, tmpRes);
-			} 			
- 		}		
-		return resMap;
-	}//calcTrigMap
-	
-
-	@Override
-	public Boolean call() throws Exception {
-		win.sinTbl.put(sampleRate, calcTrigMap( sampleSize, true ));
-		win.cosTbl.put(sampleRate, calcTrigMap( sampleSize, false));
-		// TODO Auto-generated method stub
-		return true;
-	}
-
-}
-
-//precalculate trig functions in separate threads to speed up computation
-class myTrigPrecalc implements Runnable{
-	DancingBallWin win;
-	ConcurrentSkipListMap<Float, Integer> allFreqsUsed;
-	
-	public myTrigPrecalc(DancingBallWin _win, ConcurrentSkipListMap<Float, Integer> _allFreqsUsed) {
-		win = _win; allFreqsUsed = _allFreqsUsed;
-		win.cosTbl = new ConcurrentSkipListMap<Float,ConcurrentSkipListMap<Float, Float[]>>();
-		win.sinTbl = new ConcurrentSkipListMap<Float,ConcurrentSkipListMap<Float, Float[]>>();
-	}
-	//build thread calls to build trig precalc
-	private void buildAllTrigPrecalc() {		
-		List<myTrigPreCBuilder> callPreCalcs = new ArrayList<myTrigPreCBuilder>();
-		List<Future<Boolean>> callPreCalcFtrs = new ArrayList<Future<Boolean>>();			
-		//want at least min # of verts per zone
-		//for(int i =0;i<win.sampleRates.size();++i) {			callPreCalcs.add(new myTrigPreCBuilder(win,win.sampleRates.get[i], allFreqsUsed));		}
-		for(float sampleRate : win.sampleRates.keySet()) {	
-			callPreCalcs.add(new myTrigPreCBuilder(win,sampleRate, allFreqsUsed));		
-		}
-		try {callPreCalcFtrs = win.pa.th_exec.invokeAll(callPreCalcs);for(Future<Boolean> f: callPreCalcFtrs) { f.get(); }} catch (Exception e) { e.printStackTrace(); }			
-	}//buildAllTrigPrecalc
-	
-	
-	@Override
-	public void run() {
-		buildAllTrigPrecalc();	
-		win.pa.outStr2Scr("done with trig precalc");
-		//build analyzer once this process is complete
-		win.initDFTAnalysisThrds(10);
-	}
-	
-}//myTrigPrecalc
-
+//	@Override
+//	public Boolean call() throws Exception {
+//		win.sinTbl.put(sampleRate, calcTrigMap( sampleSize, true ));
+//		win.cosTbl.put(sampleRate, calcTrigMap( sampleSize, false));
+//		// TODO Auto-generated method stub
+//		return true;
+//	}
+//}
+//
+////precalculate trig functions in separate threads to speed up computation
+//class myTrigPrecalc implements Runnable{
+//	DancingBallWin win;
+//	ConcurrentSkipListMap<Float, Integer> allFreqsUsed;
+//	
+//	public myTrigPrecalc(DancingBallWin _win, ConcurrentSkipListMap<Float, Integer> _allFreqsUsed) {
+//		win = _win; allFreqsUsed = _allFreqsUsed;
+//		win.cosTbl = new ConcurrentSkipListMap<Float,ConcurrentSkipListMap<Float, Float[]>>();
+//		win.sinTbl = new ConcurrentSkipListMap<Float,ConcurrentSkipListMap<Float, Float[]>>();
+//	}
+//	//build thread calls to build trig precalc
+//	private void buildAllTrigPrecalc() {		
+//		List<myTrigPreCBuilder> callPreCalcs = new ArrayList<myTrigPreCBuilder>();
+//		List<Future<Boolean>> callPreCalcFtrs = new ArrayList<Future<Boolean>>();			
+//		//want at least min # of verts per zone
+//		//for(int i =0;i<win.sampleRates.size();++i) {			callPreCalcs.add(new myTrigPreCBuilder(win,win.sampleRates.get[i], allFreqsUsed));		}
+//		for(float sampleRate : win.sampleRates.keySet()) {	
+//			callPreCalcs.add(new myTrigPreCBuilder(win,sampleRate, allFreqsUsed));		
+//		}
+//		try {callPreCalcFtrs = win.pa.th_exec.invokeAll(callPreCalcs);for(Future<Boolean> f: callPreCalcFtrs) { f.get(); }} catch (Exception e) { e.printStackTrace(); }			
+//	}//buildAllTrigPrecalc
+//	
+//	
+//	@Override
+//	public void run() {
+//		buildAllTrigPrecalc();	
+//		win.pa.outStr2Scr("done with trig precalc");
+//		//build analyzer once this process is complete
+//		win.initDFTAnalysisThrds(10);//10 threads
+//	}
+//	
+//}//myTrigPrecalc
 
 
 class myDFTNoteMapper implements Callable<Boolean>{
 	DancingBallWin win;
+	myAudioManager mgr;
 
 	float[][] pianoFreqsHarmonics, pianoMinFreqsHarmonics;
 	
 	float[][][] pianoSampleFreqs;
 	float sampleRate,twoPiInvSamp;
+	
+	//hold all precalced trig for each sample rate possible, for each sample frequency derived
+	//ConcurrentSkipListMap<Float, ConcurrentSkipListMap<Float, Float[]>> cosTblSample, sinTblSample;
+
+	//precalced cos and sin of frequencies
 	ConcurrentSkipListMap<Float, Float[]> cosTbl, sinTbl;
 	int stKey, endKey;
 	
 	//current song buffer
 	float[] buffer;
 	//results for this mapper's range of notes - shared with other mappers in certain freq range
-	ConcurrentSkipListMap<Float, Integer> lvlsPerKeyInRange;
+	ConcurrentSkipListMap<Float, Integer> lvlsPerKeyInRange;	
+	//all frequencies used for trig precalc
+	ConcurrentSkipListMap<Float, Integer> allFreqsUsed;
+	
+	//reference to owning map
+	ConcurrentSkipListMap<Float, Integer> levelsPerPKeySingleCalc;
+	
 	//normalization value
 	float normVal;
+	
+	//first call or not
+	//boolean firstCall; myAudioManager mgr
+	
+	//arrays hold subset of keys this thread will execute
+	public myDFTNoteMapper(myAudioManager _mgr,int _stIdx, int _endIdx ) {
+		mgr=_mgr;
+		stKey = _stIdx;
+		endKey = _endIdx;
+		int len=_endIdx - _stIdx + 1;
+		pianoFreqsHarmonics = new float[len][];
+		pianoMinFreqsHarmonics = new float[len+1][];
+		//copy refs to array values (arrays of harmonics)
+		System.arraycopy(mgr.dispPiano.pianoFreqsHarmonics, _stIdx, pianoFreqsHarmonics, 0, len);
+		System.arraycopy(mgr.dispPiano.pianoMinFreqsHarmonics, _stIdx, pianoMinFreqsHarmonics, 0, len+1);
+		int numSamplesPerKey = 10;
+		//firstCall = true;
+		allFreqsUsed = preCalcSamples(len, numSamplesPerKey);
+
+	}//myDFTNoteMapper
 	
 	//arrays hold subset of keys this thread will execute
 	public myDFTNoteMapper(DancingBallWin _win,int _stIdx, int _endIdx ) {
@@ -194,38 +220,91 @@ class myDFTNoteMapper implements Callable<Boolean>{
 		System.arraycopy(win.dispPiano.pianoFreqsHarmonics, _stIdx, pianoFreqsHarmonics, 0, len);
 		System.arraycopy(win.dispPiano.pianoMinFreqsHarmonics, _stIdx, pianoMinFreqsHarmonics, 0, len+1);
 		int numSamplesPerKey = 10;
-		
+		//firstCall = true;
+		allFreqsUsed = preCalcSamples(len, numSamplesPerKey);
+
+	}//myDFTNoteMapper
+	
+	//must be set before each dft run!
+//	public void setPerRunValues(float _srte, float[] _buffer, 
+//			ConcurrentSkipListMap<Float, Float[]> _cosTbl, 
+//			ConcurrentSkipListMap<Float, Float[]> _sinTbl,
+//			ConcurrentSkipListMap<Float, Integer> _lvlsPerKeyInRange		//destination
+//			) {
+	public void setPerRunValues(float _srte, float[] _buffer,
+			ConcurrentSkipListMap<Float, Integer> _lvlsPerPKeySingleCalc,
+			ConcurrentSkipListMap<Float, Integer> _lvlsPerKeyInRange		//destination
+			) {
+		sampleRate = _srte;
+		buffer = _buffer;//float array of length samplesize
+//		cosTbl = cosTblSample.get(sampleRate);
+//		sinTbl = sinTblSample.get(sampleRate);		
+//		cosTbl = _cosTbl;
+//		sinTbl = _sinTbl;
+		twoPiInvSamp = (float) (2.0 * Math.PI / sampleRate);
+		levelsPerPKeySingleCalc = _lvlsPerPKeySingleCalc;
+		lvlsPerKeyInRange = _lvlsPerKeyInRange;
+	}
+	
+	private ConcurrentSkipListMap<Float, Integer> preCalcSamples(int len, int numSamplesPerKey) {
 		normVal = numSamplesPerKey * numSamplesPerKey;
-		
-		//create 10 sampled frequencies to test audio at, for every key, to find average
-		pianoSampleFreqs = new float[len][][];
+		//create numSamplesPerKey sampled frequencies to test audio at, for every key, to find average
+		pianoSampleFreqs = new float[len][][];		
+		ConcurrentSkipListMap<Float, Integer> res = new ConcurrentSkipListMap<Float, Integer>();
 		for(int key=0;key<pianoFreqsHarmonics.length;++key) {//for each key
 			float[] lowFreqHarmAra = pianoMinFreqsHarmonics[key], hiFreqHarmAra = pianoMinFreqsHarmonics[key+1];
 			float[][] perKeySamples = new float[lowFreqHarmAra.length][];
-			for(int h=0;h<lowFreqHarmAra.length;++h) {//for each harmonic of key -0 idx is fundamental
+			for(int h=0;h<lowFreqHarmAra.length;++h) {//for each harmonic of key ->0 idx is fundamental
 				float[] harmSamples = new float[numSamplesPerKey];
 				for(int s=0;s<numSamplesPerKey;++s) {//for each desired sample
-					harmSamples[s] = (float) ThreadLocalRandom.current().nextDouble(lowFreqHarmAra[h],hiFreqHarmAra[h]);
+					float freq  = (float) ThreadLocalRandom.current().nextDouble(lowFreqHarmAra[h],hiFreqHarmAra[h]);
+					harmSamples[s] = freq;
+					//dummy variable for field - using key as ordered set to remove dupes
+					res.put(freq, 1);					
 				}
 				perKeySamples[h] = harmSamples;
 			}
 			pianoSampleFreqs[key]=perKeySamples;			
-		}		
-
-	}//myDFTNoteMapper
-	
-	public void setPerRunValues(float _srte, float[] _buffer, 
-			ConcurrentSkipListMap<Float, Float[]> _cosTbl, 
-			ConcurrentSkipListMap<Float, Float[]> _sinTbl,
-			ConcurrentSkipListMap<Float, Integer> _lvlsPerKeyInRange
-			) {
-		sampleRate = _srte;
-		buffer = _buffer;
-		cosTbl = _cosTbl;
-		sinTbl = _sinTbl;
-		twoPiInvSamp = (float) (2.0 * Math.PI / sampleRate);
-		lvlsPerKeyInRange = _lvlsPerKeyInRange;
+		}//preCalcSamplesAndTrig		
+		return res;
 	}
+	
+//	private void preCalcTrig() {
+//		//for every sample rate, precalculate cos and sin for all frequencies
+//		cosTblSample = new ConcurrentSkipListMap<Float, ConcurrentSkipListMap<Float, Float[]>>();
+//		sinTblSample = new ConcurrentSkipListMap<Float, ConcurrentSkipListMap<Float, Float[]>>();
+//		for(float sampleRate : win.sampleRates.keySet()) {
+//			float tpiInvF =  win.pa.TWO_PI/sampleRate;			
+//			cosTblSample.put(sampleRate,calcTrigMap(allFreqsUsed, tpiInvF, win.songBufSize, false));
+//			sinTblSample.put(sampleRate,calcTrigMap(allFreqsUsed, tpiInvF, win.songBufSize, true));
+//			
+//		}
+//		System.out.println("finished precalc for all trig");
+//	}
+//	
+//	//build map of either sin or cosine based precalcs of 2pi*freq*t/Fs where Fs is sample rate,
+//	//calculation relies on sample rate for tpiInvF == 2PI / sampleRate
+//	private ConcurrentSkipListMap<Float, Float[]> calcTrigMap(ConcurrentSkipListMap<Float, Integer> allFreqsUsed, float tpiInvF, int sampSize, boolean isSine){
+//		ConcurrentSkipListMap<Float, Float[]> resMap = new ConcurrentSkipListMap<Float, Float[]>();
+//		if(isSine) {
+//			for (float freq : allFreqsUsed.keySet()) {
+//				Float[] tmpRes = new Float[sampSize];
+//				float angleFreq = tpiInvF * freq;
+//				for(int t=0;t<sampSize;++t) {	tmpRes[t] = (float) Math.sin(angleFreq * t);}	
+//				resMap.put(freq, tmpRes);
+//			}
+// 		} else {
+//			for (float freq : allFreqsUsed.keySet()) {
+//				Float[] tmpRes = new Float[sampSize];
+//				float angleFreq = tpiInvF * freq;
+//				for(int t=0;t<sampSize;++t) {	tmpRes[t] = (float) Math.cos(angleFreq * t);}	
+//				resMap.put(freq, tmpRes);
+//			} 			
+// 		}		
+//		return resMap;
+//	}//calcTrigMap
+
+	
 	
 	/**
 	 * calculate the individual level manually using a sample of the signal as f(t)
@@ -242,7 +321,7 @@ class myDFTNoteMapper implements Callable<Boolean>{
 				}
 			}			
 			A = ((cosSum * cosSum) + (sinSum * sinSum))/normVal;//A[n] = sqrt (c(f)^2 + s(f)^2)
-			win.levelsPerPKeySingleCalc.put(A, key+stKey);				
+			levelsPerPKeySingleCalc.put(A, key+stKey);				
 			lvlsPerKeyInRange.put(A, key+stKey);	
 		}
 	}//calcIndivFreqLevelOnSamples
@@ -250,6 +329,7 @@ class myDFTNoteMapper implements Callable<Boolean>{
 	
 	/**
 	 * calculate the individual level manually using a sample of the signal as f(t), not using precalced frequencies
+	 * TRIG IS FASTER THAN PRECALC
 	 */	
 	public void calcIndivFreqLevelNoPreCalcOnSamples() {
 		//current buffer of song playing
@@ -266,57 +346,57 @@ class myDFTNoteMapper implements Callable<Boolean>{
 				}	           
 			}
 			A = ((cosSum * cosSum) + (sinSum * sinSum))/normVal; //A[n] = sqrt (c(f)^2 + s(f)^2)
-			win.levelsPerPKeySingleCalc.put(A, key+stKey);				
+			levelsPerPKeySingleCalc.put(A, key+stKey);				
 			lvlsPerKeyInRange.put(A, key+stKey);	
 		}
 	}//calcIndivFreqLevelNoPreCalcOnSamples
 
 	
-	/**
-	 * calculate the individual level manually using a sample of the signal as f(t)
-	 */	
-	public void calcIndivFreqLevel() {		
-		float cosSum = 0, sinSum = 0, A;
-		for(int key=0;key<pianoFreqsHarmonics.length;++key) {//for every key being compared
-			cosSum =0;sinSum=0;
-			//for(float harm  : pianoFreqsHarmonics[key]) 
-			{
-			float harm = pianoFreqsHarmonics[key][0];//fundamental only
-				for (int t=0;t<buffer.length; ++t) {		//for every sample
-					cosSum += buffer[t] * cosTbl.get(harm)[t];
-					sinSum += buffer[t] * sinTbl.get(harm)[t];
-				}	           
-			}
-			A = ((cosSum * cosSum) + (sinSum * sinSum)); //A[n] = sqrt (c(f)^2 + s(f)^2)
-			win.levelsPerPKeySingleCalc.put(A, key+stKey);				
-			lvlsPerKeyInRange.put(A, key+stKey);	
-		}
-	}//calcIndivFreqLevel
-	
-	/**
-	 * calculate the individual level manually using a sample of the signal as f(t), not using precalced frequencies
-	 */	
-	public void calcIndivFreqLevelNoPreCalc() {
-		//current buffer of song playing
-		float cosSum = 0, sinSum = 0, A;
-		
-		for(int key=0;key<pianoFreqsHarmonics.length;++key) {//for every key being compared
-			cosSum =0;sinSum=0;
-			//for(float harm  : pianoFreqsHarmonics[key]) 
-			{
-			float harm = pianoFreqsHarmonics[key][0];//fundamental only
-			float tpHarm = harm *  twoPiInvSamp;
-				for (int t=0;t<buffer.length; ++t) {		//for every sample
-					float tpHarmT = t*tpHarm;
-					cosSum += buffer[t] * (float)(Math.cos(tpHarmT));
-					sinSum += buffer[t] * (float)(Math.sin(tpHarmT));
-				}	           
-			}
-			A = ((cosSum * cosSum) + (sinSum * sinSum)); //A[n] = sqrt (c(f)^2 + s(f)^2)
-			win.levelsPerPKeySingleCalc.put(A, key+stKey);	
-			lvlsPerKeyInRange.put(A, key+stKey);	
-		}
-	}//calcIndivFreqLevel
+//	/**
+//	 * calculate the individual level manually using a sample of the signal as f(t)
+//	 */	
+//	public void calcIndivFreqLevel() {		
+//		float cosSum = 0, sinSum = 0, A;
+//		for(int key=0;key<pianoFreqsHarmonics.length;++key) {//for every key being compared
+//			cosSum =0;sinSum=0;
+//			//for(float harm  : pianoFreqsHarmonics[key]) 
+//			{
+//			float harm = pianoFreqsHarmonics[key][0];//fundamental only
+//				for (int t=0;t<buffer.length; ++t) {		//for every sample
+//					cosSum += buffer[t] * cosTbl.get(harm)[t];
+//					sinSum += buffer[t] * sinTbl.get(harm)[t];
+//				}	           
+//			}
+//			A = ((cosSum * cosSum) + (sinSum * sinSum)); //A[n] = sqrt (c(f)^2 + s(f)^2)
+//			win.levelsPerPKeySingleCalc.put(A, key+stKey);				
+//			lvlsPerKeyInRange.put(A, key+stKey);	
+//		}
+//	}//calcIndivFreqLevel
+//	
+//	/**
+//	 * calculate the individual level manually using a sample of the signal as f(t), not using precalced frequencies
+//	 */	
+//	public void calcIndivFreqLevelNoPreCalc() {
+//		//current buffer of song playing
+//		float cosSum = 0, sinSum = 0, A;
+//		
+//		for(int key=0;key<pianoFreqsHarmonics.length;++key) {//for every key being compared
+//			cosSum =0;sinSum=0;
+//			//for(float harm  : pianoFreqsHarmonics[key]) 
+//			{
+//			float harm = pianoFreqsHarmonics[key][0];//fundamental only
+//			float tpHarm = harm *  twoPiInvSamp;
+//				for (int t=0;t<buffer.length; ++t) {		//for every sample
+//					float tpHarmT = t*tpHarm;
+//					cosSum += buffer[t] * (float)(Math.cos(tpHarmT));
+//					sinSum += buffer[t] * (float)(Math.sin(tpHarmT));
+//				}	           
+//			}
+//			A = ((cosSum * cosSum) + (sinSum * sinSum)); //A[n] = sqrt (c(f)^2 + s(f)^2)
+//			win.levelsPerPKeySingleCalc.put(A, key+stKey);	
+//			lvlsPerKeyInRange.put(A, key+stKey);	
+//		}
+//	}//calcIndivFreqLevel
 	
 	@Override
 	public Boolean call() throws Exception {
@@ -324,9 +404,20 @@ class myDFTNoteMapper implements Callable<Boolean>{
 //			calcIndivFreqLevelNoPreCalc();
 //		} else {
 //			calcIndivFreqLevel();				
-//		}		
-		//with samples can't precalc. ffs
+//		}	
+//		if (firstCall) {
+//			preCalcTrig();
+//			allFreqsUsed = null;
+//			firstCall = false;
+//		} else {
+//			if (cosTbl == null) {//would be null if no precalculated cos/sin tables existed for current song's sample rate
+//				//System.out.println("no precalc");
+		//trig is faster than precalc - precalc suffers from stutters initially, until cache is loaded for each thread (?)
 		calcIndivFreqLevelNoPreCalcOnSamples();
+//			} else {
+//				calcIndivFreqLevelOnSamples();				
+//			}	
+//		}
 		return true;
 	}
 	

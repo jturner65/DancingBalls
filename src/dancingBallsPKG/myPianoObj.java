@@ -215,7 +215,6 @@ public class myPianoObj{
 			}			
 		}		
 	}//drawPlayedNote
-	
 
 	public void drawMe(){
 		//needs to be in 2D

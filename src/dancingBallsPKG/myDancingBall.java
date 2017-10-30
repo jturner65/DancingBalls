@@ -35,7 +35,14 @@ public class myDancingBall {
 	public float[] bandVals;	
 	
 	//beat timer
-	public float[] beatTimes;
+	//public float[] beatTimes;
+	
+	//UI selected zone and zone member to show being displaced - for debugging
+	public int zoneToShow;
+	public int zoneMmbrToShow;
+	//current and last frame per-zone beat detection results
+	public boolean[] beatDetRes;
+	public boolean[] lastBeatDetRes;
 
 	//k values for each zone so they resonate at frequency of zone in music
 	public float[] zoneKVals;
@@ -186,8 +193,41 @@ public class myDancingBall {
 	//call after all forces have been added
 	private void invokeSolver() {for (int idx = 0; idx < verts.length; ++idx) {verts[idx].integAndAdvance(win.deltaT);}}
 	
+	//called by owning class to set variables necessary for simulation, either kinematic or mass-spring
+	public void setBallSimVals(int _zs, int _zMbr,boolean[] _beatDetRes, boolean[] _lastBeatDetRes) {
+		//these two are debug-related
+		zoneToShow = _zs;
+		zoneMmbrToShow = _zMbr;
+		beatDetRes = _beatDetRes;
+		lastBeatDetRes = _lastBeatDetRes;
+	}
+	
+	//modAmtMillis is time passed per frame in milliseconds
+	public void stimMe(float modAmtMillis, boolean stimTaps, boolean useFrc) {
+		if(stimTaps) {//stimulate ball with finger taps/ detected beats - intended to be debugging mechanism
+			if(useFrc){
+				//use force deformations
+				stimBallTapsMassSprng(zoneToShow,zoneMmbrToShow,beatDetRes[zoneToShow],lastBeatDetRes[zoneToShow]);
+			} else {
+				//use kinematic deformations
+				stimBallTapsKine(zoneToShow,zoneMmbrToShow,beatDetRes[zoneToShow],lastBeatDetRes[zoneToShow]);
+			}				
+		} else {//stimulate with pure audio
+			if(useFrc){
+				//use force deformations
+				stimulateBallMassSpring(beatDetRes, lastBeatDetRes);
+			} else {
+				//use kinematic deformations
+				resetVertLocs();		//reset ball shape every frame
+				stimulateBallKine();
+			}
+		}		
+	}
+	
+	
+	
 	//stimulate zone focii
-	public void stimulateOneZone(float stimVal, int zoneIDX, int zonePt, boolean stimMates) {
+	private void stimulateOneZone(float stimVal, int zoneIDX, int zonePt, boolean stimMates) {
 		if((flags[isPtsMadeIDX]) && (flags[isZoneMappedIDX])) {
 			zonePoints[zoneIDX][zonePt].stimulateZone(stimVal);
 			if(stimMates) {	zonePoints[zoneIDX][zonePt].mPt.stimulateZone(stimVal);	}
@@ -195,7 +235,7 @@ public class myDancingBall {
 	}//stimulateZone
 	
 	//stimulate zone focii with force from specific frequency bands
-	public void stimulateZoneForce(float stimVal, int zoneIDX, int zonePt, boolean stimMates) {
+	private void stimulateZoneForce(float stimVal, int zoneIDX, int zonePt, boolean stimMates) {
 		if((flags[isPtsMadeIDX]) && (flags[isZoneMappedIDX])) {
 			zonePoints[zoneIDX][zonePt].stimulateZoneForce(stimVal);
 			if(stimMates) {	zonePoints[zoneIDX][zonePt].mPt.stimulateZoneForce(stimVal);	}
@@ -203,7 +243,7 @@ public class myDancingBall {
 	}//stimulateZone
 		
 	//excite each zone directly by displacing from rest position by scaled level given in bandVals
-	public void stimulateBallZone() {
+	public void stimulateBallKine() {
 		if(flags[audioValsSetIDX]){
 			for(int i=0;i<bandVals.length;++i) {
 				int numZones = (i+1)*(i+1);
@@ -218,7 +258,7 @@ public class myDancingBall {
 	
 	
 	//excite each zone directly by displacing from rest position by scaled level given in bandVals
-	public void stimBallTapsKinematic(int zoneIDX,int zoneToShow, boolean beatDet, boolean lastBeatDet) {//
+	public void stimBallTapsKine(int zoneIDX,int zoneToShow, boolean beatDet, boolean lastBeatDet) {//
 		if((beatDet) && (!lastBeatDet)) {
 			stimulateOneZone(2.0f, zoneIDX, zoneToShow, false);
 		} else if(lastBeatDet) {
@@ -234,14 +274,13 @@ public class myDancingBall {
 		setAllSpringForce();		
 		//solve for all particles
 		invokeSolver();
-		
 	}//stimBallTapsKinematic
 	
 	//used to govern how often forces are applied
 	private int simCount = 0;
 	//TODO need to stimulate ball on beats from music - constant force applications will cause things to explode
 	//pass zones to stimulate
-	public void stimulateBallFrc(boolean[] beatDetRes, boolean[] lastBeatDetRes) {
+	public void stimulateBallMassSpring(boolean[] beatDetRes, boolean[] lastBeatDetRes) {
 		flags[dispVertHiLiteIDX] = false;
 		int beatCount = 10;
 		simCount += 1;
