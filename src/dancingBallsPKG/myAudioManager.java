@@ -13,12 +13,6 @@ public class myAudioManager {
 	public DancingBalls pa;
 	public DancingBallWin win;
 	
-	//TODO temporary - shouldn't have reference to ball, window should manage that - get rid of this
-	//Dancing Ball object
-	public myDancingBall ball;
-
-	
-	
 	public static final int numZones = DancingBallWin.numZones;
 	//piano visualization object
 	public myPianoObj dispPiano;	
@@ -28,7 +22,6 @@ public class myAudioManager {
 
 	//current song index
 	public int songIDX = 1;
-
 	
 //	//minim audio-related variables
 	//holds results from analysis - magnitude key, value is index of note with max level within min/max note bounds
@@ -36,9 +29,7 @@ public class myAudioManager {
 	//result from analyzing 1st 8 frequencies of harmonic series for each piano note
 	public ConcurrentSkipListMap<Float, Integer> levelsPerPKeySingleCalc;
 	//results from analysis in the bass, mid and trbl ranges (4 octaves, 3 octaves, 3 octaves
-	public ConcurrentSkipListMap<Float, Integer> bassLvlsPerKey,midLvlsPerKey,trblLvlsPerKey;
-
-	
+	public ConcurrentSkipListMap<Float, Integer> bassLvlsPerKey,midLvlsPerKey,trblLvlsPerKey;	
 	
 	public final int fftMinBandwidth = 20, fftBandsPerOctave = 24;
 	public final int songBufSize = 1024;
@@ -54,47 +45,38 @@ public class myAudioManager {
 	public List<Future<Boolean>> callDFTMapperFtrs;
 	
 	public myMP3SongHandler[] pianoClips;
-//	public String[] pianoNoteFilenames = new String[] {
-//			"piano-ff-029.wav","piano-ff-030.wav","piano-ff-031.wav","piano-ff-050.wav",
-//			"piano-ff-051.wav","piano-ff-052.wav","piano-ff-053.wav","piano-ff-054.wav"};
-//	public String[] pianoNoteList = new String[] {"ff-029","ff-030","ff-031","ff-050","ff-051","ff-052","ff-053","ff-054"};
-	
+	public String[] pianoNoteFilenames = new String[] {
+			"piano-ff-029.wav","piano-ff-030.wav","piano-ff-031.wav","piano-ff-050.wav",
+			"piano-ff-051.wav","piano-ff-052.wav","piano-ff-053.wav","piano-ff-054.wav"};
 	public myMP3SongHandler[] songs;
-//	public String[] songTitles = new String[]{"sati.mp3","PurpleHaze.mp3","UNATCO.mp3","karelia.mp3","choir.mp3"};
-//	public String[] songList = new String[]{"Sati","PurpleHaze","UNATCO","Karelia","Choir"};	
-	
+	public String[] songFilenames = new String[]{"sati.mp3","PurpleHaze.mp3","UNATCO.mp3","karelia.mp3","choir.mp3"};	
 	//current index of fft windowing function, from ui
-	public int curWindowIDX = 0;
-	
+	public int curWindowIDX = 0;	
 	public WindowFunction[] windowList = new WindowFunction[]{FFT.NONE, FFT.BARTLETT, FFT.BARTLETTHANN, FFT.BLACKMAN, FFT.COSINE, FFT.GAUSS, FFT.HAMMING, FFT.HANN, FFT.LANCZOS, FFT.TRIANGULAR};
-//	public String[] windowNames = new String[]{"NONE","BARTLETT","BARTLETTHANN","BLACKMAN","COSINE","GAUSS","HAMMING","HANN","LANCZOS","TRIANGULAR"};
 	
 	//beat interaction
 	public myBeat[] tapBeats, audioBeats;
 
 	public myAudioManager(DancingBalls _pa,DancingBallWin _win) {
-		pa=_pa; win=_win;dispPiano = win.dispPiano;ball=win.ball;
-		initMe();
-		
+		pa=_pa; win=_win;dispPiano = win.dispPiano;
+		initMe();		
 	}//myAudioManager
 	
 	private void initMe() {
-		songs = new myMP3SongHandler[win.songTitles.length];
-		pianoClips = new myMP3SongHandler[win.pianoNoteFilenames.length];
+		songs = new myMP3SongHandler[songFilenames.length];
+		pianoClips = new myMP3SongHandler[pianoNoteFilenames.length];
 		//init piano freqs
 		//ConcurrentSkipListMap<Float, Integer> allFreqsUsed = 
 		dispPiano.initPianoFreqs();
 		//initialize tap beat structures
 		initTapBeatStructs();
-
 		//load all songs, add sample rate to 
 		loadSongsAndFFT();		
 		//launch thread to precalculate all trig stuff
-		
+		//not needed with multi-threading dft calc - math is fast enough without this
 		//pa.th_exec.execute(new myTrigPrecalc(this, allFreqsUsed) );
 		//build DFT threads and precalc local cos/sin values
-		initDFTAnalysisThrds(10);
-		
+		initDFTAnalysisThrds(10);		
 	}//initMe
 	
 	//initialize array of mybeat to hold results of tapped beat data
@@ -107,11 +89,7 @@ public class myAudioManager {
 	
 	//either returns current song or current piano clip
 	protected myMP3SongHandler getCurrentClip(int idx) {
-		if (win.getPrivFlags(DancingBallWin.usePianoNoteFiles)) {
-			return pianoClips[idx];
-		} else {
-			return songs[idx];
-		}		
+		if (win.getPrivFlags(DancingBallWin.usePianoNoteFiles)) {return pianoClips[idx];} else {return songs[idx];}		
 	}
 	
 	protected void setFFTVals() {
@@ -124,19 +102,21 @@ public class myAudioManager {
 	
 	protected void loadSongsAndFFT() {
 		sampleRates = new ConcurrentSkipListMap<Float, Integer>();//hold only sample rates that we have seen
-		for(int i=0;i<songs.length;++i){	songs[i] = new myMP3SongHandler(pa.minim, win.songTitles[i], win.songList[i], songBufSize);	sampleRates.put(songs[i].playMe.sampleRate(), 1);}		
-		for(int i=0;i<pianoClips.length;++i){	pianoClips[i] = new myMP3SongHandler(pa.minim, win.pianoNoteFilenames[i], win.pianoNoteList[i], songBufSize);	sampleRates.put(pianoClips[i].playMe.sampleRate(), 1);}		
+		for(int i=0;i<songs.length;++i){	songs[i] = new myMP3SongHandler(pa.minim, songFilenames[i], win.songList[i], songBufSize);	sampleRates.put(songs[i].playMe.sampleRate(), 1);}		
+		for(int i=0;i<pianoClips.length;++i){	pianoClips[i] = new myMP3SongHandler(pa.minim, pianoNoteFilenames[i], win.pianoNoteList[i], songBufSize);	sampleRates.put(pianoClips[i].playMe.sampleRate(), 1);}		
 		win.setPrivFlags(DancingBallWin.audioLoaded,true);
 		win.setPrivFlags(DancingBallWin.fftLogLoaded, true);
 		setFFTVals();
 	}//loadSongList() 
 	
 	//set process audio for each frame
-	public void processAudioData() {
+	public boolean processAudioData() {
+		boolean updateBall = false;
 		myMP3SongHandler song = this.getCurrentClip(songIDX);
 		//songs[songIDX].fftFwdOnAudio();
 		song.fftFwdOnAudio();
 		float[][] res ;
+		//artifact from jcuda implementation
 //		res = songs[songIDX].fftSpectrumFromAudio(); // real and imaginary components of frequency from sample window
 //		res = song.fftSpectrumFromAudio(); // real and imaginary components of frequency from sample window
 		//all bands
@@ -146,7 +126,9 @@ public class myAudioManager {
 			res = song.fftFwdNumBandsFromAudio();
 			bandRes = res[0];
 			bandFreqs = res[1];
-			ball.setFreqVals(bandRes);
+			//update ball's knowledge of bandRes
+			updateBall = true;
+			//ball.setFreqVals(bandRes);
 		}
 		//only perform if showing all bands eq
 		if(win.getPrivFlags(DancingBallWin.showAllBandRes)) {
@@ -165,20 +147,18 @@ public class myAudioManager {
 		if((win.getPrivFlags(DancingBallWin.showTapBeats) || win.getPrivFlags(DancingBallWin.stimWithTapBeats)) && ! win.getPrivFlags(DancingBallWin.useHumanTapBeats)) {
 			for (int i =0;i<lastBeatDetRes.length;++i) {lastBeatDetRes[i] = beatDetRes[i];}
 			beatDetRes = songs[songIDX].beatDetectZones();
-			for (int i =0;i<beatDetRes.length;++i) {if(beatDetRes[i]) {	audioBeats[i].addTap(pa.millis()); }		}//not properly measuring beat frequency - need to filter beats
-			
+			for (int i =0;i<beatDetRes.length;++i) {if(beatDetRes[i]) {	audioBeats[i].addTap(pa.millis()); }		}//not properly measuring beat frequency - need to filter beats			
 			//pa.outStr2Scr("zone : 0 beat : " + beatDetRes[0]+" last beat det : " + lastBeatDetRes[0] );
 		} else {
 			lastBeatDetRes = new boolean[numZones];
 			beatDetRes = new boolean[numZones];
 		}
-		if(song.getPlayPosRatio() > .99) {//shut off songs if done
-			win.setPrivFlags(DancingBallWin.playMP3Vis, false);			
-		}
+		if(song.getPlayPosRatio() > .99) {win.setPrivFlags(DancingBallWin.playMP3Vis, false);}//shut off songs if done
+		return updateBall;
 	}//processAudioData
 	public void changeCurrentSong(int newSongIDX){
 		this.getCurrentClip(songIDX).pause();
-		ball.resetVertLocs();
+		//ball.resetVertLocs();
 		songIDX = newSongIDX;
 		if(win.getPrivFlags(DancingBallWin.playMP3Vis)){this.getCurrentClip(songIDX).play();}
 	}//changeCurrentSong

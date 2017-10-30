@@ -6,7 +6,6 @@ import java.util.concurrent.*;
 /**
  * object representing a moving, deforming ball
  * @author john
- *
  */
 public class myDancingBall {
 	public DancingBalls pa;
@@ -203,7 +202,7 @@ public class myDancingBall {
 	}
 	
 	//modAmtMillis is time passed per frame in milliseconds
-	public void stimMe(float modAmtMillis, boolean stimTaps, boolean useFrc) {
+	public void simMe(float modAmtMillis, boolean stimTaps, boolean useFrc) {
 		if(stimTaps) {//stimulate ball with finger taps/ detected beats - intended to be debugging mechanism
 			if(useFrc){
 				//use force deformations
@@ -222,7 +221,7 @@ public class myDancingBall {
 				stimulateBallKine();
 			}
 		}		
-	}
+	}//simMe
 	
 	
 	
