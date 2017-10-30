@@ -201,7 +201,7 @@ public class myAudioManager {
 		//for (myDFTNoteMapper mapper : callDFTNoteMapper) {mapper.setPerRunValues(sampleRate, _buffer, lclCosTbl, lclSinTbl);}
 	}//setPerRunRes
 	//set process audio for each frame
-	public boolean processAudioData() {
+	public boolean processAudioData(float animTimeMod) {
 		boolean updateBall = false;
 		myMP3SongHandler song = this.getCurrentClip(songIDX);
 		//songs[songIDX].fftFwdOnAudio();
@@ -235,12 +235,21 @@ public class myAudioManager {
 		}		
 		if(win.getPrivFlags(DancingBallWin.showPianoNotes)) {levelsPerPianoKeyFund = song.fftFwdFreqLevelsInHarmonicBands(dispPiano.pianoMinFreqsHarmonics);}
 		//if we're showing beat detected and we're not using human tapped beats
-		if((win.getPrivFlags(DancingBallWin.showTapBeats) || win.getPrivFlags(DancingBallWin.stimWithTapBeats)) && ! win.getPrivFlags(DancingBallWin.useHumanTapBeats)) {
+		if (win.getPrivFlags(DancingBallWin.showTapBeats) || win.getPrivFlags(DancingBallWin.stimWithTapBeats)){
 			for (int i =0;i<lastBeatDetRes.length;++i) {lastBeatDetRes[i] = beatDetRes[i];}
-			beatDetRes = songs[songIDX].beatDetectZones();
-			for (int i =0;i<beatDetRes.length;++i) {if(beatDetRes[i]) {	audioBeats[i].addTap(pa.millis()); }		}//not properly measuring beat frequency - need to filter beats			
+			if (!win.getPrivFlags(DancingBallWin.useHumanTapBeats)) {
+				beatDetRes = songs[songIDX].beatDetectZones();
+				for (int i =0;i<beatDetRes.length;++i) {if(beatDetRes[i]) {	audioBeats[i].addTap(pa.millis()); }		}//not properly measuring beat frequency - need to filter beats
+			} else {//copy finger tap beats here
+				//pa.outStr2Scr("copy tapbeats");
+				float animMillis = animTimeMod*1000;
+				for (int i =0;i<tapBeats.length;++i) {	
+					tapBeats[i].simBeat(animMillis);
+					beatDetRes[i]=tapBeats[i].beatIsOn;	
+				}				
+			}
 			//pa.outStr2Scr("zone : 0 beat : " + beatDetRes[0]+" last beat det : " + lastBeatDetRes[0] );
-		} else {
+		} else {//copy finger tap beats here
 			lastBeatDetRes = new boolean[numZones];
 			beatDetRes = new boolean[numZones];
 		}
@@ -304,18 +313,19 @@ public class myAudioManager {
 		pa.popStyle();pa.popMatrix();		
 	}//drawFreqBand
 	
-	//draw representations of beats on screen
-	private void drawBeats(myBeat[] beats, float modAmtMillis, float height) {
-		float rad = height/2.0f;
-		pa.pushMatrix();pa.pushStyle();
-		float transY =-2*height;
-		pa.translate( 10 + rad,  win.rectDim[3]+transY + rad);
-		for (int i=0;i<beats.length;++i) {			
-			beats[i].drawBeat(modAmtMillis, rad);
-			pa.translate(0,transY);
-		}
-		pa.popStyle();pa.popMatrix();	
-	}//drawTapBeats()
+	//remove custom handling of tap beats - have them treated just like detected beats
+//	//draw representations of beats on screen
+//	private void drawBeats(myBeat[] beats, float modAmtMillis, float height) {
+//		float rad = height/2.0f;
+//		pa.pushMatrix();pa.pushStyle();
+//		float transY =-2*height;
+//		pa.translate( 10 + rad,  win.rectDim[3]+transY + rad);
+//		for (int i=0;i<beats.length;++i) {			
+//			beats[i].drawBeat(modAmtMillis, rad);
+//			pa.translate(0,transY);
+//		}
+//		pa.popStyle();pa.popMatrix();	
+//	}//drawTapBeats()
 	
 	//display beats detected in music
 	private void drawDetectedBeats(boolean[] beatState, boolean[] lastBeatState, float modAmtMillis, float height) {
@@ -367,8 +377,10 @@ public class myAudioManager {
 		}
 		else if(win.getPrivFlags(DancingBallWin.showZoneBandRes)) {drawFreqBands(bandRes, bandFreqs, bandResHeight, pa.gui_Blue, showBeats, win.getPrivFlags(DancingBallWin.showFreqLbls));}
 		if(showBeats) {
-			if(win.getPrivFlags(DancingBallWin.useHumanTapBeats)) {	drawBeats(tapBeats,modAmtMillis, bandResHeight);}//using human-entered tap beats 
-			else {								drawDetectedBeats(beatDetRes, lastBeatDetRes, modAmtMillis, bandResHeight);}//using music-generated beats
+//			if(win.getPrivFlags(DancingBallWin.useHumanTapBeats)) {	drawBeats(tapBeats,modAmtMillis, bandResHeight);}//using human-entered tap beats 
+//			else {								
+				drawDetectedBeats(beatDetRes, lastBeatDetRes, modAmtMillis, bandResHeight);
+//			}//using music-generated beats
 		}
 		if(win.getPrivFlags(DancingBallWin.showAllBandRes) && win.getPrivFlags(DancingBallWin.showPianoNotes)) {	pa.popStyle();pa.popMatrix();	}		//undo piano translation		
 		pa.hint(PConstants.ENABLE_DEPTH_TEST);		
@@ -634,7 +646,6 @@ class myBeat{
 	public float avgBeatTime, beatDispTime, curBeatTime;
 	//this beat structure is ready to consume - only after windowSize elements have been processed
 	public boolean ready, beatIsOn;
-	
 	//
 	
 	public myBeat(DancingBalls _p, int _type) {
@@ -647,9 +658,9 @@ class myBeat{
 		ready = false;
 	}
 	//keep a series of 4 beat times, updating each of 4 with subsequent additional info
-	public void addTapNew(int tapTime) {//TODO
-		
-	}
+//	public void addTapNew(int tapTime) {//TODO
+//		
+//	}
 	
 	//add timing of new tap, replace oldest entry, recalculate avgBeatTime (avg beat-to-beat timing)
 	//tapTime should be in millis
@@ -671,33 +682,55 @@ class myBeat{
 		if(avgBeatTime == 0) {return -1;}
 		return 1000.0f/avgBeatTime;
 	}
-	
-	//draw if ready and animTime (time in seconds since last frame)
-	public void drawBeat(float animTime, float rad) {
-		pa.pushMatrix();				pa.pushStyle();	
-		pa.noStroke();
+	public void simBeat(float animTime) {
+		
 		//NOTE beatTtlDispTime should never be longer than avgBeatTime
 		curBeatTime += animTime;		//time between beats
-		int clr;
 		if(!ready) {
-			clr = pa.gui_Red;
+			//do nothing
 		} else if (beatIsOn){//show beat on and determine if it should be turned off			
-			clr = pa.gui_Green;
 			beatDispTime += animTime;
 			if(beatTtlDispTime < beatDispTime) {//check if displayed long enough
 				beatDispTime = 0;
 				beatIsOn = false;				
 			}
 		} else {
-			clr=pa.gui_Gray;
 			//check if beat should be on
 			if(avgBeatTime <= curBeatTime) {
 				curBeatTime = 0;
 				beatIsOn = true;				
 			}	
-		}		
-		pa.show(myPointf.ZEROPT,rad*2.0f, clr, clr, true);
-		pa.popStyle();					pa.popMatrix();		
-	}//drawBeat	
+		}
+		//System.out.println("animtime : " + animTime + " ready " + ready +"|"+beatIsOn+"|beatDispTime:"+beatDispTime+"|curBeatTime:"+curBeatTime+"|avgBTime:"+avgBeatTime);
+	}//simBeat
+	
+//	//draw if ready and animTime (time in seconds since last frame)
+//	public void drawBeat(float animTime, float rad) {
+//		pa.pushMatrix();				pa.pushStyle();	
+//		pa.noStroke();
+//		//NOTE beatTtlDispTime should never be longer than avgBeatTime
+//		curBeatTime += animTime;		//time between beats
+//		int clr;
+//		if(!ready) {
+//			clr = pa.gui_Red;
+//		} else if (beatIsOn){//show beat on and determine if it should be turned off			
+//			clr = pa.gui_Green;
+//			beatDispTime += animTime;
+//			if(beatTtlDispTime < beatDispTime) {//check if displayed long enough
+//				beatDispTime = 0;
+//				beatIsOn = false;				
+//			}
+//		} else {
+//			clr=pa.gui_Gray;
+//			//check if beat should be on
+//			if(avgBeatTime <= curBeatTime) {
+//				curBeatTime = 0;
+//				beatIsOn = true;				
+//			}	
+//		}		
+//		//System.out.println("animtime : " + animTime + " ready " + ready +"|"+beatIsOn+"|beatDispTime:"+beatDispTime+"|curBeatTime:"+curBeatTime+"|avgBTime:"+avgBeatTime);
+//		pa.show(myPointf.ZEROPT,rad*2.0f, clr, clr, true);
+//		pa.popStyle();					pa.popMatrix();		
+//	}//drawBeat	
 }//myBeat
 

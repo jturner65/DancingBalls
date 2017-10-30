@@ -397,7 +397,7 @@ public class DancingBallWin extends myDispWindow {
 //		curMseLookVec = pa.c.getMse2DtoMse3DinWorld(pa.sceneCtrVals[pa.sceneIDX]);			//need to be here
 //		curMseLoc3D = pa.c.getMseLoc(pa.sceneCtrVals[pa.sceneIDX]);
 		//int stVal = pa.millis(); //takes 0 millis to process audio data
-		boolean updateBall = audMgr.processAudioData();//get next set of audio data to process
+		boolean updateBall = audMgr.processAudioData(animTimeMod);//get next set of audio data to process
 		if(updateBall) {		ball.setFreqVals(audMgr.bandRes);	}
 		
 		//pa.outStr2Scr("took : " + (pa.millis() - stVal) + " millis to processAudioData()");
