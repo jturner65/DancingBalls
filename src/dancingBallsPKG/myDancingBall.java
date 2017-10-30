@@ -37,7 +37,7 @@ public class myDancingBall {
 	//public float[] beatTimes;
 	
 	//UI selected zone and zone member to show being displaced - for debugging
-	public int zoneToShow;
+	public int zoneTypIDX;
 	public int zoneMmbrToShow;
 	//current and last frame per-zone beat detection results
 	public boolean[] beatDetRes;
@@ -58,6 +58,26 @@ public class myDancingBall {
 	//low freq to high freq
 	//public int[] numZoneVerts = new int[] {4,8,32,128,512,2048};
 	public int[] numZoneVerts = new int[] {8,16,32,64,128,256};
+	
+	//stimulate zones based on zone location
+	public int[][] zonesToStim = new int[][] {
+		{6,7},																		//lowest freq - alt between 2
+		{13,8,9,12,11,10},															//low bass freq - oscillate/wave through 1st half and 2nd half of array simultaneously, from back to front			
+		{14,15,16,17,18, 13,12,11,20,19},											//low melody - pair opposite zones front to back		
+		{12,13,14,15,16,17,18,19,20,21,22,23,24},									//high melody - cycle through entire set in order, and then back again descending		
+		{15,14,13,
+		16,17,18,
+		22,21,20,
+		23,24,25},								//low range high freq - stimulate 4 groups simultaneously in order (ignore 12 and 19 to make even)		
+		{0,1,2,
+		4,14,13,
+		5,15,16,
+		7,18,19,
+		11,26,25,
+		9,21,22,
+		10,23,24}								//high range high freq - 3 layers, stimulate in groups of 3 (sets of 3 idxs at a time)
+		};
+	
 
 	public float scaleZVal;//change to make an ellipsoid along z axis - set in init
 	
@@ -195,35 +215,27 @@ public class myDancingBall {
 	//called by owning class to set variables necessary for simulation, either kinematic or mass-spring
 	public void setBallSimVals(int _zs, int _zMbr,boolean[] _beatDetRes, boolean[] _lastBeatDetRes) {
 		//these two are debug-related
-		zoneToShow = _zs;
+		zoneTypIDX = _zs;
 		zoneMmbrToShow = _zMbr;
 		beatDetRes = _beatDetRes;
 		lastBeatDetRes = _lastBeatDetRes;
-	}
+	}//setBallSimVals
+	
+	//combine kinematic and dynamic stimualtion
+//	public void stimKinAndDyn() {
+//		
+//	}
 	
 	//modAmtMillis is time passed per frame in milliseconds
 	public void simMe(float modAmtMillis, boolean stimTaps, boolean useFrc) {
 		if(stimTaps) {//stimulate ball with finger taps/ detected beats - intended to be debugging mechanism
-			if(useFrc){
-				//use force deformations
-				stimBallTapsMassSprng(zoneToShow,zoneMmbrToShow,beatDetRes[zoneToShow],lastBeatDetRes[zoneToShow]);
-			} else {
-				//use kinematic deformations
-				stimBallTapsKine(zoneToShow,zoneMmbrToShow,beatDetRes[zoneToShow],lastBeatDetRes[zoneToShow]);
-			}				
+			if(useFrc){		stimBallTapsMassSprng();} 
+			else {			stimBallTapsKine();}//use force deformations or kinematic deformations				
 		} else {//stimulate with pure audio
-			if(useFrc){
-				//use force deformations
-				stimulateBallMassSpring(beatDetRes, lastBeatDetRes);
-			} else {
-				//use kinematic deformations
-				resetVertLocs();		//reset ball shape every frame
-				stimulateBallKine();
-			}
+			if(useFrc){		stimulateBallMassSpring();} //use force deformations
+			else {			resetVertLocs();stimulateBallKine();}//use kinematic deformations
 		}		
-	}//simMe
-	
-	
+	}//simMe	
 	
 	//stimulate zone focii
 	private void stimulateOneZone(float stimVal, int zoneIDX, int zonePt, boolean stimMates) {
@@ -255,20 +267,20 @@ public class myDancingBall {
 		}
 	}//stimulateZone
 	
-	
+	//DEBUG
 	//excite each zone directly by displacing from rest position by scaled level given in bandVals
-	public void stimBallTapsKine(int zoneIDX,int zoneToShow, boolean beatDet, boolean lastBeatDet) {//
-		if((beatDet) && (!lastBeatDet)) {
-			stimulateOneZone(2.0f, zoneIDX, zoneToShow, false);
-		} else if(lastBeatDet) {
+	public void stimBallTapsKine() {//[zoneIDX]
+		if((beatDetRes[zoneTypIDX]) && (!lastBeatDetRes[zoneTypIDX])) {
+			stimulateOneZone(2.0f, zoneTypIDX, zoneMmbrToShow, false);
+		} else if(lastBeatDetRes[zoneTypIDX]) {
 			resetVertLocs();		//reset ball shape when beat is gone
 		}
 
 	}//stimBallTapsKinematic
 	
-	public void stimBallTapsMassSprng(int zoneIDX, int zoneToShow, boolean beatDet, boolean lastBeatDet) {
-		if(beatDet) {
-			stimulateZoneForce(100, zoneIDX, zoneToShow, false );
+	public void stimBallTapsMassSprng() {
+		if(beatDetRes[zoneTypIDX]) {
+			stimulateZoneForce(100, zoneTypIDX, zoneMmbrToShow, false );
 		}
 		setAllSpringForce();		
 		//solve for all particles
@@ -279,7 +291,7 @@ public class myDancingBall {
 	private int simCount = 0;
 	//TODO need to stimulate ball on beats from music - constant force applications will cause things to explode
 	//pass zones to stimulate
-	public void stimulateBallMassSpring(boolean[] beatDetRes, boolean[] lastBeatDetRes) {
+	public void stimulateBallMassSpring() {
 		flags[dispVertHiLiteIDX] = false;
 		int beatCount = 10;
 		simCount += 1;
@@ -288,13 +300,13 @@ public class myDancingBall {
 			simCount = 0;
 			flags[dispVertHiLiteIDX] = true;
 			//set force values for all zones - bandVals is array of per-zone levels from song	
-			for(int z=0;z<bandVals.length;++z) {
+			for(int zone=0;zone<bandVals.length;++zone) {
 				//if((beatDetRes[i]) ) {//&& (!lastBeatDetRes[i])) {//send force only when transitioning on beat
 				//TODO determine better mapping to specific zones
-				int numZones = (z+1)*(z+1);
+				int numZones = (zone+1)*(zone+1);
 				for (int j=0;j<numZones;++j) {
-					int zRand = (int) (ThreadLocalRandom.current().nextDouble(0,zonePoints[z].length));
-					stimulateZoneForce(100.0f*bandVals[z], z,zRand, true );
+					int zoneMbrToShow = (int) (ThreadLocalRandom.current().nextDouble(0,zonePoints[zone].length));
+					stimulateZoneForce(100.0f*bandVals[zone], zone,zoneMbrToShow, true );
 				}
 				//}
 			}
@@ -410,6 +422,124 @@ public class myDancingBall {
 		}		
 		pa.popStyle();pa.popMatrix();		
 	}//drawZones
+	
+	
+	//zone 0 - lowest freq : zone pt z < -100 			: 2 zones
+//Zone IDX : 0 Zone ID : 6 ZPt Loc : |(100.0000, 0.0000, -173.2051)
+//Zone IDX : 0 Zone ID : 7 ZPt Loc : |(-100.0000, -0.0000, -173.2051)
+	
+	//zone 1 - bass freq : zone pt  -100 < z < -10 	: 6 zones - 3 on each plane 
+//Zone IDX : 1 Zone ID : 8 ZPt Loc : |(184.7759, 0.0000, -76.5367)
+//Zone IDX : 1 Zone ID : 9 ZPt Loc : |(92.3879, 160.0206, -76.5367)
+//Zone IDX : 1 Zone ID : 10 ZPt Loc : |(-92.3880, 160.0206, -76.5367)		
+//Zone IDX : 1 Zone ID : 11 ZPt Loc : |(-184.7759, -0.0000, -76.5367)
+//Zone IDX : 1 Zone ID : 12 ZPt Loc : |(-92.3879, -160.0206, -76.5367)
+//Zone IDX : 1 Zone ID : 13 ZPt Loc : |(92.3880, -160.0206, -76.5367)
+	
+	//zone 2 - low melody : zone pt abs(z) < 10
+//Zone IDX : 2 Zone ID : 11 ZPt Loc : |(200.0000, 0.0000, -0.0000)
+//Zone IDX : 2 Zone ID : 12 ZPt Loc : |(161.8034, 117.5571, -0.0000)
+//Zone IDX : 2 Zone ID : 13 ZPt Loc : |(61.8034, 190.2113, -0.0000)
+//Zone IDX : 2 Zone ID : 14 ZPt Loc : |(-61.8034, 190.2113, -0.0000)
+//Zone IDX : 2 Zone ID : 15 ZPt Loc : |(-161.8034, 117.5570, -0.0000)
+//Zone IDX : 2 Zone ID : 16 ZPt Loc : |(-200.0000, -0.0000, -0.0000)
+//Zone IDX : 2 Zone ID : 17 ZPt Loc : |(-161.8034, -117.5571, -0.0000)
+//Zone IDX : 2 Zone ID : 18 ZPt Loc : |(-61.8033, -190.2113, -0.0000)
+//Zone IDX : 2 Zone ID : 19 ZPt Loc : |(61.8034, -190.2113, -0.0000)
+//Zone IDX : 2 Zone ID : 20 ZPt Loc : |(161.8034, -117.5571, -0.0000)		
+	
+	//zone 3 - high melody 		10<z<120
+//Zone IDX : 3 Zone ID : 12 ZPt Loc : |(180.1938, 0.0000, 86.7767)
+//Zone IDX : 3 Zone ID : 13 ZPt Loc : |(159.5537, 83.7402, 86.7767)
+//Zone IDX : 3 Zone ID : 14 ZPt Loc : |(102.3617, 148.2966, 86.7767)
+//Zone IDX : 3 Zone ID : 15 ZPt Loc : |(21.7200, 178.8800, 86.7767)
+//Zone IDX : 3 Zone ID : 16 ZPt Loc : |(-63.8976, 168.4841, 86.7767)
+//Zone IDX : 3 Zone ID : 17 ZPt Loc : |(-134.8770, 119.4906, 86.7767)
+//Zone IDX : 3 Zone ID : 18 ZPt Loc : |(-174.9577, 43.1232, 86.7767)
+//Zone IDX : 3 Zone ID : 19 ZPt Loc : |(-174.9577, -43.1232, 86.7767)
+//Zone IDX : 3 Zone ID : 20 ZPt Loc : |(-134.8770, -119.4906, 86.7767)
+//Zone IDX : 3 Zone ID : 21 ZPt Loc : |(-63.8976, -168.4841, 86.7767)
+//Zone IDX : 3 Zone ID : 22 ZPt Loc : |(21.7200, -178.8800, 86.7767)
+//Zone IDX : 3 Zone ID : 23 ZPt Loc : |(102.3618, -148.2965, 86.7767)
+//Zone IDX : 3 Zone ID : 24 ZPt Loc : |(159.5537, -83.7402, 86.7767)
+	
+	//zone 4 - low high-freq-rhythm 120 < z < 160
+//Zone IDX : 4 Zone ID : 12 ZPt Loc : |(141.4214, 0.0000, 141.4214)
+//Zone IDX : 4 Zone ID : 13 ZPt Loc : |(127.4162, 61.3604, 141.4214)
+//Zone IDX : 4 Zone ID : 14 ZPt Loc : |(88.1748, 110.5677, 141.4214)
+//Zone IDX : 4 Zone ID : 15 ZPt Loc : |(31.4692, 137.8756, 141.4214)
+//Zone IDX : 4 Zone ID : 16 ZPt Loc : |(-31.4692, 137.8756, 141.4214)
+//Zone IDX : 4 Zone ID : 17 ZPt Loc : |(-88.1748, 110.5676, 141.4214)
+//Zone IDX : 4 Zone ID : 18 ZPt Loc : |(-127.4162, 61.3604, 141.4214)
+//Zone IDX : 4 Zone ID : 19 ZPt Loc : |(-141.4214, -0.0000, 141.4214)
+//Zone IDX : 4 Zone ID : 20 ZPt Loc : |(-127.4162, -61.3604, 141.4214)
+//Zone IDX : 4 Zone ID : 21 ZPt Loc : |(-88.1748, -110.5677, 141.4214)
+//Zone IDX : 4 Zone ID : 22 ZPt Loc : |(-31.4692, -137.8756, 141.4214)
+//Zone IDX : 4 Zone ID : 23 ZPt Loc : |(31.4693, -137.8756, 141.4214)
+//Zone IDX : 4 Zone ID : 24 ZPt Loc : |(88.1748, -110.5677, 141.4214)
+//Zone IDX : 4 Zone ID : 25 ZPt Loc : |(127.4162, -61.3604, 141.4214)		
+	
+	//zone 5 - high high-freq-rhythm z > 160
+//Zone IDX : 5 Zone ID : 0 ZPt Loc : |(22.3929, 0.0000, 198.7424)
+//Zone IDX : 5 Zone ID : 1 ZPt Loc : |(-11.1964, 19.3928, 198.7424)
+//Zone IDX : 5 Zone ID : 2 ZPt Loc : |(-11.1964, -19.3928, 198.7424)
+//Zone IDX : 5 Zone ID : 3 ZPt Loc : |(66.0558, 0.0000, 188.7767)
+//Zone IDX : 5 Zone ID : 4 ZPt Loc : |(50.6017, 42.4599, 188.7767)
+//Zone IDX : 5 Zone ID : 5 ZPt Loc : |(11.4705, 65.0523, 188.7767)
+//Zone IDX : 5 Zone ID : 6 ZPt Loc : |(-33.0279, 57.2060, 188.7767)
+//Zone IDX : 5 Zone ID : 7 ZPt Loc : |(-62.0722, 22.5924, 188.7767)
+//Zone IDX : 5 Zone ID : 8 ZPt Loc : |(-62.0722, -22.5924, 188.7767)
+//Zone IDX : 5 Zone ID : 9 ZPt Loc : |(-33.0279, -57.2060, 188.7767)
+//Zone IDX : 5 Zone ID : 10 ZPt Loc : |(11.4705, -65.0523, 188.7767)
+//Zone IDX : 5 Zone ID : 11 ZPt Loc : |(50.6017, -42.4598, 188.7767)
+//Zone IDX : 5 Zone ID : 12 ZPt Loc : |(106.4064, 0.0000, 169.3448)
+//Zone IDX : 5 Zone ID : 13 ZPt Loc : |(97.2071, 43.2794, 169.3448)
+//Zone IDX : 5 Zone ID : 14 ZPt Loc : |(71.1998, 79.0754, 169.3448)
+//Zone IDX : 5 Zone ID : 15 ZPt Loc : |(32.8814, 101.1985, 169.3448)
+//Zone IDX : 5 Zone ID : 16 ZPt Loc : |(-11.1225, 105.8235, 169.3448)
+//Zone IDX : 5 Zone ID : 17 ZPt Loc : |(-53.2032, 92.1507, 169.3448)
+//Zone IDX : 5 Zone ID : 18 ZPt Loc : |(-86.0846, 62.5441, 169.3448)
+//Zone IDX : 5 Zone ID : 19 ZPt Loc : |(-104.0812, 22.1231, 169.3448)
+//Zone IDX : 5 Zone ID : 20 ZPt Loc : |(-104.0812, -22.1231, 169.3448)
+//Zone IDX : 5 Zone ID : 21 ZPt Loc : |(-86.0846, -62.5441, 169.3448)
+//Zone IDX : 5 Zone ID : 22 ZPt Loc : |(-53.2032, -92.1507, 169.3448)
+//Zone IDX : 5 Zone ID : 23 ZPt Loc : |(-11.1225, -105.8235, 169.3448)
+//Zone IDX : 5 Zone ID : 24 ZPt Loc : |(32.8814, -101.1985, 169.3448)
+//Zone IDX : 5 Zone ID : 25 ZPt Loc : |(71.1998, -79.0754, 169.3448)
+//Zone IDX : 5 Zone ID : 26 ZPt Loc : |(97.2071, -43.2794, 169.3448)
+	
+	//multiplied by radius
+	public float[] minZBnds = new float[] {-1.0f,-.5f, -.05f, .05f, .6f, .8f};
+	public float[] maxZBnds = new float[] {-.5f, -.05f, .05f, .6f, .8f, 1.0f};
+	
+	
+	public void debugAllZones() {
+		float minZ, maxZ;
+		ConcurrentSkipListMap<Integer, ArrayList<Integer>> listOfRes = new ConcurrentSkipListMap<Integer, ArrayList<Integer>>();
+		for(int zt=0;zt<zonePoints.length;++zt) {//for every type
+			minZ = rad * minZBnds[zt];
+			maxZ = rad * maxZBnds[zt];
+			ArrayList<Integer> tmpListOfRes = new ArrayList<Integer>();
+			pa.outStr2Scr("Zone type : " + zt);
+			for(int z=0;z<zonePoints[zt].length;++z) {//for every zone
+				if((minZ < zonePoints[zt][z].pt.z) && (zonePoints[zt][z].pt.z < maxZ)){
+					tmpListOfRes.add(z);
+					pa.outStr2Scr("Use point : " + zonePoints[zt][z].debugMeToStr());
+				}
+			}	
+			listOfRes.put(zt, tmpListOfRes);
+			pa.outStr2Scr("");
+		}
+		//display all results
+		for(int i=0;i<listOfRes.size();++i) {//for every type
+			ArrayList<Integer> listOfZoneIDs = listOfRes.get(i);
+			pa.outStr2Scr("Zone type : " + i);
+			String res = "IDXs : ";
+			for(int z=0;z<listOfZoneIDs.size();++z) {res += ""+ listOfZoneIDs.get(z)+",";}
+			pa.outStr2Scr(res);
+			pa.outStr2Scr("");
+		}
+	}//debugAllZones
 
 
 }//myDancingBall
@@ -451,7 +581,7 @@ class myZonePoint{
 			//System.out.println("for initial stim : " + stim + " and for dist : " + key + " stim val is " + stimVal);
 			ngbhd.get(key).stimulate(stimVal);
 		}	
-	}
+	}//stimulateZone
 
 	//stimulate a zone with a force, scaled for distance from zone point - add force in direction of normal
 	public void stimulateZoneForce(float stim) {//
@@ -460,8 +590,7 @@ class myZonePoint{
 			//System.out.println("for initial stim : " + stim + " and for dist : " + key + " stim val is " + stimVal);
 			ngbhd.get(key).stimulateFrc(stimVal);
 		}			
-	}
-	
+	}//stimulateZoneForce	
 	
 	public void applyZoneSpringForce(mySpringToRest frc) {
 		myVectorf[] result;
@@ -499,8 +628,12 @@ class myZonePoint{
 		pa.line(mPt.drawPt.x, mPt.drawPt.y, mPt.drawPt.z, drawPt.x, drawPt.y, drawPt.z);
 		pa.popStyle();pa.popMatrix();		
 	}
-
-	
 	public void drawNeighborhood(int clr) {for (myRndrdPart vert : ngbhd.values()) {vert.drawMeWithColor(clr % 22);}}
+	
+	//display this zone's zone point, zone idx and zone id
+	public String debugMeToStr() {
+		return "Zone IDX : "+zoneIDX+" Zone ID : "+ zoneID + " ZPt Loc : " + pt.toStrBrf();
+	}
+	
 }//myZonePoint
 

@@ -453,7 +453,11 @@ public class DancingBallWin extends myDispWindow {
 	@Override
 	protected void stopMe() {System.out.println("Stop");	resetDancerDisplacement();}
 	//debug function
-	public void dbgFunc0(){		}	
+	public void dbgFunc0(){
+		//display ball's zone's x,y,z for each zone type's zones
+		ball.debugAllZones();
+		//zones to use : 
+	}	
 	public void dbgFunc1(){		}	
 	public void dbgFunc2(){		}	
 	public void dbgFunc3(){		}	
