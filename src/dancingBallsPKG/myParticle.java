@@ -7,10 +7,11 @@ public class myParticle {
 	public static int IDgen = 0;
 
 	public myVectorf initPos, initVel;
-	
 	//used for spring forces - last iteration's distance vector
 	public myVectorf vecLOld;
-
+	//reference to ks and kd values for spring attached to this particle
+	public double[] kskdVals;
+	//private boolean isSetKsKd;//make sure lowest-frequency zone dominates in ks/kd setting
 	//array to keep around 
 	public myVectorf[] aPosition, aVelocity, aForceAcc ,aOldPos, aOldVel,aOldForceAcc;
 
@@ -60,6 +61,7 @@ public class myParticle {
 		initVel = new myVectorf(_velocity);
 		solveType = _solv;
 		solver = new mySolver( _solv);
+		//isSetKsKd = false;
 	}
 
 	protected void setOrigMass(float _m) {
@@ -77,19 +79,30 @@ public class myParticle {
 			aOldForceAcc[i].set(0,0,0);
 		}
 	}
-
+	
+//	public void setKsKdVals(double[] _zoneKsKdVals) {
+//		if(!isSetKsKd) {
+//		kskdVals = _zoneKsKdVals;
+//		isSetKsKd = true;
+//		}
+//	}
+	
 	
 //	public static void updateCurPtrs(){
 //		curNext = (curIDX + 1) % szAcc; 
 //		curPrev = 0;
 //		
 //	}
-	
+	public myVectorf springForce = new myVectorf(0,0,0);
 	public void applyForce(myVectorf _force) {aForceAcc[curIDX]._add(_force);}//applyforce
 	public void integAndAdvance(double deltaT){		
 		//idxs 2 and 3 of tSt hold last iteration's pos and vel
 		myVectorf[] tSt = new myVectorf[]{ aPosition[curIDX], aVelocity[curIDX], aOldPos[curIDX], aOldVel[curIDX]};	
 		//idxs 2 and 3 of tStDot hold last iteration's vel and frc
+		if(springForce.magn >0) {
+			applyForce(springForce);
+			springForce.set(0,0,0);
+		}
 		myVectorf[] tStDot = (mass == 1.0f ? 
 				new myVectorf[]{ tSt[1],aForceAcc[curIDX],tSt[3], aOldForceAcc[curIDX]} : 
 				new myVectorf[]{ tSt[1],myVectorf._div(aForceAcc[curIDX],mass),tSt[3], myVectorf._div(aOldForceAcc[curIDX],mass)});
@@ -105,6 +118,7 @@ public class myParticle {
 		
 		aOldForceAcc[curIDX].set(aForceAcc[oldTopIDX]);
 		aForceAcc[curIDX].set(0,0,0);			//clear out new head of force acc	
+		//isSetKsKd = false;
 	}
 	
 	//distance from rest
@@ -143,6 +157,7 @@ class myRndrdPart extends myParticle{
 		init(_pa, _ball, _norm, _clr);
 		setOrigMass(_oMass);
 	}
+
 	private void init(DancingBalls _pa, myDancingBall _ball, myVectorf _norm, int _clr) {
 		pa = _pa;ball=_ball;
 		norm = _norm;
@@ -160,10 +175,15 @@ class myRndrdPart extends myParticle{
 		return aPosition[curIDX];
 	}
 	//kinematic displacement by _stimVal
-	public void stimulate(float _stimVal) {
+	public void displace(float _stimVal) {
 		//aPosition[curIDX].set( myVectorf._add(initPos,myVectorf._mult(norm, _stimVal)));
 		aPosition[curIDX]._add( myVectorf._mult(norm, _stimVal));
 	}
+	
+	//use this to set to only a single force for springs, since multiple zones might affect a particle, we only want a single zone's spring to work on particle
+	public void setSpringForce(float _stimVal) {
+		springForce.set( myVectorf._mult(norm, _stimVal));
+	}	
 	
 	//add force in direction of normal
 	public void stimulateFrc(float _stimVal) {

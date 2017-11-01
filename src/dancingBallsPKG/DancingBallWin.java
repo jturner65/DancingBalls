@@ -428,11 +428,17 @@ public class DancingBallWin extends myDispWindow {
 	private void setBallSimulateVals() {
 		//need to pre-calculate per-zone beat frequencies that we want to use to excite zones
 		float[] zoneFreqs = new float[numZones];
-		//TODO
+		//TODO determine per-zone spring constants
+		//1.1254 as zonefreq gives ks=50 in ball
+		for(int i=0;i<numZones;++i) {
+			//TODO change this to be based on beat frequency
+			zoneFreqs[i] = 1.1254f;
+		}//
+		
 		//set all required values for ball stimulation
 		ball.setBallSimVals(zoneToShow,zoneMmbrToShow,audMgr.beatDetRes,audMgr.lastBeatDetRes);		
-		//set ball zone spring constants
-		ball.setZoneKs();
+		//set ball zone spring constants TODO use beat frequencies
+		ball.setZoneKs(zoneFreqs);
 	}//setBallSimulateVals
 	
 	@Override

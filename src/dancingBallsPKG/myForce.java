@@ -90,92 +90,34 @@ class my2bdyForce extends myForce{
 //spring force to rest position
 class mySpringToRest extends myForce{
 	//damped spring
-	public mySpringToRest(DancingBalls _p,  String _n, double _k, double _k2,  ForceType _t) {
-		super(_p, _n, _k, _k2, new myVectorf(), _t);
-	}
-	public mySpringToRest(DancingBalls _p, String _n, double _k,double _k2) {//passed k > 0 is repulsive force, k < 0 is attractive force
-		this(_p, _n, _k, _k2, ForceType.DAMPSPRING);
-	}
+	public mySpringToRest(DancingBalls _p,  String _n, double _k, double _k2,  ForceType _t) {super(_p, _n, _k, _k2, new myVectorf(), _t);	}
+	public mySpringToRest(DancingBalls _p, String _n, double _k,double _k2) {this(_p, _n, _k, _k2, ForceType.DAMPSPRING);}
 	
 	//_p2 should be null, d should be 0, since we have it hardcoded to be to initPos
 	@Override
 	public myVectorf[] calcForceOnParticle(myParticle _p1, myParticle _p2, double d) {
-		myVectorf[] result = new myVectorf[]{new myVectorf(),new myVectorf()};
-		myVectorf vecL;
-		vecL = new myVectorf(_p1.initPos,_p1.aPosition[_p1.curIDX]);//vector from current position to init position
+		myVectorf[] result; //= new myVectorf[]{new myVectorf(),new myVectorf()};
+		myVectorf vecL = new myVectorf(_p1.initPos,_p1.aPosition[_p1.curIDX]);//vector from current position to init position
 		if (vecL.magn > pa.epsValCalc) {		
 			myVectorf lnorm = myVectorf._normalize(vecL);//unitlength vector of l
 			myVectorf lprime = myVectorf._sub(vecL, _p1.vecLOld);		//lprime - time derivative of length, subtract old length vector from new length vector ?
-			double KsTerm = constVal1 * (vecL.magn - d);
+			double KsTerm = constVal1 * (vecL.magn);//-d);
 			double KdTerm = constVal2 * (lprime._dot(lnorm));//was _dot(vecL) ->should be component in direction of normal TODO verify
-			double fp = -1*(KsTerm + KdTerm);
-			result[0] = myVectorf._mult(lnorm,fp);
-			result[1] = myVectorf._mult(lnorm, -fp);
 
-		}//only add force if magnitude of distance vector is not 0
+//			double KsTerm = _p1.kskdVals[0] * (vecL.magn);//-d);
+//			double KdTerm = _p1.kskdVals[1] * (lprime._dot(lnorm));//was _dot(vecL) ->should be component in direction of normal TODO verify
+			double fp = (KsTerm + KdTerm);
+			result = new myVectorf[] {myVectorf._mult(lnorm,-fp),myVectorf._mult(lnorm, fp)};
+		} else {//only add force if magnitude of distance vector is not 0
+			//if disp is very small, move to original position, return 0 force 
+			_p1.aPosition[_p1.curIDX].set(_p1.initPos);
+			result = new myVectorf[]{new myVectorf(),new myVectorf()};
+		}
 		_p1.vecLOld.set(vecL);
 		return result;
 	}	
 	@Override
 	public String toString(){return super.toString() + "\tSpring Constant :  " + String.format("%.2f",constVal1) + " \tDamping Constant : "+String.format("%.2f",constVal2) ;}	
-}
+}//mySpringToRest
 
-
-
-//myVector[] result = new myVector[]{new myVector(),new myVector()};
-//myVector vecL, v_l;
-//switch (force.ftype) {
-//	case S_VECTOR:	{
-//		result[0] = myVector._mult(_p1.velocity.peekFirst(), force.constVal);//vector here means we derive the force as a particle-dependent vector value, velocity, against some scalar kd 
-//		break; }
-//	case ATTR: {//attractor, uses two particles, 1st constant, 
-//		vecL = new myVector(_p2.position.peekFirst(),_p1.position.peekFirst());//from 2 to 1
-//		if (vecL.magn > pa.epsVal) {		//attractor force - constVal (negative) * m1 * m2 * lnorm/ lmag*lmag
-//			double m1 = _p1.mass, m2 = _p2.mass;
-//			myVector lnorm = myVector._normalize(vecL);//unitlength vector of l
-//			double fp = -1 * force.constVal * m1 * m2 / (vecL.sqMagn);
-//			result[0] = myVector._mult(lnorm,fp);			
-//			result[1] = myVector._mult(lnorm, -fp);
-//		}//only add force if magnitude of distance vector is not 0
-//		break; }
-//	case REPL: {//repulsive force, uses two particles, 1st constant, opposite sign as attractor 
-//		vecL = new myVector(_p2.position.peekFirst(),_p1.position.peekFirst());//from 2 to 1
-//		if (vecL.magn > pa.epsVal) {		//repulsive force -> constVal * m1 * m2 * lnorm/ lmag*lmag
-//			double m1 = _p1.mass, m2 = _p2.mass;
-//			myVector lnorm = myVector._normalize(vecL);//unitlength vector of l
-//			double fp = -1 * force.constVal * m1 * m2 / (vecL.sqMagn);
-//			result[0] = myVector._mult(lnorm,-fp);
-//			result[1] = myVector._mult(lnorm,fp);
-//		}//only add force if magnitude of distance vector is not 0
-//
-//		break; }
-//	case DAMPSPRING:{//damped spring - not sure if going to use, but what the hey - dependent on old length (need ldot vector)
-//		vecL = new myVector(_p2.position.peekFirst(),_p1.position.peekFirst());
-//		if (vecL.magn > pa.epsVal) {		//spring with damping force
-//			myVector lnorm = myVector._normalize(vecL);//unitlength vector of l
-//			myVector lprime = myVector._sub(vecL, myVector._sub(_p1.oldPos.peekFirst(), _p2.oldPos.peekFirst()));		//lprime - time derivative, subtract old length vector from new length vector ?
-//			double KsTerm = force.constVal * (vecL.magn - d);
-//			double KdTerm = force.constVal2 * (lprime._dot(vecL));
-//			double fp = -1 * (KsTerm + KdTerm);
-//			result[0] = myVector._mult(lnorm,fp);
-//			result[1] = myVector._mult(lnorm, -fp);
-//		}//only add force if magnitude of distance vector is not 0
-//		break; }
-//	case DSPR_THETABAR:{//damped spring to represent ankle
-//		vecL = new myVector(_p1.initVel,_p1.velocity.peekFirst());
-//		v_l = new myVector(_p2.initPos,_p1.position.peekFirst());
-//		if (vecL.magn > pa.epsVal) {		//spring with damping force
-//			myVector lnorm = myVector._normalize(vecL);//unitlength vector of l
-//			//Eigen::Vector3d lprime = l - (_p1->position[1] - _p2->position[1]);		//lprime - time derivative, subtract old length vector from new length vector ?
-//			double KpTerm = force.constVal * (vecL.magn - d);
-//			double KdTerm = force.constVal2 * (v_l._dot(vecL));
-//			double fp = -1 * (KpTerm + KdTerm);
-//			result[0] = myVector._mult(lnorm,fp);
-//			result[1] = myVector._mult(lnorm, -fp);
-//		}//only add force if magnitude of distance vector is not 0
-//		break; }
-//	default: {	break; }
-//
-//}//switch
-//return result;
 
