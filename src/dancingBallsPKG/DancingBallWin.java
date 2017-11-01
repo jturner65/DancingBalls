@@ -62,24 +62,22 @@ public class DancingBallWin extends myDispWindow {
 			showVertNorms		= 5,
 			showZones			= 6,
 			stimZoneMates		= 7,			
-			fftLogLoaded		= 8,
-			audioLoaded 		= 9,
-			playMP3Vis			= 10,
-			useForcesForBall	= 11, 		//if true use forces to stimulate ball, if false just displace from rest position by level 
-			sendAudioToBall		= 12,
+			playMP3Vis			= 8,
+			useForcesForBall	= 9, 		//if true use forces to stimulate ball, if false just displace from rest position by level 
+			sendAudioToBall		= 10,
 			
-			showZoneBandRes		= 13,		//overlay fft band energy bars on screen for zones
-			showAllBandRes		= 14,		//overlay fft band energy bars on screen for all bands
+			showZoneBandRes		= 11,		//overlay fft band energy bars on screen for zones
+			showAllBandRes		= 12,		//overlay fft band energy bars on screen for all bands
 			
-			useHumanTapBeats	= 15,		//use human tapping for each zone beat, otherwise use detected beats
-			showTapBeats		= 16,		//show tap beats on side of screen
-			stimWithTapBeats	= 17,		//stimulate ball with tap beats, otherwise stimulate with audio
+			useHumanTapBeats	= 13,		//use human tapping for each zone beat, otherwise use detected beats
+			showTapBeats		= 14,		//show tap beats on side of screen
+			stimWithTapBeats	= 15,		//stimulate ball with tap beats, otherwise stimulate with audio
 			
-			showFreqLbls		= 18,		//overlay frequency labels on display of energy bars
-			showPianoNotes		= 19,		//display piano notes being played
-			calcSingleFreq		= 20,		//analyze signal with single frequencies
-			showEachOctave 		= 21; 	
-	public static final int numPrivFlags = 22;
+			showFreqLbls		= 16,		//overlay frequency labels on display of energy bars
+			showPianoNotes		= 17,		//display piano notes being played
+			calcSingleFreq		= 18,		//analyze signal with single frequencies
+			showEachOctave 		= 19; 	
+	public static final int numPrivFlags = 20;
 	
 	//piano display
 	public float whiteKeyWidth = 78, bkModY;				//how long, in pixels, is a white key, blk key is 2/3 as long

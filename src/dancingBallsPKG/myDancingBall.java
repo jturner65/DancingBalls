@@ -61,10 +61,9 @@ public class myDancingBall {
 	
 	//stimulate zones based on zone location - this is per zone array of zone IDs to stimulate
 	public int[][] zonesToStim = new int[][] {
-		{6,7},									//lowest freq - alt between 2 : altZoneMod
-		
+		{6,7},									//lowest freq - alt between 2 : altGroupZoneMod with group size 1		
 		{13,8,9,
-		12,11,10},								//low bass freq - oscillate/wave through 1st half and 2nd half of array simultaneously, from back to front : altZoneMod			
+		12,11,10},								//low bass freq - oscillate/wave through 1st half and 2nd half of array simultaneously, from back to front (in idx order) : 			
 
 		{14,15,16,17,18, 
 		13,12,11,20,19},						//low melody - pair opposite zones front to back, and then back to front : cycleGroupZoneMod
@@ -85,8 +84,12 @@ public class myDancingBall {
 		10,23,24}								//high range high freq - 3 layers, stimulate in groups of 3 (stimulate sets of 3 idxs at a time) : randMultiGroupZoneMod
 		};
 	
-	//record of most recent modifications to each zone's values
-	public int[][] zoneMods;
+	//record of most recent modifications to each zone's values	
+	public myZoneMod[] zoneMods;
+	//per-zone count of beats before zone modification cycles to next zone member
+	public final int[] zmBeatCounts = new int[] {2,4,2,2,2,2};
+	//per zone # of groupings for zone mod handling - each group member at a particular idx is stimulated at the same time
+	public final int[] zmGroupSize = new int[] {1,2,2,1,4,7};
 	
 	public float scaleZVal;//change to make an ellipsoid along z axis - set in init
 	
@@ -214,6 +217,37 @@ public class myDancingBall {
 		}
 		springForce = new mySpringToRest(pa, "Spring To Rest", sprKp, sprKd);
 		
+		zoneMods = new myZoneMod[numZones];
+		zoneMods[0] = new altGroupZoneMod(pa, this, 0, zonesToStim[0], zmBeatCounts[0], zmGroupSize[0]);
+//		zoneMods[1] = new altZoneMod(pa, this, 0, zonesToStim[0],beatCount);
+		
+//		//(DancingBalls _p, myDancingBall _b, int _zt, int[] _zIDXs, int _btc)
+//		//beat count == # of beats before cycling to different zone
+//		int beatCount = 4;
+//		zoneMods[0] = new altZoneMod(pa, this, 0, zonesToStim[0],beatCount);
+//		zoneMods[1] = new altZoneMod(pa, this, 0, zonesToStim[0],beatCount);
+				
+//		{13,8,9,
+//		12,11,10},								//low bass freq - oscillate/wave through 1st half and 2nd half of array simultaneously, from back to front : cycleGroupZoneMod			
+//
+//		{14,15,16,17,18, 
+//		13,12,11,20,19},						//low melody - pair opposite zones front to back, and then back to front : cycleGroupZoneMod
+//		
+//		{12,13,14,15,16,17,18,19,20,21,22,23,24},	//high melody - cycle through entire set in order	: altZoneMod
+//		
+//		{15,14,13,
+//		16,17,18,
+//		22,21,20,
+//		23,24,25},								//low range high freq - stimulate 4 groups simultaneously in order (ignore 12 and 19 to make even)	: cycleGroupZoneMod
+//		
+//		{0,1,2,
+//		4,14,13,
+//		5,15,16,
+//		7,18,19,
+//		11,26,25,
+//		9,21,22,
+//		10,23,24}								//high range high freq - 3 layers, stimulate in groups of 3 (stimulate sets of 3 idxs at a time) : randMultiGroupZoneMod
+		
 		pa.outStr2Scr("Ball Final Init Done");		
 		setFlags(isInitedIDX, true);	
 		win.setBallIsMade(true);
@@ -250,8 +284,8 @@ public class myDancingBall {
 	//stimulate zone focii
 	private void stimulateOneZone(float stimVal, int zoneIDX, int zonePt, boolean stimMates) {
 		//if((flags[isPtsMadeIDX]) && (flags[isZoneMappedIDX])) {
-			zonePoints[zoneIDX][zonePt].stimulateZone(stimVal);
-			if(stimMates) {	zonePoints[zoneIDX][zonePt].mPt.stimulateZone(stimVal);	}
+			zonePoints[zoneIDX][zonePt].stimulateZoneKin(stimVal);
+			if(stimMates) {	zonePoints[zoneIDX][zonePt].mPt.stimulateZoneKin(stimVal);	}
 		//}
 	}//stimulateZone
 	
@@ -270,7 +304,7 @@ public class myDancingBall {
 				int numZones = (i+1)*(i+1);
 				for (int j=0;j<numZones;++j) {
 					int z = (int) (ThreadLocalRandom.current().nextDouble(0,zonePoints[i].length));
-					stimulateOneZone(bandVals[i]*.1f, i,z, true );
+					stimulateOneZone(bandVals[i]*5.0f, i,z, true );
 				}
 			}
 			setFlags(audioValsSetIDX, false);//vals have been processed, clear until new vals have been set
@@ -281,7 +315,7 @@ public class myDancingBall {
 	//excite each zone directly by displacing from rest position by scaled level given in bandVals
 	public void stimBallTapsKine_DBG() {//[zoneIDX]
 		if((beatDetRes[zoneTypIDX]) && (!lastBeatDetRes[zoneTypIDX])) {
-			stimulateOneZone(2.0f, zoneTypIDX, zoneMmbrToShow, false);
+			stimulateOneZone(100.0f, zoneTypIDX, zoneMmbrToShow, false);
 		} else if(lastBeatDetRes[zoneTypIDX]) {
 			resetVertLocs();		//reset ball shape when beat is gone
 		}
@@ -502,9 +536,9 @@ class myZonePoint{
 	}
 
 	//stimulate zone with stim value, scaled for distance from zone point
-	public void stimulateZone(float stim) {
+	public void stimulateZoneKin(float stim) {
 		for(Float key : ngbhd.keySet()) {
-			float stimVal = 50 * stim * (1 - ((key - minDist)*interpDenom));
+			float stimVal = stim * (1 - ((key - minDist)*interpDenom));
 			//System.out.println("for initial stim : " + stim + " and for dist : " + key + " stim val is " + stimVal);
 			ngbhd.get(key).stimulate(stimVal);
 		}	
@@ -519,13 +553,13 @@ class myZonePoint{
 		}			
 	}//stimulateZoneForce	
 	
-	public void applyZoneSpringForce(mySpringToRest frc) {
-		myVectorf[] result;
-		for(myRndrdPart part : ngbhd.values()) {		
-			result = frc.calcForceOnParticle(part, null, 0);//d is 0 because we want to meet rest position exactly
-			part.stimulateFrc(result[0].magn);//applyForce(result[0]);//todo might need to use result[1] if in wrong direction
-		}					
-	}//applyZoneSpringForce	
+//	public void applyZoneSpringForce(mySpringToRest frc) {
+//		myVectorf[] result;
+//		for(myRndrdPart part : ngbhd.values()) {		
+//			result = frc.calcForceOnParticle(part, null, 0);//d is 0 because we want to meet rest position exactly
+//			part.stimulateFrc(result[0].magn);//applyForce(result[0]);//todo might need to use result[1] if in wrong direction
+//		}					
+//	}//applyZoneSpringForce	
 	
 	public void resetZone() {
 		for(myRndrdPart part : ngbhd.values()) {		part.reset();	}

@@ -832,6 +832,7 @@ public class DancingBalls extends PApplet{
 			text(str,0,0,0);		
 		popStyle();	popMatrix();	
 	}//drawText	
+	
 	//save screenshot
 	public void savePic(){		save(screenShotPath + prjNmShrt + ((animCounter < 10) ? "000" : ((animCounter < 100) ? "00" : ((animCounter < 1000) ? "0" : ""))) + animCounter + ".jpg");		animCounter++;		}
 	public void line(double x1, double y1, double z1, double x2, double y2, double z2){line((float)x1,(float)y1,(float)z1,(float)x2,(float)y2,(float)z2 );}
@@ -979,14 +980,8 @@ public class DancingBalls extends PApplet{
 	 * @param rad
 	 * @param thet
 	 * @param phi
-	 * @return x,y,z of coords passed
+	 * @return ara : norm, surface point == x,y,z of coords passed
 	 */
-//	public myVectorf getXYZFromRThetPhi(float rad, float thet, float phi) {
-//		double sinThet = Math.sin(thet);		
-//		myVectorf res = new myVectorf(sinThet * Math.cos(phi), Math.cos(thet), sinThet * Math.sin(phi));
-//		res._mult(rad);	
-//		return res;
-//	}//
 	public myVectorf[] getXYZFromRThetPhi(float rad, float thet, float phi, float scaleZ) {
 		double sinThet = Math.sin(thet);	
 		myVectorf[] res = new myVectorf[2];
@@ -996,10 +991,9 @@ public class DancingBalls extends PApplet{
 	}//
 	
 	/**
-	 * builds a list of N regularly placed vertices for a sphere of radius rad
+	 * builds a list of N regularly placed vertices for a sphere of radius rad centered at 0,0,0
 	 * See How to generate equidistributed points on the surface of a sphere by Markus Deserno
-	 */
-	
+	 */	
 	public myVectorf[][] getRegularSphereList(float rad, int N, float scaleZ) {
 		ArrayList<myVectorf[]> res = new ArrayList<myVectorf[]>();
 		//choose 1 point per dArea, where dArea is area of sphere parsed into N equal portions
@@ -1015,8 +1009,7 @@ public class DancingBalls extends PApplet{
 			}
 		}
 		return res.toArray(new myVectorf[0][]);
-	}//getRegularSphereList
-	
+	}//getRegularSphereList	
 	
 	
 	//find random point on a sphere of radius rad centered at ctr, and norm vector from center to point
@@ -1034,20 +1027,8 @@ public class DancingBalls extends PApplet{
 	//} while (pos.z < 0);
 		return res;
 	}
+
 	
-	
-//	//find random point on a sphere of radius rad centered at ctr
-//	public myVectorf getRandPosOnSphere(double rad, myVectorf ctr){
-//		myVectorf pos = new myVectorf();
-//		//do{
-//		double 	cosTheta = ThreadLocalRandom.current().nextDouble(-1,1), sinTheta =  Math.sin(Math.acos(cosTheta)),
-//				phi = ThreadLocalRandom.current().nextDouble(0,PConstants.TWO_PI);
-//		pos.set(sinTheta * Math.cos(phi), sinTheta * Math.sin(phi),cosTheta);
-//		pos._mult(rad);
-//		pos._add(ctr);
-//	//} while (pos.z < 0);
-//		return pos;
-//	}
 	//very fast mechanism for setting an array of doubles to a specific val - takes advantage of caching
 	public void dAraFill(double[] ara, double val){
 		int len = ara.length;
