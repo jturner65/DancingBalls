@@ -35,8 +35,9 @@ public class DancingBallWin extends myDispWindow {
 		gIDX_minVertNBHD	= 3,
 		gIDX_zoneToShow		= 4,
 		gIDX_zoneMmbrToShow = 5,
-		gIDX_curSong 		= 6,
-		gIDX_winSel 		= 7;
+		gIDX_curSongBank	= 6,
+		gIDX_curSong 		= 7,
+		gIDX_winSel 		= 8;
 	//initial values - need one per object
 	public float[] uiVals = new float[]{
 			deltaT,
@@ -45,7 +46,8 @@ public class DancingBallWin extends myDispWindow {
 			minVInNBD,
 			zoneToShow,
 			zoneMmbrToShow,
-			1,//songIDX, in audMgr
+			0,	//song bank in audMgr
+			1,//songIDX, in audMgr			
 			0//	curWindowIDX in audMgr	
 	};			//values of 8 ui-controlled quantities
 
@@ -56,28 +58,27 @@ public class DancingBallWin extends myDispWindow {
 	public static final int 
 			debugAnimIDX 		= 0,						//debug
 			modDelT				= 1,			//whether to modify delT based on frame rate or keep it fixed (to fight lag)
-			usePianoNoteFiles   = 2,			//use piano notes instead of songs as audio source
-			randVertsForSphere	= 3,
-			ballIsMade			= 4,
-			showVertNorms		= 5,
-			showZones			= 6,
-			stimZoneMates		= 7,			
-			playMP3Vis			= 8,
-			useForcesForBall	= 9, 		//if true use forces to stimulate ball, if false just displace from rest position by level 
-			sendAudioToBall		= 10,
+			randVertsForSphere	= 2,
+			ballIsMade			= 3,
+			showVertNorms		= 4,
+			showZones			= 5,
+			stimZoneMates		= 6,			
+			playMP3Vis			= 7,
+			useForcesForBall	= 8, 		//if true use forces to stimulate ball, if false just displace from rest position by level 
+			sendAudioToBall		= 9,
 			
-			showZoneBandRes		= 11,		//overlay fft band energy bars on screen for zones
-			showAllBandRes		= 12,		//overlay fft band energy bars on screen for all bands
+			showZoneBandRes		= 10,		//overlay fft band energy bars on screen for zones
+			showAllBandRes		= 11,		//overlay fft band energy bars on screen for all bands
 			
-			useHumanTapBeats	= 13,		//use human tapping for each zone beat, otherwise use detected beats
-			showTapBeats		= 14,		//show tap beats on side of screen
-			stimWithTapBeats	= 15,		//stimulate ball with tap beats, otherwise stimulate with audio
+			useHumanTapBeats	= 12,		//use human tapping for each zone beat, otherwise use detected beats
+			showTapBeats		= 13,		//show tap beats on side of screen
+			stimWithTapBeats	= 14,		//stimulate ball with tap beats, otherwise stimulate with audio
 			
-			showFreqLbls		= 16,		//overlay frequency labels on display of energy bars
-			showPianoNotes		= 17,		//display piano notes being played
-			calcSingleFreq		= 18,		//analyze signal with single frequencies
-			showEachOctave 		= 19; 	
-	public static final int numPrivFlags = 20;
+			showFreqLbls		= 15,		//overlay frequency labels on display of energy bars
+			showPianoNotes		= 16,		//display piano notes being played
+			calcSingleFreq		= 17,		//analyze signal with single frequencies
+			showEachOctave 		= 18; 	
+	public static final int numPrivFlags = 19;
 	
 	//piano display
 	public float whiteKeyWidth = 78, bkModY;				//how long, in pixels, is a white key, blk key is 2/3 as long
@@ -86,10 +87,11 @@ public class DancingBallWin extends myDispWindow {
 	
 	//offset to bottom of custom window menu 
 	private float custMenuOffset;
-	//list of piano clip names
-	public String[] pianoNoteList = new String[] {"ff-029","ff-030","ff-031","ff-050","ff-051","ff-052","ff-053","ff-054"};
+	//list of song banks - use to pick either songs or piano notes
+	public String[] songBanks = new String[] {"Songs", "Piano Notes"};
 	//list of song names
-	public String[] songList = new String[]{"Sati","PurpleHaze","UNATCO","Karelia","Choir"};
+	public String[][] songList = new String[][]{{"Sati","PurpleHaze","UNATCO","Karelia","Choir"},
+												{"ff-029","ff-030","ff-031","ff-050","ff-051","ff-052","ff-053","ff-054"}};
 	//display names of fft windows
 	public String[] windowNames = new String[]{"NONE","BARTLETT","BARTLETTHANN","BLACKMAN","COSINE","GAUSS","HAMMING","HANN","LANCZOS","TRIANGULAR"};
 	
@@ -116,19 +118,19 @@ public class DancingBallWin extends myDispWindow {
 	public void initAllPrivBtns(){
 		truePrivFlagNames = new String[]{								//needs to be in order of privModFlgIdxs
 				"Debugging","Mod DelT By FRate","Random Ball Verts","Showing Vert Norms","Showing Zones", 
-				"Stim Zone and Mate", "Playing MP3","Use Piano Note files","Mass-Spring Ball", "Dancing", 
+				"Stim Zone and Mate", "Playing MP3","Mass-Spring Ball", "Dancing", 
 				"Stim Ball W/Beats","Showing Beats","Use Human Tap Beats", 
 				"Showing Ctr Freq Vals","Showing Zone EQ", "Showing All Band Eq","Showing Piano","Showing Per Thd Note","Note Lvls w/Indiv F"	
 		};
 		falsePrivFlagNames = new String[]{			//needs to be in order of flags
 				"Enable Debug","Fixed DelT","Uniform Ball Verts","Hiding Vert Norms", "Hiding Zones",
-				"Stim Only Zones","Stopped MP3","Use Song Files","Kinematics Ball","Not Dancing", 
+				"Stim Only Zones","Stopped MP3","Kinematics Ball","Not Dancing", 
 				"Stim Ball W/Audio","Hiding Beats","Use Detected Beats",  
 				"Hiding Ctr Freq Vals", "Hiding Zone EQ", "Hiding All Band Eq", "Hiding Piano","Showing One Note", "Note Lvls w/FFT"
 		};
 		privModFlgIdxs = new int[]{
 				debugAnimIDX, modDelT,randVertsForSphere,showVertNorms,showZones,
-				stimZoneMates,playMP3Vis, usePianoNoteFiles, useForcesForBall, sendAudioToBall,  
+				stimZoneMates,playMP3Vis, useForcesForBall, sendAudioToBall,  
 				stimWithTapBeats, showTapBeats, useHumanTapBeats, 
 				showFreqLbls, showZoneBandRes, showAllBandRes, showPianoNotes,showEachOctave, calcSingleFreq
 		};
@@ -196,16 +198,16 @@ public class DancingBallWin extends myDispWindow {
 				if(val) {	audMgr.startAudio();}
 				else {		audMgr.pauseAudio();}
 				break;}
-			case usePianoNoteFiles 		: {//change display to be list of piano note files
-				setPrivFlags(playMP3Vis,false);//turn off playing
-				if (val) {//use piano notes files
-					guiObjs[gIDX_curSong].setNewMax(pianoNoteList.length-1);
-					audMgr.songIDX %= pianoNoteList.length;
-				} else {//use song files
-					guiObjs[gIDX_curSong].setNewMax(songList.length-1);			
-					audMgr.songIDX %= songList.length;
-				}				
-				break;}
+//			case usePianoNoteFiles 		: {//change display to be list of piano note files
+//				setPrivFlags(playMP3Vis,false);//turn off playing
+//				if (val) {//use piano notes files
+//					guiObjs[gIDX_curSong].setNewMax(pianoNoteList.length-1);
+//					audMgr.songIDX %= pianoNoteList.length;
+//				} else {//use song files
+//					guiObjs[gIDX_curSong].setNewMax(songList.length-1);			
+//					audMgr.songIDX %= songList.length;
+//				}				
+//				break;}
 			case sendAudioToBall 		: {break;}
 			case useForcesForBall		: {break;}
 			case showZoneBandRes: {
@@ -233,7 +235,8 @@ public class DancingBallWin extends myDispWindow {
 			{5, 100, 5},				//min neighborhood size fraction of number of verts			
 			{0,numZones-1,1},				//zone to show if showing zones on sphere
 			{0,10000,1},					//zone member to show if showing zones on sphere (% list size, so can be huge)
-			{0.0, songList.length-1, 0.1},	//song/clip selected
+			{0.0, songBanks.length-1, 0.1},	//song bank selected
+			{0.0, songList[(int)uiVals[gIDX_curSongBank]].length-1, 0.1},	//song/clip selected - start with initial bank
 			{0.0, windowNames.length-1, 1.0},	//window function selected
 		};		//min max mod values for each modifiable UI comp	
 
@@ -244,6 +247,7 @@ public class DancingBallWin extends myDispWindow {
 			uiVals[gIDX_minVertNBHD],
 			uiVals[gIDX_zoneToShow],
 			uiVals[gIDX_zoneMmbrToShow],
+			uiVals[gIDX_curSongBank],
 			uiVals[gIDX_curSong],
 			uiVals[gIDX_winSel]
 		};								//starting value
@@ -255,7 +259,8 @@ public class DancingBallWin extends myDispWindow {
 				"Min Ratio # Verts in NBHD",
 				"Zone to show on Sphere",
 				"Zone Member to Show",
-				"MP3 Song",
+				"Song Bank",
+				"MP3 Clip",
 				"FFT Window func"
 		};								//name/label of component	
 		
@@ -267,6 +272,7 @@ public class DancingBallWin extends myDispWindow {
 			{true, false, true},
 			{true, false, true},
 			{true, false, true},
+			{true, true, true},
 			{true, true, true},
 			{true, true, true}
 		};						//per-object  list of boolean flags
@@ -324,8 +330,21 @@ public class DancingBallWin extends myDispWindow {
 				//reset UI display value to be zoneMmbrToShow
 				guiObjs[UIidx].setVal(zoneMmbrToShow);
 				break;}
+			case gIDX_curSongBank : {
+				//change banks - stop music
+				setPrivFlags(playMP3Vis,false);//turn off playing
+				uiVals[UIidx] = val % songList.length;
+				//change current song idx value to be legal within song list for this bank
+				uiVals[gIDX_curSong] %= songList[(int)uiVals[UIidx]].length;
+				//change song list dropdown max to be this bank's song list length-1
+				guiObjs[gIDX_curSong].setNewMax(songList[(int)uiVals[UIidx]].length-1);
+
+				audMgr.changeCurrentSong((int)uiVals[UIidx],(int)uiVals[gIDX_curSong]);
+				ball.resetVertLocs();	
+				break;
+			}
 			case gIDX_curSong 	: {
-				audMgr.changeCurrentSong((int)val);
+				audMgr.changeCurrentSong((int)uiVals[gIDX_curSongBank],(int)uiVals[gIDX_curSong]);//changeCurrentSong((int)val);
 				ball.resetVertLocs();
 				break;}
 			case gIDX_winSel		: {
@@ -339,10 +358,12 @@ public class DancingBallWin extends myDispWindow {
 	@Override
 	protected String getUIListValStr(int UIidx, int validx) {
 		switch(UIidx){
-			case gIDX_curSong : {return 
-					getPrivFlags(this.usePianoNoteFiles) ? 
-							pianoNoteList[(validx % pianoNoteList.length)] :	
-							songList[(validx % songList.length)]; }
+			case gIDX_curSongBank :{ return songBanks[validx %songBanks.length];}
+			case gIDX_curSong : {return songList[(int)uiVals[gIDX_curSongBank]][validx];}
+					
+//					getPrivFlags(this.usePianoNoteFiles) ? 
+//							pianoNoteList[(validx % pianoNoteList.length)] :	
+//							songList[(validx % songList.length)]; }
 			case gIDX_winSel  : {return windowNames[(validx % windowNames.length)]; }
 			default : {break;}
 		}
@@ -428,17 +449,18 @@ public class DancingBallWin extends myDispWindow {
 	private void setBallSimulateVals() {
 		//need to pre-calculate per-zone beat frequencies that we want to use to excite zones
 		float[] zoneFreqs = new float[numZones];
-		//TODO determine per-zone spring constants
+		//TODO determine per-zone spring constants by using beat frequency in each zone (evolving)
 		//1.1254 as zonefreq gives ks=50 in ball
+		myBeat[] beats = audMgr.getBeats();
 		for(int i=0;i<numZones;++i) {
-			//TODO change this to be based on beat frequency
-			zoneFreqs[i] = 1.1254f;
+			float btFreq = beats[i].getBeatFreq();
+			zoneFreqs[i] = (btFreq <= 0 ? 1.1254f : btFreq);//this value results in 50 ks
 		}//
+		//set ball zone spring constants TODO use beat frequencies
+		ball.setZoneKs(zoneFreqs);
 		
 		//set all required values for ball stimulation
 		ball.setBallSimVals(zoneToShow,zoneMmbrToShow,audMgr.beatDetRes,audMgr.lastBeatDetRes);		
-		//set ball zone spring constants TODO use beat frequencies
-		ball.setZoneKs(zoneFreqs);
 	}//setBallSimulateVals
 	
 	@Override

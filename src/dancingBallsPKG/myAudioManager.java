@@ -27,14 +27,14 @@ public class myAudioManager {
 	//handled sample rates based on songs loaded - put sample rates in keys
 	public ConcurrentSkipListMap<Float, Integer> sampleRates;
 
-	//current song index
-	public int songIDX = 1;
+	//current song index and songBank (bank corresponds to songs or piano samples)
+	public int songIDX = 1, songBank = 0;
 	
 //	//minim audio-related variables
 	//holds results from analysis - magnitude key, value is index of note with max level within min/max note bounds
-	public ConcurrentSkipListMap<Float, Integer> levelsPerPianoKeyFund;
+	public ConcurrentSkipListMap<Float, Integer> lvlsPerPKeyFundFFT;
 	//result from analyzing 1st 8 frequencies of harmonic series for each piano note
-	public ConcurrentSkipListMap<Float, Integer> levelsPerPKeySingleCalc;
+	public ConcurrentSkipListMap<Float, Integer> lvlsPerPKeyDFTCalc;
 	//results from analysis in the bass, mid and trbl ranges (4 octaves, 3 octaves, 3 octaves
 	public ConcurrentSkipListMap<Float, Integer> bassLvlsPerKey,midLvlsPerKey,trblLvlsPerKey;	
 	
@@ -52,12 +52,17 @@ public class myAudioManager {
 	public List<myDFTNoteMapper> callDFTNoteMapper;
 	public List<Future<Boolean>> callDFTMapperFtrs;
 	
-	public myMP3SongHandler[] pianoClips;
-	public String[] pianoNoteFilenames = new String[] {
-			"piano-ff-029.wav","piano-ff-030.wav","piano-ff-031.wav","piano-ff-050.wav",
-			"piano-ff-051.wav","piano-ff-052.wav","piano-ff-053.wav","piano-ff-054.wav"};
-	public myMP3SongHandler[] songs;
-	public String[] songFilenames = new String[]{"sati.mp3","PurpleHaze.mp3","UNATCO.mp3","karelia.mp3","choir.mp3"};	
+//	public myMP3SongHandler[] pianoClips;
+//	public String[] pianoNoteFilenames = new String[] {
+//			"piano-ff-029.wav","piano-ff-030.wav","piano-ff-031.wav","piano-ff-050.wav",
+//			"piano-ff-051.wav","piano-ff-052.wav","piano-ff-053.wav","piano-ff-054.wav"};
+	public myMP3SongHandler[][] songs;
+	public String[][] songFilenames = new String[][]{{"sati.mp3","PurpleHaze.mp3","UNATCO.mp3","karelia.mp3","choir.mp3"},
+		{"piano-ff-029.wav","piano-ff-030.wav","piano-ff-031.wav","piano-ff-050.wav",
+		"piano-ff-051.wav","piano-ff-052.wav","piano-ff-053.wav","piano-ff-054.wav"}
+	};	
+
+	
 	//current index of fft windowing function, from ui
 	public int curWindowIDX = 0;	
 	public WindowFunction[] windowList = new WindowFunction[]{FFT.NONE, FFT.BARTLETT, FFT.BARTLETTHANN, FFT.BLACKMAN, FFT.COSINE, FFT.GAUSS, FFT.HAMMING, FFT.HANN, FFT.LANCZOS, FFT.TRIANGULAR};
@@ -72,8 +77,8 @@ public class myAudioManager {
 	
 	private void initMe() {
 		initFlags();
-		songs = new myMP3SongHandler[songFilenames.length];
-		pianoClips = new myMP3SongHandler[pianoNoteFilenames.length];
+		songs = new myMP3SongHandler[win.songBanks.length][];
+		//pianoClips = new myMP3SongHandler[pianoNoteFilenames.length];
 		//init piano freqs
 		//ConcurrentSkipListMap<Float, Integer> allFreqsUsed = 
 		dispPiano.initPianoFreqs();
@@ -109,37 +114,54 @@ public class myAudioManager {
 		//beat holding array
 		tapBeats = new myBeat[numZones];
 		audioBeats = new myBeat[numZones];
-		for(int i=0;i<numZones; ++i) {	tapBeats[i] = new myBeat(pa,i);	audioBeats[i] = new myBeat(pa,i);	}		
+		int stTime = pa.millis();
+		for(int i=0;i<numZones; ++i) {	tapBeats[i] = new myBeat(pa,i,stTime);	audioBeats[i] = new myBeat(pa,i,stTime);	}		
 	}//initTapBeatStructs
 	
 	//either returns current song or current piano clip
-	protected myMP3SongHandler getCurrentClip(int idx) {
-		if (win.getPrivFlags(DancingBallWin.usePianoNoteFiles)) {return pianoClips[idx];} else {return songs[idx];}		
+	protected myMP3SongHandler getCurrentClip(int bankIdx, int songIdx) {
+		return songs[bankIdx][songIdx];
+		//if (win.getPrivFlags(DancingBallWin.usePianoNoteFiles)) {return pianoClips[idx];} else {return songs[idx];}		
 	}
 	
 	protected void setFFTVals() {
-		if (getFlags(fftLoadedIDX)){
-			for(int i=0;i<songs.length;++i){songs[i].setFFTVals(windowList[curWindowIDX], fftMinBandwidth, fftBandsPerOctave, numZones);}	
-			for(int i=0;i<pianoClips.length;++i){	pianoClips[i].setFFTVals(windowList[curWindowIDX], fftMinBandwidth, fftBandsPerOctave, numZones);}				
+		for(int b=0;b<win.songBanks.length;++b) {
+			for(int i=0;i<songs[b].length;++i){songs[b][i].setFFTVals(windowList[curWindowIDX], fftMinBandwidth, fftBandsPerOctave, numZones);}
 		}
 		
+//		for(int i=0;i<songs.length;++i){songs[i].setFFTVals(windowList[curWindowIDX], fftMinBandwidth, fftBandsPerOctave, numZones);}	
+//		for(int i=0;i<pianoClips.length;++i){	pianoClips[i].setFFTVals(windowList[curWindowIDX], fftMinBandwidth, fftBandsPerOctave, numZones);}				
 	}//setFFTVals
 	
 	protected void loadSongsAndFFT() {
 		sampleRates = new ConcurrentSkipListMap<Float, Integer>();//hold only sample rates that we have seen
-		for(int i=0;i<songs.length;++i){	songs[i] = new myMP3SongHandler(pa.minim, songFilenames[i], win.songList[i], songBufSize);	sampleRates.put(songs[i].playMe.sampleRate(), 1);}		
-		for(int i=0;i<pianoClips.length;++i){	pianoClips[i] = new myMP3SongHandler(pa.minim, pianoNoteFilenames[i], win.pianoNoteList[i], songBufSize);	sampleRates.put(pianoClips[i].playMe.sampleRate(), 1);}		
+		for(int b=0;b<win.songBanks.length;++b) {
+			myMP3SongHandler[] tmpSongs = new myMP3SongHandler[songFilenames[b].length];
+			for(int i=0;i<songFilenames[b].length;++i){	
+				tmpSongs[i]= new myMP3SongHandler(pa.minim, 
+					songFilenames[b][i], 
+					win.songList[b][i], 
+					songBufSize);	
+				sampleRates.put(tmpSongs[i].playMe.sampleRate(), 1);}		
+			songs[b] = tmpSongs;
+		}
+//		for(int i=0;i<songs.length;++i){	songs[i] = new myMP3SongHandler(pa.minim, songFilenames[i], win.songList[i], songBufSize);	sampleRates.put(songs[i].playMe.sampleRate(), 1);}		
+//		for(int i=0;i<pianoClips.length;++i){	pianoClips[i] = new myMP3SongHandler(pa.minim, pianoNoteFilenames[i], win.pianoNoteList[i], songBufSize);	sampleRates.put(pianoClips[i].playMe.sampleRate(), 1);}		
 		setFlags(audioLoadedIDX,true);
 		setFlags(fftLoadedIDX, true);
 		setFFTVals();
 	}//loadSongList() 
 	
-
-	public void changeCurrentSong(int newSongIDX){
-		this.getCurrentClip(songIDX).pause();
+//	public void changeCurrentBankAndSong(int newSongBank, int newSongIdx) {		
+//		changeCurrentSong(newSongBank, newSongIdx);
+//	}
+//	public void changeCurrentSong(int newSongIDX){changeCurrentSong(songBank, newSongIDX);}
+	public void changeCurrentSong(int newSongBank, int newSongIDX){
+		this.getCurrentClip(songBank, songIDX).pause();//pause current song
 		//ball.resetVertLocs();
-		songIDX = newSongIDX;
-		if(win.getPrivFlags(DancingBallWin.playMP3Vis)){this.getCurrentClip(songIDX).play();}
+		songBank = (newSongBank % songs.length);
+		songIDX = (newSongIDX % songs[songBank].length);
+		if(win.getPrivFlags(DancingBallWin.playMP3Vis)){this.getCurrentClip(songBank,songIDX).play();}
 	}//changeCurrentSong
 	public void changeCurrentWindowfunc(int newWinFuncIDX) {
 		curWindowIDX = newWinFuncIDX;
@@ -150,7 +172,7 @@ public class myAudioManager {
 	public void startAudio(){
 		if(!getFlags(audioLoadedIDX)){loadSongsAndFFT();}//load songs if not loaded already
 		//pa.outStr2Scr("Song in buffer : " + songTitles[songIDX] + " size: " +  songs[songIDX].bufferSize() + " Sample rate : "+ songs[songIDX].sampleRate());
-		this.getCurrentClip(songIDX).play();
+		this.getCurrentClip(songBank,songIDX).play();
 		//send frequencies from fft 
 //		if((!privFlags[oceanMadeIDX]) || (null == ball) || (!fftOcean.cudaFlags[fftOcean.doneInit])){return;}
 		//ball.setFreqVals(blankRes1, blankRes2,blankBands);			
@@ -165,15 +187,11 @@ public class myAudioManager {
 	}
 	//stop all clips from playing
 	protected void stopAllPlaying() {
-		for(int i=0;i<songs.length;++i){	songs[i].pause();	}		
-		for(int i=0;i<pianoClips.length;++i){	pianoClips[i].pause();	}				
+		for(int b=0;b<songs.length;++b){for(int i=0;i<songs[b].length;++i){	songs[b][i].pause();	}	}	
+		//for(int i=0;i<pianoClips.length;++i){	pianoClips[i].pause();	}				
 	}
 	//rewind current song
-	public void rewindSong() {
-		if(win.getPrivFlags(DancingBallWin.playMP3Vis)){
-			this.getCurrentClip(songIDX).rewind();
-		}		
-	}
+	public void rewindSong() {if(win.getPrivFlags(DancingBallWin.playMP3Vis)){this.getCurrentClip(songBank,songIDX).rewind();}}
 	
 	public ConcurrentSkipListMap<Float, Integer> buildDescMap(){
 		return new ConcurrentSkipListMap<Float, Integer>(new Comparator<Float>() { @Override public int compare(Float o1, Float o2) {   return o2.compareTo(o1);}});
@@ -194,7 +212,7 @@ public class myAudioManager {
 			if(endIdx > dispPiano.pianoFreqsHarmonics.length - 1) {endIdx = dispPiano.pianoFreqsHarmonics.length-1;}
 		}
 		pa.outStr2Scr("DFT Threads configured.");
-		levelsPerPKeySingleCalc = buildDescMap();
+		lvlsPerPKeyDFTCalc = buildDescMap();
 		bassLvlsPerKey = buildDescMap();
 		midLvlsPerKey = buildDescMap();
 		trblLvlsPerKey = buildDescMap();
@@ -209,26 +227,25 @@ public class myAudioManager {
 		//threads 0-3 are bass range
 		//4-6 are mid range
 		//7-9 are treble range.  perhaps use these to calculate zone behavior?
-		levelsPerPKeySingleCalc.clear();
+		lvlsPerPKeyDFTCalc.clear();
 		
-		for(int i=0;i<4;++i) {callDFTNoteMapper.get(i).setPerRunValues(sampleRate, _buffer,levelsPerPKeySingleCalc, bassLvlsPerKey);}
-		for(int i=4;i<7;++i) {callDFTNoteMapper.get(i).setPerRunValues(sampleRate, _buffer, levelsPerPKeySingleCalc, midLvlsPerKey);}
-		for(int i=7;i<10;++i) {callDFTNoteMapper.get(i).setPerRunValues(sampleRate, _buffer, levelsPerPKeySingleCalc, trblLvlsPerKey);}
+		for(int i=0;i<4;++i) {callDFTNoteMapper.get(i).setPerRunValues(sampleRate, _buffer,lvlsPerPKeyDFTCalc, bassLvlsPerKey);}
+		for(int i=4;i<7;++i) {callDFTNoteMapper.get(i).setPerRunValues(sampleRate, _buffer, lvlsPerPKeyDFTCalc, midLvlsPerKey);}
+		for(int i=7;i<10;++i) {callDFTNoteMapper.get(i).setPerRunValues(sampleRate, _buffer, lvlsPerPKeyDFTCalc, trblLvlsPerKey);}
 		
 		//for (myDFTNoteMapper mapper : callDFTNoteMapper) {mapper.setPerRunValues(sampleRate, _buffer, lclCosTbl, lclSinTbl);}
 	}//setPerRunRes
 	//set process audio for each frame
 	public boolean processAudioData(float animTimeMod) {
 		boolean updateBall = false;
-		myMP3SongHandler song = this.getCurrentClip(songIDX);
+		myMP3SongHandler song = this.getCurrentClip(songBank,songIDX);
 		//songs[songIDX].fftFwdOnAudio();
 		song.fftFwdOnAudio();
 		float[][] res ;
 		//artifact from jcuda implementation
-//		res = songs[songIDX].fftSpectrumFromAudio(); // real and imaginary components of frequency from sample window
 //		res = song.fftSpectrumFromAudio(); // real and imaginary components of frequency from sample window
-		//all bands
-		//only perform if showing zone bands or ball is receiving audio
+		//all zones - only perform if showing zone bands or ball is receiving audio, allowing for ball to receive stim from human tap beats TODO
+		//get zone audio
 		if(win.getPrivFlags(DancingBallWin.stimWithTapBeats) || win.getPrivFlags(DancingBallWin.showZoneBandRes) 
 				|| win.getPrivFlags(DancingBallWin.sendAudioToBall) || (win.getPrivFlags(DancingBallWin.showTapBeats) && !win.getPrivFlags(DancingBallWin.useHumanTapBeats) )) {
 			res = song.fftFwdNumBandsFromAudio();
@@ -240,26 +257,27 @@ public class myAudioManager {
 		}
 		//only perform if showing all bands eq
 		if(win.getPrivFlags(DancingBallWin.showAllBandRes)) {
-			//res = songs[songIDX].fftFwdBandsFromAudio();
 			res = song.fftFwdBandsFromAudio();
 			allBandsRes = res[0];
 			allBandFreqs = res[1];		
 		}		
-		//analyze frequencies of center notes of piano manually
+		//analyze frequencies of center notes of piano manually using DFT approx
 		if(win.getPrivFlags(DancingBallWin.calcSingleFreq)) {			
 			setPerRunRes(song.playMe.sampleRate(),song.playMe.mix.toArray());	//send updates to dftAnalyzer		
 			try {callDFTMapperFtrs = pa.th_exec.invokeAll(callDFTNoteMapper);for(Future<Boolean> f: callDFTMapperFtrs) { f.get(); }} catch (Exception e) { e.printStackTrace(); }			
 		}		
-		if(win.getPrivFlags(DancingBallWin.showPianoNotes)) {levelsPerPianoKeyFund = song.fftFwdFreqLevelsInHarmonicBands(dispPiano.pianoMinFreqsHarmonics);}
+		if(win.getPrivFlags(DancingBallWin.showPianoNotes)) {lvlsPerPKeyFundFFT = song.fftFwdFreqLevelsInHarmonicBands(dispPiano.pianoMinFreqsHarmonics);}
 		//if we're showing beat detected and we're not using human tapped beats
-		if (win.getPrivFlags(DancingBallWin.showTapBeats) || win.getPrivFlags(DancingBallWin.stimWithTapBeats)){
+		if (win.getPrivFlags(DancingBallWin.showTapBeats) || win.getPrivFlags(DancingBallWin.stimWithTapBeats)|| win.getPrivFlags(DancingBallWin.sendAudioToBall)){
 			for (int i =0;i<lastBeatDetRes.length;++i) {lastBeatDetRes[i] = beatDetRes[i];}
-			if (!win.getPrivFlags(DancingBallWin.useHumanTapBeats)) {
-				beatDetRes = songs[songIDX].beatDetectZones();
-				for (int i =0;i<beatDetRes.length;++i) {if(beatDetRes[i]) {	audioBeats[i].addTap(pa.millis()); }		}//not properly measuring beat frequency - need to filter beats
+			float animMillis = animTimeMod*1000;
+			if (!win.getPrivFlags(DancingBallWin.useHumanTapBeats)) {//
+				//true /false beat exists for all zones
+				beatDetRes = song.beatDetectZones();
+				//only add initial hit of beat as beat
+				for (int i =0;i<beatDetRes.length;++i) {if((beatDetRes[i]) && (!lastBeatDetRes[i])) {	audioBeats[i].addTap(pa.millis()); }		}
 			} else {//copy finger tap beats here
 				//pa.outStr2Scr("copy tapbeats");
-				float animMillis = animTimeMod*1000;
 				for (int i =0;i<tapBeats.length;++i) {	
 					tapBeats[i].simBeat(animMillis);
 					beatDetRes[i]=tapBeats[i].beatIsOn;	
@@ -345,7 +363,7 @@ public class myAudioManager {
 //	}//drawTapBeats()
 	
 	//display beats detected in music
-	private void drawDetectedBeats(boolean[] beatState, boolean[] lastBeatState, float modAmtMillis, float height) {
+	private void drawDetectedBeats(boolean[] beatState, boolean[] lastBeatState, myBeat[] beats, float height) {
 		float rad = height/2.0f;
 		pa.pushMatrix();pa.pushStyle();
 		pa.noStroke();
@@ -356,20 +374,22 @@ public class myAudioManager {
 			if (beatState[i]){	clr = pa.gui_Green; }
 			else if (lastBeatState[i]) {clr = pa.gui_Red;}
 			else {		clr=pa.gui_Gray;}//show beat on and determine if it should be turned off			
-			pa.show(myPointf.ZEROPT,height, clr, clr, true);
+			//pa.show(myPointf.ZEROPT,height, clr, clr, true);
+			pa.showFlat(myPointf.ZEROPT,height, clr, clr,pa.gui_White,String.format("%.4f", beats[i].getBeatFreq()));
 			pa.translate(0,transY);
 		}
 		pa.popStyle();pa.popMatrix();	
 	}//drawDetectedBeats	
 	
+	public myBeat[] getBeats() {	return win.getPrivFlags(DancingBallWin.useHumanTapBeats) ? tapBeats : audioBeats;}
 	public void drawScreenData(float modAmtMillis) {
 		pa.hint(PConstants.DISABLE_DEPTH_TEST);
 		float bandResHeight = 10.0f;
 		boolean showBeats = win.getPrivFlags(DancingBallWin.showTapBeats);
 		if(win.getPrivFlags(DancingBallWin.showPianoNotes)) {
 			dispPiano.drawMe();	
-			if(win.getPrivFlags(DancingBallWin.calcSingleFreq) ) {
-				if(!win.getPrivFlags(DancingBallWin.showAllBandRes)) {dispPiano.drawPianoBandRes( levelsPerPKeySingleCalc);}
+			if(win.getPrivFlags(DancingBallWin.calcSingleFreq) ) {//use single frequency DFT mechanism
+				if(!win.getPrivFlags(DancingBallWin.showAllBandRes)) {dispPiano.drawPianoBandRes( lvlsPerPKeyDFTCalc);}
 				if(win.getPrivFlags(DancingBallWin.showEachOctave)) {
 					float bandThresh = 5.0f;//TODO set this to something to shut down multi-thread results that are very low
 					//threads 0-3 are bass range
@@ -378,12 +398,11 @@ public class myAudioManager {
 					dispPiano.drawPlayedNote(bassLvlsPerKey, bandThresh, 3, 2);
 					dispPiano.drawPlayedNote(midLvlsPerKey, bandThresh, 4, 2);
 					dispPiano.drawPlayedNote(trblLvlsPerKey, bandThresh, 5, 2);
-				} else {					dispPiano.drawPlayedNote(levelsPerPianoKeyFund, 0, pa.gui_Green, 3);	}
-			} else {
-				if(!win.getPrivFlags(DancingBallWin.showAllBandRes)) {dispPiano.drawPianoBandRes(levelsPerPianoKeyFund);}
-				dispPiano.drawPlayedNote(levelsPerPianoKeyFund, 0 ,pa.gui_Green, 3);
+				} else {					dispPiano.drawPlayedNote(lvlsPerPKeyDFTCalc, 0, pa.gui_Green, 3);	}//draw results 
+			} else {//use FFT mechanism
+				if(!win.getPrivFlags(DancingBallWin.showAllBandRes)) {dispPiano.drawPianoBandRes(lvlsPerPKeyFundFFT);}
+				dispPiano.drawPlayedNote(lvlsPerPKeyFundFFT, 0 ,pa.gui_Green, 3);
 			}
-			if(!win.getPrivFlags(DancingBallWin.showAllBandRes)) {dispPiano.drawPianoBandRes(win.getPrivFlags(DancingBallWin.calcSingleFreq) ? levelsPerPKeySingleCalc : levelsPerPianoKeyFund);}
 		}		
 		if (win.getPrivFlags(DancingBallWin.showAllBandRes)) {//if showing all bands, displace by piano keys' width
 			if(win.getPrivFlags(DancingBallWin.showPianoNotes)) {	//move over for piano				
@@ -394,9 +413,13 @@ public class myAudioManager {
 		}
 		else if(win.getPrivFlags(DancingBallWin.showZoneBandRes)) {drawFreqBands(bandRes, bandFreqs, bandResHeight, pa.gui_Blue, showBeats, win.getPrivFlags(DancingBallWin.showFreqLbls));}
 		if(showBeats) {
-//			if(win.getPrivFlags(DancingBallWin.useHumanTapBeats)) {	drawBeats(tapBeats,modAmtMillis, bandResHeight);}//using human-entered tap beats 
+			drawDetectedBeats(beatDetRes, lastBeatDetRes, getBeats(),  bandResHeight);
+//			
+//			if(win.getPrivFlags(DancingBallWin.useHumanTapBeats)) {	
+//				drawDetectedBeats(beatDetRes, lastBeatDetRes, getBeats(),  bandResHeight);}
+//				//drawBeats(tapBeats,modAmtMillis, bandResHeight);}//using human-entered tap beats 
 //			else {								
-				drawDetectedBeats(beatDetRes, lastBeatDetRes, modAmtMillis, bandResHeight);
+//				drawDetectedBeats(beatDetRes, lastBeatDetRes, audioBeats,  bandResHeight);
 //			}//using music-generated beats
 		}
 		if(win.getPrivFlags(DancingBallWin.showAllBandRes) && win.getPrivFlags(DancingBallWin.showPianoNotes)) {	pa.popStyle();pa.popMatrix();	}		//undo piano translation		
@@ -498,13 +521,10 @@ class myMP3SongHandler{
 		
 		
 	}
-	
-	
 	//call every frame before any fft analysis - steps fft forward over a single batch of samples
 	public void fftFwdOnAudio() {fft.forward( playMe.mix ); }
 //	//call to get data for fft display - call before any fft analysis
-//	public float[][] fftSpectrumFromAudio() {	return new float[][] {fft.getSpectrumReal(), fft.getSpectrumImaginary()};}
-	
+//	public float[][] fftSpectrumFromAudio() {	return new float[][] {fft.getSpectrumReal(), fft.getSpectrumImaginary()};}	
 	//get levels of all bands in spectrum
 	public float[][] fftFwdBandsFromAudio() {
 		int specSize = fft.specSize();	//should be songBufSize / 2 + 1 : approx 512 bands
@@ -553,10 +573,8 @@ class myMP3SongHandler{
 		}		
 		return res;
 	}//fftFwdFreqLevelsInBands
-
 	
-	//beat detect based on minim library implementation
-	//detect beats in each predefined zone
+	//beat detect based on minim library implementation-detect beats in each predefined zone
 	public void beatDetect(float[] avgs) {
 		float instant, E, V, C, diff, dAvg, diff2;
 		long now = System.currentTimeMillis();
@@ -600,9 +618,7 @@ class myMP3SongHandler{
 	//check this to see if beat has been detected
 	public boolean[] beatDetectZones() {
 		boolean[] retVal = new boolean[fIsOnset.length];
-		for(int i=0;i<fIsOnset.length;++i) {
-			retVal[i]=fIsOnset[i];
-		}
+		for(int i=0;i<fIsOnset.length;++i) {retVal[i]=fIsOnset[i];}
 		return retVal;
 	}
 	
@@ -664,10 +680,11 @@ class myBeat{
 	public boolean ready, beatIsOn;
 	//
 	
-	public myBeat(DancingBalls _p, int _type) {
+	public myBeat(DancingBalls _p, int _type, int stTime) {
 		pa = _p;type=_type;
 		//time location of beat taps
 		beats = new int[windowSize];
+		for(int i=0;i<windowSize;++i) {beats[i]=stTime;}
 		//time between taps
 		beatTime = new int[windowSize];
 		avgBeatTime = 0;		
@@ -682,9 +699,9 @@ class myBeat{
 	//tapTime should be in millis
 	public void addTap(int tapTime) {
 		beats[beatIDX] = tapTime;		//abs time of beat tap
-		beatTime[beatIDX] = tapTime - beats[(beatIDX + windowSize - 1)%windowSize];
+		beatTime[beatIDX] = tapTime - beats[(beatIDX + windowSize - 1)%windowSize];//last beat time - get delta beat time
 		beatIDX = (beatIDX + 1)%windowSize;
-		if(beatIDX == 0) {
+		if(beatIDX == 0) {//cycled around at least 1 time
 			ready = true;
 		}//once windowSize elements have been processed, this structure is ready
 		if(ready) {//if ready to, calculate average
@@ -698,7 +715,7 @@ class myBeat{
 		if(avgBeatTime == 0) {return -1;}
 		return 1000.0f/avgBeatTime;
 	}
-	public void simBeat(float animTime) {
+	public void simBeat(float animTime) {//animtime in millis?
 		
 		//NOTE beatTtlDispTime should never be longer than avgBeatTime
 		curBeatTime += animTime;		//time between beats

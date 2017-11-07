@@ -1318,8 +1318,19 @@ public class DancingBalls extends PApplet{
 		setColorValFill(tclr);setColorValStroke(tclr);
 		text(txt, d, d,d); 
 	}
+
+	public void showFlat(myPointf P, float r,int fclr, int sclr, int tclr, String txt) {
+		pushMatrix(); pushStyle(); 
+		if((fclr!= -1) && (sclr!= -1)){setColorValFill(fclr); setColorValStroke(sclr);}
+		translate(P.x,P.y,0); 
+		circle(0,0,r,r);	
+		setColorValFill(tclr);setColorValStroke(tclr);
+		text(txt, r, r,r); 
+		popStyle(); popMatrix();
+	} // render sphere of radius r and center P)
 	
-	public void show(myPointf P, float r,int fclr, int sclr, boolean flat) {//TODO make flat circles for points if flat
+
+	public void show(myPointf P, float r,int fclr, int sclr, boolean flat) {
 		pushMatrix(); pushStyle(); 
 		if((fclr!= -1) && (sclr!= -1)){setColorValFill(fclr); setColorValStroke(sclr);}
 		if(!flat){

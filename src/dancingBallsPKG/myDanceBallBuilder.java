@@ -202,7 +202,7 @@ class myDFTNoteMapper implements Callable<Boolean>{
 		//copy refs to array values (arrays of harmonics)
 		System.arraycopy(mgr.dispPiano.pianoFreqsHarmonics, _stIdx, pianoFreqsHarmonics, 0, len);
 		System.arraycopy(mgr.dispPiano.pianoMinFreqsHarmonics, _stIdx, pianoMinFreqsHarmonics, 0, len+1);
-		int numSamplesPerKey = 10;
+		int numSamplesPerKey = 5;
 		//firstCall = true;
 		allFreqsUsed = preCalcSamples(len, numSamplesPerKey);
 
@@ -256,7 +256,9 @@ class myDFTNoteMapper implements Callable<Boolean>{
 			float[][] perKeySamples = new float[lowFreqHarmAra.length][];
 			for(int h=0;h<lowFreqHarmAra.length;++h) {//for each harmonic of key ->0 idx is fundamental
 				float[] harmSamples = new float[numSamplesPerKey];
-				for(int s=0;s<numSamplesPerKey;++s) {//for each desired sample
+				harmSamples[0] = pianoFreqsHarmonics[key][h];
+				for(int s=1;s<numSamplesPerKey;++s) {//for each desired sample
+					//instead of random use multiple of 
 					float freq  = (float) ThreadLocalRandom.current().nextDouble(lowFreqHarmAra[h],hiFreqHarmAra[h]);
 					harmSamples[s] = freq;
 					//dummy variable for field - using key as ordered set to remove dupes
