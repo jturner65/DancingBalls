@@ -49,14 +49,18 @@ public class myAudioManager {
 	//per bank arrays of buffer size, song handlers, song file names
 	//current song index and songBank (bank corresponds to songs or piano samples)
 	//list of song banks - use to pick either songs or piano notes
-	public static String[] songBanks = new String[] {"Songs", "Piano Notes"};
+	public static String[] songBanks = new String[] {"Songs", "Bach", "Piano Notes"};
 	//list of song names
-	public static String[][] songList = new String[][]{{"Sati","PurpleHaze","UNATCO","Karelia","Choir"},
-												{"ff-029","ff-030","ff-031","ff-050","ff-051","ff-052","ff-053","ff-054"}};
+	public static String[][] songList = new String[][]{
+		{"Sati","PurpleHaze","UNATCO","Hunting","SavanaDance","Karelia","Choir"},
+		{"Cello4 EbMaj","Cello5 Cmin"},
+		{"ff-029","ff-030","ff-031","ff-050","ff-051","ff-052","ff-053","ff-054"}};
 	public int songIDX = 1, songBank = 0;
-	public final int[] songBufSize = new int[] {2048, 1024};
+	public final int[] songBufSize = new int[] {2048, 2048, 1024};
 	public myMP3SongHandler[][] songs;
-	public String[][] songFilenames = new String[][]{{"sati.mp3","PurpleHaze.mp3","UNATCO.mp3","karelia.mp3","choir.mp3"},
+	public String[][] songFilenames = new String[][]{
+		{"sati.mp3","PurpleHaze.mp3","UNATCO.mp3","Hunting.mp3","SavanaDance.mp3","karelia.mp3","choir.mp3"},
+		{"Bach cello No. 4 in EbMaj_Prelude.mp3","Bach cello No. 5 in CMin_Prelude.mp3"},
 		{"piano-ff-029.wav","piano-ff-030.wav","piano-ff-031.wav","piano-ff-050.wav","piano-ff-051.wav","piano-ff-052.wav","piano-ff-053.wav","piano-ff-054.wav"}
 	};	
 
