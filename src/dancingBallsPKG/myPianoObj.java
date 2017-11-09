@@ -26,8 +26,10 @@ public class myPianoObj{
 	public nValType[] isNaturalNotes = new nValType[]{nValType.A,nValType.B, nValType.C,nValType.D, nValType.E,nValType.F,nValType.G};	
 	
 	//sound analysis
-	//harmonic series
+	//harmonic series for piano tuning
 	public float[][] pianoFreqsHarmonics, pianoMinFreqsHarmonics;
+	//equal temperment harmonic series
+	public float[][] eqTempFreqsHarms, eqTempMinFreqsHarms;
 	//key cutoffs for "bass" zone, "midrange/melody" zone and "treble/cymbal" zone
 //	public int bassLastKey = 36, //thr
 //				midFirstKey = 31,
@@ -38,9 +40,9 @@ public class myPianoObj{
 	//number of harmonics to track
 	public int numHarms = 8;
 	//Array of mappings from key-1 to note name
-	public String[] pianoNotes;
+	//public String[] pianoNoteNames;
 	//holds frequency halfway between note and next highest note
-	public ConcurrentSkipListMap<Float, String> maxFreqsForNotes;
+	//public ConcurrentSkipListMap<Float, String> maxFreqsForNotes;
 	//holds on-screen y locations of centers of each key at edge of piano
 	public float[] pianoKeyCtrYLocs;
 	
@@ -114,14 +116,24 @@ public class myPianoObj{
 		return res;
 	}//buildPianoFreqs
 	
-	//set up list of note fundamental frequencies and note names to analyze sati
 	public ConcurrentSkipListMap<Float, Integer> initPianoFreqs() {
 		pianoFreqsHarmonics = new float[88][];
-		pianoMinFreqsHarmonics = new float[89][];		
+		pianoMinFreqsHarmonics = new float[89][];	
+		eqTempFreqsHarms = new float[88][]; 
+		eqTempMinFreqsHarms = new float[89][];
+		ConcurrentSkipListMap<Float, Integer> pianoRes = initAllFreqs(pianoFreqsHarmonics, pianoMinFreqsHarmonics, true);
+		ConcurrentSkipListMap<Float, Integer> eqTempRes = initAllFreqs(eqTempFreqsHarms, eqTempMinFreqsHarms, false);
+	
+		return pianoRes;
+	}
+	
+	
+	//set up list of note fundamental frequencies and note names to analyze sati
+	public ConcurrentSkipListMap<Float, Integer> initAllFreqs(float[][] pFreqH, float[][] pMinFreqH, boolean useEqTemp) {
 		//freq 1/2 way between note and prev note
 		//pianoMinFreqs = new float[89];
-		pianoNotes = new String[88];
-		maxFreqsForNotes = new ConcurrentSkipListMap<Float, String>();
+		String[] pianoNoteNames = new String[88];
+		//maxFreqsForNotes = new ConcurrentSkipListMap<Float, String>();
 		float[] pianoFreqsTuning = buildPianoFreqs();
 		//frequencies taking into account inharmonicity
 		//freq of A0, dist 1/2 between each half step
@@ -139,18 +151,18 @@ public class myPianoObj{
 			harmMin1[h] = stMinFreq * (h+1);
 			allFreqsUsed.put(harmMin1[h], 1);
 		}
-		pianoMinFreqsHarmonics[0] = harmMin1;		//idx 0 is fundamental min freq
+		pMinFreqH[0] = harmMin1;		//idx 0 is fundamental min freq
 		String[] noteNames = {"A","A#","B","C","C#","D","D#","E","F","F#","G","G#"};
-		for(int i=0;i<pianoFreqsHarmonics.length;++i){
+		for(int i=0;i<pFreqH.length;++i){
 			//comment out this line to have equal temperment tuning
-			stFreq = pianoFreqsTuning[i];
+			if(!useEqTemp) {stFreq = pianoFreqsTuning[i];}
 			float[] harmSeries = new float[numHarms], harmMinSeries= new float[numHarms];
 			for(int h=0;h<numHarms;++h) {
 				harmSeries[h] = stFreq * (h+1);
 				allFreqsUsed.put(harmSeries[h], 1);
 			}
-			pianoFreqsHarmonics[i] = harmSeries;//idx 0 of each idx is fundamental freq of each key
-			pianoNotes[i] = noteNames[i%noteNames.length] + "_" + ((i+9)/noteNames.length); 
+			pFreqH[i] = harmSeries;//idx 0 of each idx is fundamental freq of each key
+			pianoNoteNames[i] = noteNames[i%noteNames.length] + "_" + ((i+9)/noteNames.length); 
 			//System.out.println("i:"+i+"|Note Name : "+pianoNotes[i]);
 			stFreq *= augHalf;		//.5 way to next note
 			//pianoMinFreqs[i+1] = stFreq;			
@@ -158,9 +170,9 @@ public class myPianoObj{
 				harmMinSeries[h] = stFreq * (h+1);
 				allFreqsUsed.put(harmMinSeries[h], 1);
 			}
-			pianoMinFreqsHarmonics[i+1] = harmMinSeries;
+			pMinFreqH[i+1] = harmMinSeries;
 			//halway to next frequency - use as threshold
-			maxFreqsForNotes.put(stFreq, pianoNotes[i]);
+			//maxFreqsForNotes.put(stFreq, pianoNoteNames[i]);
 			stFreq *= augHalf;//now next note
 			//pa.outStr2Scr("key : " + pianoNotes[i] + "|eq tmpr tuning : " +pianoFreqsHarmonics[i][0] + "| adjusted tuning : "+ pianoFreqsTuning[i] );
 		}			

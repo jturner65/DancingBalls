@@ -27,7 +27,6 @@ public class myAudioManager {
 	//handled sample rates based on songs loaded - put sample rates in keys
 	public ConcurrentSkipListMap<Float, Integer> sampleRates;
 
-
 //	//minim audio-related variables
 	//holds results from analysis - magnitude key, value is index of note with max level within min/max note bounds
 	public ConcurrentSkipListMap<Float, Integer> lvlsPerPKeyFundFFT;
@@ -52,18 +51,24 @@ public class myAudioManager {
 	public static String[] songBanks = new String[] {"Songs", "Bach", "Piano Notes"};
 	//list of song names
 	public static String[][] songList = new String[][]{
-		{"Sati","PurpleHaze","UNATCO","Hunting","SavanaDance","Karelia","Choir"},
+		{"Sati","PurpleHaze","Fur Elise","UNATCO","Hunting","SavanaDance","Karelia","Choir"},
 		{"Cello4 EbMaj","Cello5 Cmin"},
 		{"ff-029","ff-030","ff-031","ff-050","ff-051","ff-052","ff-053","ff-054"}};
 	public int songIDX = 1, songBank = 0;
 	public final int[] songBufSize = new int[] {2048, 2048, 1024};
 	public myMP3SongHandler[][] songs;
 	public String[][] songFilenames = new String[][]{
-		{"sati.mp3","PurpleHaze.mp3","UNATCO.mp3","Hunting.mp3","SavanaDance.mp3","karelia.mp3","choir.mp3"},
+		{"sati.mp3","PurpleHaze.mp3","FurElise.mp3","UNATCO.mp3","Hunting.mp3","SavanaDance.mp3","karelia.mp3","choir.mp3"},
 		{"Bach cello No. 4 in EbMaj_Prelude.mp3","Bach cello No. 5 in CMin_Prelude.mp3"},
 		{"piano-ff-029.wav","piano-ff-030.wav","piano-ff-031.wav","piano-ff-050.wav","piano-ff-051.wav","piano-ff-052.wav","piano-ff-053.wav","piano-ff-054.wav"}
-	};	
-
+	};
+	//whether to use piano tuning or equal temperment tuning
+	public boolean[][] usePianoTune = new boolean [][]{
+		{true, false, true, false, false, false,false,false },
+		{false, false},
+		{true, true, true, true, true, true, true, true}
+		};
+	
 	
 	//current index of fft windowing function, from ui
 	public int curWindowIDX = 0;	
@@ -213,10 +218,10 @@ public class myAudioManager {
 		//4-6 are mid range
 		//7-9 are treble range.  
 		lvlsPerPKeyDFTCalc.clear();
-		
-		for(int i=0;i<4;++i) {callDFTNoteMapper.get(i).setPerRunValues(sampleRate, _buffer,lvlsPerPKeyDFTCalc, bassLvlsPerKey);}
-		for(int i=4;i<7;++i) {callDFTNoteMapper.get(i).setPerRunValues(sampleRate, _buffer, lvlsPerPKeyDFTCalc, midLvlsPerKey);}
-		for(int i=7;i<10;++i) {callDFTNoteMapper.get(i).setPerRunValues(sampleRate, _buffer, lvlsPerPKeyDFTCalc, trblLvlsPerKey);}
+		boolean usePianoTemp = usePianoTune[songBank][songIDX];
+		for(int i=0;i<4;++i) {callDFTNoteMapper.get(i).setPerRunValues(sampleRate, _buffer, usePianoTemp,lvlsPerPKeyDFTCalc, bassLvlsPerKey);}
+		for(int i=4;i<7;++i) {callDFTNoteMapper.get(i).setPerRunValues(sampleRate, _buffer, usePianoTemp, lvlsPerPKeyDFTCalc, midLvlsPerKey);}
+		for(int i=7;i<10;++i) {callDFTNoteMapper.get(i).setPerRunValues(sampleRate, _buffer, usePianoTemp, lvlsPerPKeyDFTCalc, trblLvlsPerKey);}
 		
 		//for (myDFTNoteMapper mapper : callDFTNoteMapper) {mapper.setPerRunValues(sampleRate, _buffer, lclCosTbl, lclSinTbl);}
 	}//setPerRunRes
