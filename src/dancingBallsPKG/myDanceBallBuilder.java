@@ -162,9 +162,10 @@ class myDanceBallMapper implements Runnable{
 class myDFTNoteMapper implements Callable<Boolean>{
 	DancingBallWin win;
 	myAudioManager mgr;
-
+	//how much to multiply a low freq to go to the next larger frequency to cover the equispaced sampling for each note span
+	final float augNSth;
 	float[][] pianoFreqsHarmonics, pianoMinFreqsHarmonics;
-	
+	//per key, per harmonic multiple, per sample 
 	float[][][] pianoSampleFreqs;
 	float sampleRate,twoPiInvSamp;
 	
@@ -188,10 +189,7 @@ class myDFTNoteMapper implements Callable<Boolean>{
 	//normalization value
 	float normVal;
 	
-	//first call or not
-	//boolean firstCall; myAudioManager mgr
-	
-	//arrays hold subset of keys this thread will execute
+	//arrays hold subset of key freqs this thread will execute
 	public myDFTNoteMapper(myAudioManager _mgr,int _stIdx, int _endIdx ) {
 		mgr=_mgr;
 		stKey = _stIdx;
@@ -203,73 +201,110 @@ class myDFTNoteMapper implements Callable<Boolean>{
 		System.arraycopy(mgr.dispPiano.pianoFreqsHarmonics, _stIdx, pianoFreqsHarmonics, 0, len);
 		System.arraycopy(mgr.dispPiano.pianoMinFreqsHarmonics, _stIdx, pianoMinFreqsHarmonics, 0, len+1);
 		int numSamplesPerKey = 5;
-		//firstCall = true;
-		allFreqsUsed = preCalcSamples(len, numSamplesPerKey);
+		augNSth = (float) Math.exp(Math.log(2.0)/(12.0f * numSamplesPerKey));
+
+		normVal = numSamplesPerKey * numSamplesPerKey;
+		//allFreqsUsed = preCalcRandSamples(len, numSamplesPerKey);
+		allFreqsUsed = preCalcRandUniSamples(len, numSamplesPerKey);
 
 	}//myDFTNoteMapper
-	
-	//arrays hold subset of keys this thread will execute
-	public myDFTNoteMapper(DancingBallWin _win,int _stIdx, int _endIdx ) {
-		win=_win;
-		stKey = _stIdx;
-		endKey = _endIdx;
-		int len=_endIdx - _stIdx + 1;
-		pianoFreqsHarmonics = new float[len][];
-		pianoMinFreqsHarmonics = new float[len+1][];
-		//copy refs to array values (arrays of harmonics)
-		System.arraycopy(win.dispPiano.pianoFreqsHarmonics, _stIdx, pianoFreqsHarmonics, 0, len);
-		System.arraycopy(win.dispPiano.pianoMinFreqsHarmonics, _stIdx, pianoMinFreqsHarmonics, 0, len+1);
-		int numSamplesPerKey = 10;
-		//firstCall = true;
-		allFreqsUsed = preCalcSamples(len, numSamplesPerKey);
 
-	}//myDFTNoteMapper
 	
-	//must be set before each dft run!
+//	//must be set before each dft run!
 //	public void setPerRunValues(float _srte, float[] _buffer, 
 //			ConcurrentSkipListMap<Float, Float[]> _cosTbl, 
 //			ConcurrentSkipListMap<Float, Float[]> _sinTbl,
 //			ConcurrentSkipListMap<Float, Integer> _lvlsPerKeyInRange		//destination
 //			) {
+//		sampleRate = _srte;
+//		buffer = _buffer;//float array of length samplesize
+//		cosTbl = _cosTbl;
+//		sinTbl = _sinTbl;
+//		twoPiInvSamp = (float) (2.0 * Math.PI / sampleRate);
+//		//levelsPerPKeySingleCalc = _lvlsPerPKeySingleCalc;
+//		lvlsPerKeyInRange = _lvlsPerKeyInRange;	
+//	}
+	
+	//must be set before each dft run
 	public void setPerRunValues(float _srte, float[] _buffer,
 			ConcurrentSkipListMap<Float, Integer> _lvlsPerPKeySingleCalc,
 			ConcurrentSkipListMap<Float, Integer> _lvlsPerKeyInRange		//destination
 			) {
 		sampleRate = _srte;
 		buffer = _buffer;//float array of length samplesize
-//		cosTbl = cosTblSample.get(sampleRate);
-//		sinTbl = sinTblSample.get(sampleRate);		
-//		cosTbl = _cosTbl;
-//		sinTbl = _sinTbl;
 		twoPiInvSamp = (float) (2.0 * Math.PI / sampleRate);
 		levelsPerPKeySingleCalc = _lvlsPerPKeySingleCalc;
 		lvlsPerKeyInRange = _lvlsPerKeyInRange;
 	}
 	
-	private ConcurrentSkipListMap<Float, Integer> preCalcSamples(int len, int numSamplesPerKey) {
-		normVal = numSamplesPerKey * numSamplesPerKey;
+//	private ConcurrentSkipListMap<Float, Integer> preCalcRandSamples(int len, int numSamplesPerKey) {
+//		//create numSamplesPerKey sampled frequencies to test audio at, for every key, to find average
+//		pianoSampleFreqs = new float[len][][];		
+//		ConcurrentSkipListMap<Float, Integer> res = new ConcurrentSkipListMap<Float, Integer>();
+//		for(int key=0;key<pianoFreqsHarmonics.length;++key) {//for each key
+//			float[] lowFreqHarmAra = pianoMinFreqsHarmonics[key], hiFreqHarmAra = pianoMinFreqsHarmonics[key+1];
+//			float[][] perKeySamples = new float[lowFreqHarmAra.length][];
+//			for(int h=0;h<lowFreqHarmAra.length;++h) {//for each harmonic of key ->0 idx is fundamental
+//				float[] harmSamples = new float[numSamplesPerKey];
+//				harmSamples[0] = pianoFreqsHarmonics[key][h];
+//				for(int s=1;s<numSamplesPerKey;++s) {//for each desired sample
+//					//instead of random use multiple of 
+//					float freq  = (float) ThreadLocalRandom.current().nextDouble(lowFreqHarmAra[h],hiFreqHarmAra[h]);
+//					harmSamples[s] = freq;
+//					//dummy variable for field - using key as ordered set to remove dupes
+//					res.put(freq, 1);					
+//				}
+//				perKeySamples[h] = harmSamples;
+//			}
+//			pianoSampleFreqs[key]=perKeySamples;			
+//		}//preCalcSamplesAndTrig		
+//		return res;
+//	}
+	//build a map of uniformly spaced samples between min and max freq for a key
+	private ConcurrentSkipListMap<Float, Integer> preCalcRandUniSamples(int len, int numExamplesPerKey){
 		//create numSamplesPerKey sampled frequencies to test audio at, for every key, to find average
 		pianoSampleFreqs = new float[len][][];		
 		ConcurrentSkipListMap<Float, Integer> res = new ConcurrentSkipListMap<Float, Integer>();
-		for(int key=0;key<pianoFreqsHarmonics.length;++key) {//for each key
-			float[] lowFreqHarmAra = pianoMinFreqsHarmonics[key], hiFreqHarmAra = pianoMinFreqsHarmonics[key+1];
-			float[][] perKeySamples = new float[lowFreqHarmAra.length][];
-			for(int h=0;h<lowFreqHarmAra.length;++h) {//for each harmonic of key ->0 idx is fundamental
-				float[] harmSamples = new float[numSamplesPerKey];
-				harmSamples[0] = pianoFreqsHarmonics[key][h];
-				for(int s=1;s<numSamplesPerKey;++s) {//for each desired sample
-					//instead of random use multiple of 
-					float freq  = (float) ThreadLocalRandom.current().nextDouble(lowFreqHarmAra[h],hiFreqHarmAra[h]);
-					harmSamples[s] = freq;
-					//dummy variable for field - using key as ordered set to remove dupes
-					res.put(freq, 1);					
-				}
-				perKeySamples[h] = harmSamples;
+		int numHarmonics = pianoMinFreqsHarmonics[0].length;
+		float[]fundFreqAra;
+		//array of harmonic # (0 is fund) of samples (idx 0 is array of all fundamentals)
+		float[][] perKeyExamples;
+		for(int key=0;key<pianoFreqsHarmonics.length;++key) {//for each key			
+			perKeyExamples = new float[numHarmonics][];
+			fundFreqAra = new float[numExamplesPerKey];
+			//first calc fundamentals : numExamplesPerKey equally spaced freqs between 
+			//lowFreqHarmAra[0] and highFreqHarmAra[0]
+			float stFreq = pianoMinFreqsHarmonics[key][0];//fundamental of lowest frequency of this key
+			for(int ex=0;ex<numExamplesPerKey;++ex) {//get numExamplesPerKey equally spaced fundamentals
+				fundFreqAra[ex] = stFreq;
+				stFreq *= augNSth;
 			}
-			pianoSampleFreqs[key]=perKeySamples;			
+			perKeyExamples[0]= fundFreqAra;
+			//now calculate multiples of all harmonics for arrays to put in perKeyExamples
+			for(int h=1;h<numHarmonics;++h) {//for harmonic role (fundamental, 2nd harmonic, etc)
+				float[] harmSamples = new float[numExamplesPerKey];
+				float mult = h+1;
+				for(int ex=0;ex<numExamplesPerKey;++ex) {harmSamples[ex]=mult*fundFreqAra[ex];}	//for every example
+				perKeyExamples[h] = harmSamples;
+			}
+			
+			
+//			for(int h=0;h<lowFreqHarmAra.length;++h) {//for each harmonic of key ->0 idx is fundamental
+//				float[] harmSamples = new float[numExamplesPerKey];
+//				harmSamples[0] = pianoFreqsHarmonics[key][h];
+//				for(int s=1;s<numExamplesPerKey;++s) {//for each desired sample
+//					//instead of random use multiple of 
+//					float freq  = (float) ThreadLocalRandom.current().nextDouble(lowFreqHarmAra[h],hiFreqHarmAra[h]);
+//					harmSamples[s] = freq;
+//					//dummy variable for field - using key as ordered set to remove dupes
+//					res.put(freq, 1);					
+//				}
+//				perKeyExamples[h] = harmSamples;
+//			}
+			pianoSampleFreqs[key]=perKeyExamples;			
 		}//preCalcSamplesAndTrig		
 		return res;
-	}
+	}	
 	
 	/**
 	 * calculate the individual level manually using a sample of the signal as f(t)

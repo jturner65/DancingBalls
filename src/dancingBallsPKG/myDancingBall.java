@@ -29,27 +29,22 @@ public class myDancingBall {
 	//public mySpringToRest[] springsPerZone;
 	//constants - manage via UI?
 	public final double ksMod4kp = .8;
-	public double sprKs = 50.0, 
+	//making spring constant derived from a multiple of 120 bpm beat frequency (->ks==158, 79) 
+	//caused weird constructive/destructive interference in motion.
+	public double sprKs = 50.0,//
 			sprKd = ksMod4kp*sprKs;
 	
 	//spring ks and kd vals for each zone
 	public double[][] zoneKsKdVals;
 	
-	//fft data
+	//freq analysis data
 	public float[] bandVals;	
 	
-	//beat timer
-	//public float[] beatTimes;
-	
 	//UI selected zone and zone member to show being displaced - for debugging
-	public int zoneTypIDX;
-	public int zoneMmbrToShow;
+	public int zoneTypIDX, zoneMmbrToShow;
 	//current and last frame per-zone beat detection results
 	public boolean[] beatDetRes;
 	public boolean[] lastBeatDetRes;
-
-	//k values for each zone so they resonate at frequency of zone in music
-	public float[] zoneKVals;
 	
 	//neighborhoods for each of n "zones" of ball surface to displace from musical content - corresponds to # of frequency spans to respond to
 	public static final int numZones = DancingBallWin.numZones;//set in owning window
@@ -66,26 +61,22 @@ public class myDancingBall {
 	//all zone variables predicated on 6 zones being constructed along the parameters of numZoneVerts above
 	//stimulate zones based on zone location - this is per zone array of zone IDs to stimulate
 	public int[][] zonesToStim = new int[][] {
-		{6,7},									//lowest freq - alt between 2 : altGroupZoneMod with group size 1		
-		{13,8,9,
-		12,11,10},								//low bass freq - oscillate/wave through 1st half and 2nd half of array simultaneously, from back to front (in idx order) : altGroupZoneMod			
+		{6,7},										//lowest freq - alt between 2 : altGroupZoneMod with group size 1	
+		
+		{13,8,9,12,11,10},							//low bass freq - oscillate/wave through 1st half and 2nd half of array simultaneously, from back to front (in idx order) : altGroupZoneMod			
 
-		{14,15,16,17,18, 
-		13,12,11,20,19},						//low melody - pair opposite zones front to back, and then back to front : cycleGroupZoneMod
+		{14,15,16,17,18,13,12,11,20,19},			//low melody - pair opposite zones front to back, and then back to front : cycleGroupZoneMod
 		
 		{12,13,14,15,16,17,18,19,20,21,22,23,24},	//high melody - cycle through entire set in order, and then back again descending		: cycleGroupZoneMod
 		
-		{15,14,13,
-		16,17,18,
-		22,21,20,
-		23,24,25},								//low range high freq - stimulate 4 groups simultaneously in order (ignore 12 and 19 to make even)	: cycleGroupZoneMod
+		{15,14,13,16,17,18,22,21,20,23,24,25},		//low range high freq - stimulate 4 groups simultaneously in order (ignore 12 and 19 to make even)	: cycleGroupZoneMod
 		
-		{0,4,5,7,11,9,10,						//high range high freq - stimulate 3 groups simultaneously, randomly change group : randMultiGroupZoneMod
+		{0,4,5,7,11,9,10,							//high range high freq - stimulate 3 groups simultaneously, randomly change group : randMultiGroupZoneMod
 		1,14,15,18,26,21,23,
 		2,13,16,19,25,22,24}
 		};
 	
-	//record of most recent modifications to each zone's values	
+	//object that governs zone modification
 	public myZoneMod[] zoneMods;
 	//per-zone count of beats before zone modification cycles to next zone member
 	public final int[] zmBeatCounts = new int[] {2,4,2,2,2,2};
@@ -127,6 +118,13 @@ public class myDancingBall {
 	
 	//remake ball if need to change # of zones
 	private void buildZonePoints() {
+		//springs should be built before zone points
+		springForce = new mySpringToRest(pa, "Spring To Rest", sprKs, sprKd);	
+//		springsPerZone = new mySpringToRest[numZones];
+//		for(int i=0;i<numZones;++i) {
+//			springsPerZone[i] = new mySpringToRest(pa, "Zone " + i + " Rest Spring", sprKs, sprKd);	
+//		}
+		
 		for(int i=0;i<zonePtsDel.length; ++i){zonePtsDel[i] = (float) (1.0f + ThreadLocalRandom.current().nextDouble(-.001, .001));}
 		zoneKsKdVals = new double[numZones][2];
 		for(int i=0;i<numZones;++i) {	
@@ -150,7 +148,15 @@ public class myDancingBall {
 				}
 				zonePoints[i][j].setMate(maxPt);
 			}
-		}		
+		}
+
+		//objects which modify zones of ball
+		zoneMods = new myZoneMod[numZones];
+		for(int i=0;i<numZones;++i) {
+			zoneMods[i] = new myZoneMod(pa, this, i, zonesToStim[i], zmBeatCounts[i], zmGroupCount[i],zmIncrType[i]);			
+			pa.outStr2Scr("zoneMods idx : "+i+" # zone pts :"+zonePoints[i].length);
+		}
+
 	}//buildZonePoints
 	
 	//set k values for resonant frequencies for each zone, using the frequency of the beats at that zone
@@ -163,8 +169,11 @@ public class myDancingBall {
 		double ks;
 		for(int i=0;i<zoneFreqs.length;++i) {
 			ks = (i+1)*fourPiSq*zoneFreqs[i]*zoneFreqs[i];
-			this.zoneKsKdVals[i][0] = ks;
-			this.zoneKsKdVals[i][1] = ksMod4kp*ks;
+			zoneKsKdVals[i][0] = ks;
+			zoneKsKdVals[i][1] = ksMod4kp*ks;
+			//setting these directly to the values calculated caused the spring contant to get too high
+//			springsPerZone[i].setConstVal1(zoneKsKdVals[i][0]);
+//			springsPerZone[i].setConstVal2(zoneKsKdVals[i][1]);
 		}
 		//pa.outStr2Scr("idx 0 beat freq :  " + tapBeats[0].getBeatFreq());		
 	}//setZoneKs
@@ -214,13 +223,12 @@ public class myDancingBall {
 	public void finalInit() {
 		pa.outStr2Scr("Ball Final Init called");		
 		if((!flags[isZoneMappedIDX]) || (flags[isInitedIDX])) {return;}
-
-		springForce = new mySpringToRest(pa, "Spring To Rest", sprKs, sprKd);
-		
-		zoneMods = new myZoneMod[numZones];
-		for(int i=0;i<numZones;++i) {
-			zoneMods[i] = new myZoneMod(pa, this, i, zonesToStim[i], zmBeatCounts[i], zmGroupCount[i],zmIncrType[i]);			
-		}
+//		//objects which modify zones of ball
+//		zoneMods = new myZoneMod[numZones];
+//		for(int i=0;i<numZones;++i) {
+//			zoneMods[i] = new myZoneMod(pa, this, i, zonesToStim[i], zmBeatCounts[i], zmGroupCount[i],zmIncrType[i]);			
+//			pa.outStr2Scr("zoneMods idx : "+i+" # zone pts :"+zonePoints[i].length);
+//		}
 		pa.outStr2Scr("Ball Final Init Done");		
 		setFlags(isInitedIDX, true);	
 		win.setBallIsMade(true);
@@ -239,36 +247,76 @@ public class myDancingBall {
 	}//setBallSimVals
 	
 
-	
 	//modAmtMillis is time passed per frame in milliseconds
 	public void simMe(float modAmtMillis, boolean stimTaps, boolean useFrc) {
 		if(stimTaps) {//stimulate ball with finger taps/ detected beats - intended to be debugging mechanism
 			if(useFrc){		stimBallTapsMassSprng_DBG();} 
 			else {			stimBallTapsKine_DBG();}//use force deformations or kinematic deformations				
 		} else {//stimulate with pure audio
-			if(useFrc){		stimulateBallMassSpring();} //use force deformations
-			else {			resetVertLocs();stimulateBallKine();}//use kinematic deformations
+			if(useFrc){		stimulateBallMassSpringRand();} //use force deformations
+			else {			resetVertLocs();stimulateBallKineRand();}//use kinematic deformations
 		}		
 	}//simMe	
 	
+	
+	//modAmtMillis is time passed per frame in milliseconds
+	//this simMe uses zoneMod to manage zone stimulation - only specific zones are stimulated
+	public void simMeNew(float modAmtMillis, boolean stimTaps, boolean useFrc) {
+		if(stimTaps) {//stimulate ball with finger taps/ detected beats - intended to be debugging mechanism
+			if(useFrc){		
+				stimBallTapsMassSprng_DBG();
+			} 
+			else {			
+				stimBallTapsKine_DBG();
+			}//use force deformations or kinematic deformations				
+		} else {//stimulate with pure audio
+			for (int i=0;i<this.zoneMods.length;++i) {
+				//stim value based on old value used for kinematic stim : (i+1) * 50.0f*bandVals[i]
+				zoneMods[i].modZone((i+1) * 50.0f*bandVals[i],beatDetRes[i], lastBeatDetRes[i]);
+			}
+		}		
+	}//simMe	
+	/////////
+	// functions to stimulate zoneMod objects
+	/**
+	 * set a single zone mod object to use a particular stimulation type
+	 * @param zIdx zone index
+	 * @param stimType type of stim : 0 == kinematic; 1 == dynamic(mass-spring); 2 == jump(init kinematic, dynamic for rest of stim)
+	 */
+	public void setOneZoneModStimType(int zIdx, int stimType) {
+		zoneMods[zIdx].setCurZoneStim(stimType);
+	}//setOneZoneModStimType
+	
+	/**
+	 * set a all zone mod objects to use a particular stimulation type
+	 * @param stimType type of stim : 0 == kinematic; 1 == dynamic(mass-spring); 2 == jump(init kinematic, dynamic for rest of stim)
+	 */
+	public void setZoneModStimType(int stimType) {
+		for (int i=0;i<this.zoneMods.length;++i) {
+			zoneMods[i].setCurZoneStim(stimType);
+		}
+	}//setZoneModStimType
+	
+	////////////////////////
+	//original direct zone stimulation functions
 	//stimulate zone focii
 	private void stimulateOneZone(float stimVal, int zoneIDX, int zonePt, boolean stimMates) {
 		//if((flags[isPtsMadeIDX]) && (flags[isZoneMappedIDX])) {
-			zonePoints[zoneIDX][zonePt].stimulateZoneKin(stimVal);
-			if(stimMates) {	zonePoints[zoneIDX][zonePt].mPt.stimulateZoneKin(stimVal);	}
+		zonePoints[zoneIDX][zonePt].stimulateZoneKin(stimVal);
+		if(stimMates) {	zonePoints[zoneIDX][zonePt].mPt.stimulateZoneKin(stimVal);	}
 		//}
 	}//stimulateZone
 	
 	//stimulate zone focii with force from specific frequency bands
 	private void stimulateOneZoneForce(float stimVal, int zoneIDX, int zonePt, boolean stimMates) {
 		//if((flags[isPtsMadeIDX]) && (flags[isZoneMappedIDX])) {
-			zonePoints[zoneIDX][zonePt].stimulateZoneForce(stimVal);
-			if(stimMates) {	zonePoints[zoneIDX][zonePt].mPt.stimulateZoneForce(stimVal);	}
+		zonePoints[zoneIDX][zonePt].stimulateZoneForce(stimVal);
+		if(stimMates) {	zonePoints[zoneIDX][zonePt].mPt.stimulateZoneForce(stimVal);	}
 		//}
 	}//stimulateZone
 	
 	//excite each zone directly by displacing from rest position by scaled level given in bandVals
-	public void stimulateBallKine() {
+	public void stimulateBallKineRand() {
 		if(flags[audioValsSetIDX]){
 			for(int i=0;i<bandVals.length;++i) {
 				int numZones = (i+1)*(i+1);
@@ -305,7 +353,7 @@ public class myDancingBall {
 	private int simCount = 0;
 	//TODO need to stimulate ball on beats from music - constant force applications will cause things to explode
 	//pass zones to stimulate
-	public void stimulateBallMassSpring() {
+	public void stimulateBallMassSpringRand() {
 		flags[dispVertHiLiteIDX] = false;
 		int beatCount = 5;
 		simCount += 1;
@@ -315,7 +363,7 @@ public class myDancingBall {
 			flags[dispVertHiLiteIDX] = true;
 			//set force values for all zones - bandVals is array of per-zone levels from song	
 			for(int zone=0;zone<bandVals.length;++zone) {
-				if((beatDetRes[zone]) && (!lastBeatDetRes[zone]) ) {//&& (!lastBeatDetRes[i])) {//send force only when transitioning on beat
+				if((beatDetRes[zone]) && (!lastBeatDetRes[zone]) ) {//send force only when transitioning onto beat
 					//TODO determine better mapping to specific zones
 					int numZones = (zone+1)*(zone+1);
 					for (int j=0;j<numZones;++j) {
@@ -477,6 +525,8 @@ public class myDancingBall {
 class myZonePoint{
 	public static DancingBalls pa;
 	public static myDancingBall ball;
+	//spring for force-based calculations
+	public mySpringToRest springForce;
 
 	public myVectorf pt, drawPt;
 	public int zoneIDX, zoneID;
@@ -492,6 +542,9 @@ class myZonePoint{
 	
 	public myZonePoint(DancingBalls _pa, myDancingBall _ball, int _zIdx, int _zID, myVectorf _pt){
 		pa = _pa;ball=_ball;pt = _pt;zoneIDX = _zIdx; zoneID = _zID;
+		//TODO change to per-zone spring
+		//springForce = _ball.springsPerZone[zoneIDX];		
+		springForce = _ball.springForce;		
 		zoneMrkrSz = pa.max(1.0f,10.0f - 2*zoneIDX); 
 		drawPt = new myVectorf(pt); drawPt._mult(2.0f);		
 	}
@@ -513,7 +566,6 @@ class myZonePoint{
 			ngbhd.get(key).displace(stimVal);
 		}	
 	}//stimulateZone
-
 	//stimulate a zone with a force, scaled for distance from zone point - add force in direction of normal
 	public void stimulateZoneForce(float stim) {//
 		for(Float key : ngbhd.keySet()) {
@@ -521,10 +573,29 @@ class myZonePoint{
 			//System.out.println("for initial stim : " + stim + " and for dist : " + key + " stim val is " + stimVal);
 			myRndrdPart part =ngbhd.get(key); 
 			part.stimulateFrc(stimVal);
-			//part.setKsKdVals(ball.zoneKsKdVals[zoneIDX]);
 		}			
 	}//stimulateZoneForce	
-
+	//stimulate a zone with a force, account for this zone's spring, scaled for distance from zone point - add force in direction of normal
+	public void stimulateZoneForceWithSpring(float stim) {//
+		for(Float key : ngbhd.keySet()) {
+			float stimVal = stim * (1 - ((key - minDist)*interpDenom));
+			//System.out.println("for initial stim : " + stim + " and for dist : " + key + " stim val is " + stimVal);
+			myRndrdPart part =ngbhd.get(key); 
+			part.stimulateFrc(stimVal);
+		}
+		fwdSimZoneNoStim();
+	}//stimulateZoneForce	
+	//for dynamic simulation, apply spring forces to rest positions and integrate
+	public void fwdSimZoneNoStim() {
+		myVectorf[] result;	
+		for (myRndrdPart part : ngbhd.values()) {				
+			result = springForce.calcForceOnParticle(part, null, 0);
+			float dotProd = result[0]._dot(part.norm);
+			part.stimulateFrc(dotProd);			
+		}			
+		for (myRndrdPart part : ngbhd.values()) {	part.integAndAdvance(ball.win.deltaT);	}
+		
+	}
 	
 	public void resetZone() {
 		for(myRndrdPart part : ngbhd.values()) {		part.reset();	}

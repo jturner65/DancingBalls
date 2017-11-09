@@ -87,11 +87,6 @@ public class DancingBallWin extends myDispWindow {
 	
 	//offset to bottom of custom window menu 
 	private float custMenuOffset;
-	//list of song banks - use to pick either songs or piano notes
-	public String[] songBanks = new String[] {"Songs", "Piano Notes"};
-	//list of song names
-	public String[][] songList = new String[][]{{"Sati","PurpleHaze","UNATCO","Karelia","Choir"},
-												{"ff-029","ff-030","ff-031","ff-050","ff-051","ff-052","ff-053","ff-054"}};
 	//display names of fft windows
 	public String[] windowNames = new String[]{"NONE","BARTLETT","BARTLETTHANN","BLACKMAN","COSINE","GAUSS","HAMMING","HANN","LANCZOS","TRIANGULAR"};
 	
@@ -152,6 +147,9 @@ public class DancingBallWin extends myDispWindow {
 		setFlags(isRunnable, true);
 		//this window uses a customizable camera
 		setFlags(useCustCam, true);
+		//initially start with the following priv flags set
+		setAllPrivFlags(new int[] {useForcesForBall,sendAudioToBall,calcSingleFreq}, true);
+		
 		custMenuOffset = uiClkCoords[3];	//495
 		rebuildDancer();		
 		//audMgr needs to be built after dispPiano and flags values have been set	
@@ -174,7 +172,8 @@ public class DancingBallWin extends myDispWindow {
 	//set once ball is either being rebuilt or is finished being built
 	public void setBallIsMade(boolean val) {	setPrivFlags(ballIsMade, val);}
 	public boolean getBallIsMade() {	return getPrivFlags(ballIsMade);}
-	public boolean getStimZoneMates() {	return getPrivFlags(stimZoneMates);}	
+	public boolean getStimZoneMates() {	return getPrivFlags(stimZoneMates);}
+	
 	@Override
 	//set flag values and execute special functionality for this sequencer
 	public void setPrivFlags(int idx, boolean val){
@@ -209,7 +208,10 @@ public class DancingBallWin extends myDispWindow {
 //				}				
 //				break;}
 			case sendAudioToBall 		: {break;}
-			case useForcesForBall		: {break;}
+			case useForcesForBall		: {
+				//1 : force/mass-spring, 0 : kinematic
+				sendStimTypeToBall(val ? 1 : 0);
+				break;}
 			case showZoneBandRes: {
 				if(val) {setPrivFlags(showAllBandRes, false);}//either or allowed,not both
 				break;}
@@ -225,6 +227,11 @@ public class DancingBallWin extends myDispWindow {
 		}		
 	}//setPrivFlags	
 	
+	//send current desired stimualtion type to ball based on UI input
+	private void sendStimTypeToBall(int stimType) {
+		ball.setZoneModStimType(stimType);
+	}
+	
 	//initialize structure to hold modifiable menu regions
 	@Override
 	protected void setupGUIObjsAras(){	
@@ -235,8 +242,8 @@ public class DancingBallWin extends myDispWindow {
 			{5, 100, 5},				//min neighborhood size fraction of number of verts			
 			{0,numZones-1,1},				//zone to show if showing zones on sphere
 			{0,10000,1},					//zone member to show if showing zones on sphere (% list size, so can be huge)
-			{0.0, songBanks.length-1, 0.1},	//song bank selected
-			{0.0, songList[(int)uiVals[gIDX_curSongBank]].length-1, 0.1},	//song/clip selected - start with initial bank
+			{0.0, myAudioManager.songBanks.length-1, 0.1},	//song bank selected
+			{0.0, myAudioManager.songList[(int)uiVals[gIDX_curSongBank]].length-1, 0.1},	//song/clip selected - start with initial bank
 			{0.0, windowNames.length-1, 1.0},	//window function selected
 		};		//min max mod values for each modifiable UI comp	
 
@@ -333,11 +340,11 @@ public class DancingBallWin extends myDispWindow {
 			case gIDX_curSongBank : {
 				//change banks - stop music
 				setPrivFlags(playMP3Vis,false);//turn off playing
-				uiVals[UIidx] = val % songList.length;
+				uiVals[UIidx] = val % myAudioManager.songList.length;
 				//change current song idx value to be legal within song list for this bank
-				uiVals[gIDX_curSong] %= songList[(int)uiVals[UIidx]].length;
+				uiVals[gIDX_curSong] %= myAudioManager.songList[(int)uiVals[UIidx]].length;
 				//change song list dropdown max to be this bank's song list length-1
-				guiObjs[gIDX_curSong].setNewMax(songList[(int)uiVals[UIidx]].length-1);
+				guiObjs[gIDX_curSong].setNewMax(myAudioManager.songList[(int)uiVals[UIidx]].length-1);
 
 				audMgr.changeCurrentSong((int)uiVals[UIidx],(int)uiVals[gIDX_curSong]);
 				ball.resetVertLocs();	
@@ -358,8 +365,8 @@ public class DancingBallWin extends myDispWindow {
 	@Override
 	protected String getUIListValStr(int UIidx, int validx) {
 		switch(UIidx){
-			case gIDX_curSongBank :{ return songBanks[validx %songBanks.length];}
-			case gIDX_curSong : {return songList[(int)uiVals[gIDX_curSongBank]][validx];}
+			case gIDX_curSongBank :{ return myAudioManager.songBanks[validx %myAudioManager.songBanks.length];}
+			case gIDX_curSong : {return myAudioManager.songList[(int)uiVals[gIDX_curSongBank]][validx];}
 					
 //					getPrivFlags(this.usePianoNoteFiles) ? 
 //							pianoNoteList[(validx % pianoNoteList.length)] :	
@@ -454,7 +461,8 @@ public class DancingBallWin extends myDispWindow {
 		myBeat[] beats = audMgr.getBeats();
 		for(int i=0;i<numZones;++i) {
 			float btFreq = beats[i].getBeatFreq();
-			zoneFreqs[i] = (btFreq <= 0 ? 1.1254f : btFreq);//this value results in 50 ks
+			//zoneFreqs[i] = (btFreq <= 0 ? 1.1254f : btFreq);//this value results in 50 ks
+			zoneFreqs[i] = (btFreq <= 0 ? 2.0f : btFreq);//this value results in 158 ks
 		}//
 		//set ball zone spring constants TODO use beat frequencies
 		ball.setZoneKs(zoneFreqs);

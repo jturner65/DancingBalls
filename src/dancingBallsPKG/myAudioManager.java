@@ -27,9 +27,7 @@ public class myAudioManager {
 	//handled sample rates based on songs loaded - put sample rates in keys
 	public ConcurrentSkipListMap<Float, Integer> sampleRates;
 
-	//current song index and songBank (bank corresponds to songs or piano samples)
-	public int songIDX = 1, songBank = 0;
-	
+
 //	//minim audio-related variables
 	//holds results from analysis - magnitude key, value is index of note with max level within min/max note bounds
 	public ConcurrentSkipListMap<Float, Integer> lvlsPerPKeyFundFFT;
@@ -38,11 +36,7 @@ public class myAudioManager {
 	//results from analysis in the bass, mid and trbl ranges (4 octaves, 3 octaves, 3 octaves
 	public ConcurrentSkipListMap<Float, Integer> bassLvlsPerKey,midLvlsPerKey,trblLvlsPerKey;	
 	
-	public final int songBufSize = 1024;
-
 	public final int fftMinBandwidth = 20, fftBandsPerOctave = 24;
-	public float[] blankRes1 = new float[songBufSize];
-	public float[] blankRes2 = new float[songBufSize];
 	//per zone avg frequencies
 	public float[] //blankBands = new float[numZones], 
 			bandRes = new float[numZones], bandFreqs = new float[numZones], 
@@ -51,15 +45,19 @@ public class myAudioManager {
 	//threads for working on dft analysis
 	public List<myDFTNoteMapper> callDFTNoteMapper;
 	public List<Future<Boolean>> callDFTMapperFtrs;
-	
-//	public myMP3SongHandler[] pianoClips;
-//	public String[] pianoNoteFilenames = new String[] {
-//			"piano-ff-029.wav","piano-ff-030.wav","piano-ff-031.wav","piano-ff-050.wav",
-//			"piano-ff-051.wav","piano-ff-052.wav","piano-ff-053.wav","piano-ff-054.wav"};
+
+	//per bank arrays of buffer size, song handlers, song file names
+	//current song index and songBank (bank corresponds to songs or piano samples)
+	//list of song banks - use to pick either songs or piano notes
+	public static String[] songBanks = new String[] {"Songs", "Piano Notes"};
+	//list of song names
+	public static String[][] songList = new String[][]{{"Sati","PurpleHaze","UNATCO","Karelia","Choir"},
+												{"ff-029","ff-030","ff-031","ff-050","ff-051","ff-052","ff-053","ff-054"}};
+	public int songIDX = 1, songBank = 0;
+	public final int[] songBufSize = new int[] {2048, 1024};
 	public myMP3SongHandler[][] songs;
 	public String[][] songFilenames = new String[][]{{"sati.mp3","PurpleHaze.mp3","UNATCO.mp3","karelia.mp3","choir.mp3"},
-		{"piano-ff-029.wav","piano-ff-030.wav","piano-ff-031.wav","piano-ff-050.wav",
-		"piano-ff-051.wav","piano-ff-052.wav","piano-ff-053.wav","piano-ff-054.wav"}
+		{"piano-ff-029.wav","piano-ff-030.wav","piano-ff-031.wav","piano-ff-050.wav","piano-ff-051.wav","piano-ff-052.wav","piano-ff-053.wav","piano-ff-054.wav"}
 	};	
 
 	
@@ -77,18 +75,16 @@ public class myAudioManager {
 	
 	private void initMe() {
 		initFlags();
-		songs = new myMP3SongHandler[win.songBanks.length][];
-		//pianoClips = new myMP3SongHandler[pianoNoteFilenames.length];
-		//init piano freqs
+		songs = new myMP3SongHandler[songBanks.length][];
 		//ConcurrentSkipListMap<Float, Integer> allFreqsUsed = 
 		dispPiano.initPianoFreqs();
 		//initialize tap beat structures
 		initTapBeatStructs();
 		//load all songs, add sample rate to 
 		loadSongsAndFFT();		
-		//launch thread to precalculate all trig stuff
-		//not needed with multi-threading dft calc - math is fast enough without this
+		//launch thread to precalculate all trig stuff : not needed with multi-threading dft calc - math is fast enough without this
 		//pa.th_exec.execute(new myTrigPrecalc(this, allFreqsUsed) );
+		
 		//build DFT threads and precalc local cos/sin values
 		initDFTAnalysisThrds(10);		
 	}//initMe
@@ -125,37 +121,28 @@ public class myAudioManager {
 	}
 	
 	protected void setFFTVals() {
-		for(int b=0;b<win.songBanks.length;++b) {
+		for(int b=0;b<songBanks.length;++b) {
 			for(int i=0;i<songs[b].length;++i){songs[b][i].setFFTVals(windowList[curWindowIDX], fftMinBandwidth, fftBandsPerOctave, numZones);}
 		}
-		
-//		for(int i=0;i<songs.length;++i){songs[i].setFFTVals(windowList[curWindowIDX], fftMinBandwidth, fftBandsPerOctave, numZones);}	
-//		for(int i=0;i<pianoClips.length;++i){	pianoClips[i].setFFTVals(windowList[curWindowIDX], fftMinBandwidth, fftBandsPerOctave, numZones);}				
 	}//setFFTVals
 	
 	protected void loadSongsAndFFT() {
 		sampleRates = new ConcurrentSkipListMap<Float, Integer>();//hold only sample rates that we have seen
-		for(int b=0;b<win.songBanks.length;++b) {
+		for(int b=0;b<songBanks.length;++b) {
 			myMP3SongHandler[] tmpSongs = new myMP3SongHandler[songFilenames[b].length];
 			for(int i=0;i<songFilenames[b].length;++i){	
 				tmpSongs[i]= new myMP3SongHandler(pa.minim, 
 					songFilenames[b][i], 
-					win.songList[b][i], 
-					songBufSize);	
+					songList[b][i], 
+					songBufSize[b]);	
 				sampleRates.put(tmpSongs[i].playMe.sampleRate(), 1);}		
 			songs[b] = tmpSongs;
 		}
-//		for(int i=0;i<songs.length;++i){	songs[i] = new myMP3SongHandler(pa.minim, songFilenames[i], win.songList[i], songBufSize);	sampleRates.put(songs[i].playMe.sampleRate(), 1);}		
-//		for(int i=0;i<pianoClips.length;++i){	pianoClips[i] = new myMP3SongHandler(pa.minim, pianoNoteFilenames[i], win.pianoNoteList[i], songBufSize);	sampleRates.put(pianoClips[i].playMe.sampleRate(), 1);}		
 		setFlags(audioLoadedIDX,true);
 		setFlags(fftLoadedIDX, true);
 		setFFTVals();
 	}//loadSongList() 
 	
-//	public void changeCurrentBankAndSong(int newSongBank, int newSongIdx) {		
-//		changeCurrentSong(newSongBank, newSongIdx);
-//	}
-//	public void changeCurrentSong(int newSongIDX){changeCurrentSong(songBank, newSongIDX);}
 	public void changeCurrentSong(int newSongBank, int newSongIDX){
 		this.getCurrentClip(songBank, songIDX).pause();//pause current song
 		//ball.resetVertLocs();
@@ -178,13 +165,7 @@ public class myAudioManager {
 		//ball.setFreqVals(blankRes1, blankRes2,blankBands);			
 	}
 
-	public void pauseAudio(){
-		if(getFlags(audioLoadedIDX)){
-			stopAllPlaying();
-			//this.getCurrentClip(songIDX).pause();
-			//songs[songIDX].pause();
-		}		
-	}
+	public void pauseAudio(){		if(getFlags(audioLoadedIDX)){			stopAllPlaying();	}}
 	//stop all clips from playing
 	protected void stopAllPlaying() {
 		for(int b=0;b<songs.length;++b){for(int i=0;i<songs[b].length;++i){	songs[b][i].pause();	}	}	
@@ -226,7 +207,7 @@ public class myAudioManager {
 		
 		//threads 0-3 are bass range
 		//4-6 are mid range
-		//7-9 are treble range.  perhaps use these to calculate zone behavior?
+		//7-9 are treble range.  
 		lvlsPerPKeyDFTCalc.clear();
 		
 		for(int i=0;i<4;++i) {callDFTNoteMapper.get(i).setPerRunValues(sampleRate, _buffer,lvlsPerPKeyDFTCalc, bassLvlsPerKey);}
