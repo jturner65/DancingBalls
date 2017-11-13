@@ -219,7 +219,7 @@ public class myAudioManager {
 		//7-9 are treble range.  
 		lvlsPerPKeyDFTCalc.clear();
 		boolean usePianoTemp = usePianoTune[songBank][songIDX];
-		for(int i=0;i<4;++i) {callDFTNoteMapper.get(i).setPerRunValues(sampleRate, _buffer, usePianoTemp,lvlsPerPKeyDFTCalc, bassLvlsPerKey);}
+		for(int i=0;i<4;++i) {callDFTNoteMapper.get(i).setPerRunValues(sampleRate, _buffer, usePianoTemp, lvlsPerPKeyDFTCalc, bassLvlsPerKey);}
 		for(int i=4;i<7;++i) {callDFTNoteMapper.get(i).setPerRunValues(sampleRate, _buffer, usePianoTemp, lvlsPerPKeyDFTCalc, midLvlsPerKey);}
 		for(int i=7;i<10;++i) {callDFTNoteMapper.get(i).setPerRunValues(sampleRate, _buffer, usePianoTemp, lvlsPerPKeyDFTCalc, trblLvlsPerKey);}
 		
@@ -375,11 +375,14 @@ public class myAudioManager {
 	public void drawScreenData(float modAmtMillis) {
 		pa.hint(PConstants.DISABLE_DEPTH_TEST);
 		float bandResHeight = 10.0f;
-		boolean showBeats = win.getPrivFlags(DancingBallWin.showTapBeats);
-		if(win.getPrivFlags(DancingBallWin.showPianoNotes)) {
+		boolean showBeats = win.getPrivFlags(DancingBallWin.showTapBeats),
+				showPianoNotes = win.getPrivFlags(DancingBallWin.showPianoNotes),
+				showFreqlbls = win.getPrivFlags(DancingBallWin.showFreqLbls),
+				showAllBandRes = win.getPrivFlags(DancingBallWin.showAllBandRes);
+		if(showPianoNotes) {
 			dispPiano.drawMe();	
+			//draw band Res
 			if(win.getPrivFlags(DancingBallWin.calcSingleFreq) ) {//use single frequency DFT mechanism
-				if(!win.getPrivFlags(DancingBallWin.showAllBandRes)) {dispPiano.drawPianoBandRes( lvlsPerPKeyDFTCalc);}
 				if(win.getPrivFlags(DancingBallWin.showEachOctave)) {
 					float bandThresh = 5.0f;//TODO set this to something to shut down multi-thread results that are very low
 					//threads 0-3 are bass range
@@ -390,29 +393,23 @@ public class myAudioManager {
 					dispPiano.drawPlayedNote(trblLvlsPerKey, bandThresh, 5, 2);
 				} else {					dispPiano.drawPlayedNote(lvlsPerPKeyDFTCalc, 0, pa.gui_Green, 3);	}//draw results 
 			} else {//use FFT mechanism
-				if(!win.getPrivFlags(DancingBallWin.showAllBandRes)) {dispPiano.drawPianoBandRes(lvlsPerPKeyFundFFT);}
 				dispPiano.drawPlayedNote(lvlsPerPKeyFundFFT, 0 ,pa.gui_Green, 3);
 			}
-		}		
-		if (win.getPrivFlags(DancingBallWin.showAllBandRes)) {//if showing all bands, displace by piano keys' width
-			if(win.getPrivFlags(DancingBallWin.showPianoNotes)) {	//move over for piano				
+			if (showAllBandRes) {//if showing all bands, displace by piano keys' width
 				pa.pushMatrix();pa.pushStyle();
 				pa.translate(win.whiteKeyWidth,0,0);				
-			}
-			drawFreqBands(allBandsRes, allBandFreqs, 1.0f, pa.gui_TransRed, showBeats, win.getPrivFlags(DancingBallWin.showFreqLbls));
+			} else {
+				dispPiano.drawPianoBandRes( lvlsPerPKeyDFTCalc);
+			}	
+		}		
+		if (showAllBandRes) {//if showing all bands, displace by piano keys' width
+			drawFreqBands(allBandsRes, allBandFreqs, 1.0f, pa.gui_TransRed, showBeats,showFreqlbls);
 		}
-		else if(win.getPrivFlags(DancingBallWin.showZoneBandRes)) {drawFreqBands(bandRes, bandFreqs, bandResHeight, pa.gui_Blue, showBeats, win.getPrivFlags(DancingBallWin.showFreqLbls));}
+		else if(win.getPrivFlags(DancingBallWin.showZoneBandRes)) {drawFreqBands(bandRes, bandFreqs, bandResHeight, pa.gui_Blue, showBeats, showFreqlbls);}
 		if(showBeats) {
 			drawDetectedBeats(beatDetRes, lastBeatDetRes, getBeats(),  bandResHeight);
-//			
-//			if(win.getPrivFlags(DancingBallWin.useHumanTapBeats)) {	
-//				drawDetectedBeats(beatDetRes, lastBeatDetRes, getBeats(),  bandResHeight);}
-//				//drawBeats(tapBeats,modAmtMillis, bandResHeight);}//using human-entered tap beats 
-//			else {								
-//				drawDetectedBeats(beatDetRes, lastBeatDetRes, audioBeats,  bandResHeight);
-//			}//using music-generated beats
 		}
-		if(win.getPrivFlags(DancingBallWin.showAllBandRes) && win.getPrivFlags(DancingBallWin.showPianoNotes)) {	pa.popStyle();pa.popMatrix();	}		//undo piano translation		
+		if(showAllBandRes && showPianoNotes) {	pa.popStyle();pa.popMatrix();	}		//undo piano translation		
 		pa.hint(PConstants.ENABLE_DEPTH_TEST);		
 	}//drawScreenData
 	

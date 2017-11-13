@@ -1125,15 +1125,15 @@ public class DancingBalls extends PApplet{
 		return P(P(A,x,AB),y,rAB);
 	  }
 	
-	
+	private static float cyl_da = TWO_PI/36.0f;
 	public void cylinder(myPoint A, myPoint B, float r, int c1, int c2) {
 		myPoint P = A;
 		myVector V = V(A,B);
 		myVector I = c.drawSNorm;//U(Normal(V));
 		myVector J = U(N(I,V));
-		float da = TWO_PI/36;
 		beginShape(QUAD_STRIP);
-			for(float a=0; a<=TWO_PI+da; a+=da) {fill(c1); gl_vertex(P(P,r*cos(a),I,r*sin(a),J,0,V)); fill(c2); gl_vertex(P(P,r*cos(a),I,r*sin(a),J,1,V));}
+		float rcA, rsA;
+		for(float a=0; a<=TWO_PI+cyl_da; a+=cyl_da) {rcA = r*cos(a); rsA = r*sin(a);fill(c1); gl_vertex(P(P,rcA,I,rsA,J,0,V)); fill(c2); gl_vertex(P(P,rcA,I,rsA,J,1,V));}
 		endShape();
 	}
 	

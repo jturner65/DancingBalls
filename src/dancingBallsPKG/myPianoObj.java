@@ -260,7 +260,7 @@ public class myPianoObj{
 		}
 		//pa.outStr2Scr("NumKeysDrawn : "+ keyCnt , true);
 		pa.popStyle();pa.popMatrix();		
-	}
+	}//draw graphical rep of piano
 	
 	//str is what order note is = 0 is strongest, 1 is next strongest, etc.
 	public void drawNoteCircle(int idx, int ord, float str, float maxStr, int clr1) {
