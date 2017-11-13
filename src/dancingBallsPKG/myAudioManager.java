@@ -48,13 +48,13 @@ public class myAudioManager {
 	//per bank arrays of buffer size, song handlers, song file names
 	//current song index and songBank (bank corresponds to songs or piano samples)
 	//list of song banks - use to pick either songs or piano notes
+	public int songIDX = 1, songBank = 0;
 	public static String[] songBanks = new String[] {"Songs", "Bach", "Piano Notes"};
 	//list of song names
 	public static String[][] songList = new String[][]{
 		{"Sati-Gnoss1","Sati-Gymn1","PurpleHaze","Fur Elise","UNATCO","Hunting","SavanaDance","Karelia","Choir"},
 		{"Cello4 EbMaj","Cello5 Cmin"},
 		{"ff-029","ff-030","ff-031","ff-050","ff-051","ff-052","ff-053","ff-054"}};
-	public int songIDX = 1, songBank = 0;
 	public final int[] songBufSize = new int[] {2048, 2048, 1024};
 	public myMP3SongHandler[][] songs;
 	public String[][] songFilenames = new String[][]{
@@ -64,7 +64,7 @@ public class myAudioManager {
 	};
 	//whether to use piano tuning or equal temperment tuning
 	public boolean[][] usePianoTune = new boolean [][]{
-		{true, false, true, false, false, false,false,false },
+		{true,true, false, true, false, false, false, false, false},
 		{false, false},
 		{true, true, true, true, true, true, true, true}
 		};
