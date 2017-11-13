@@ -76,9 +76,10 @@ public class DancingBallWin extends myDispWindow {
 			
 			showFreqLbls		= 15,		//overlay frequency labels on display of energy bars
 			showPianoNotes		= 16,		//display piano notes being played
-			calcSingleFreq		= 17,		//analyze signal with single frequencies
-			showEachOctave 		= 18; 	
-	public static final int numPrivFlags = 19;
+			showMelodyTrail		= 17,		//display "piano roll" trail of melody, otherwise show levels of signal for each piano key
+			calcSingleFreq		= 18,		//analyze signal with single frequencies
+			showEachOctave 		= 19; 	
+	public static final int numPrivFlags = 20;
 	
 	//piano display
 	public float whiteKeyWidth = 78, bkModY;				//how long, in pixels, is a white key, blk key is 2/3 as long
@@ -115,19 +116,19 @@ public class DancingBallWin extends myDispWindow {
 				"Debugging","Mod DelT By FRate","Random Ball Verts","Showing Vert Norms","Showing Zones", 
 				"Stim Zone and Mate", "Playing MP3","Mass-Spring Ball", "Dancing", 
 				"Stim Ball W/Beats","Showing Beats","Use Human Tap Beats", 
-				"Showing Ctr Freq Vals","Showing Zone EQ", "Showing All Band Eq","Showing Piano","Showing Per Thd Note","Note Lvls w/Indiv F"	
+				"Showing Ctr Freq Vals","Showing Zone EQ", "Showing All Band Eq","Showing Piano","Showing Melody Trail","Showing Per Thd Note","Note Lvls w/Indiv F"	
 		};
 		falsePrivFlagNames = new String[]{			//needs to be in order of flags
 				"Enable Debug","Fixed DelT","Uniform Ball Verts","Hiding Vert Norms", "Hiding Zones",
 				"Stim Only Zones","Stopped MP3","Kinematics Ball","Not Dancing", 
 				"Stim Ball W/Audio","Hiding Beats","Use Detected Beats",  
-				"Hiding Ctr Freq Vals", "Hiding Zone EQ", "Hiding All Band Eq", "Hiding Piano","Showing One Note", "Note Lvls w/FFT"
+				"Hiding Ctr Freq Vals", "Hiding Zone EQ", "Hiding All Band Eq", "Hiding Piano","Showing Key lvls","Showing One Note", "Note Lvls w/FFT"
 		};
 		privModFlgIdxs = new int[]{
 				debugAnimIDX, modDelT,randVertsForSphere,showVertNorms,showZones,
 				stimZoneMates,playMP3Vis, useForcesForBall, sendAudioToBall,  
 				stimWithTapBeats, showTapBeats, useHumanTapBeats, 
-				showFreqLbls, showZoneBandRes, showAllBandRes, showPianoNotes,showEachOctave, calcSingleFreq
+				showFreqLbls, showZoneBandRes, showAllBandRes, showPianoNotes, showMelodyTrail, showEachOctave, calcSingleFreq
 		};
 		numClickBools = privModFlgIdxs.length;	
 		initPrivBtnRects(0,numClickBools);
@@ -197,32 +198,16 @@ public class DancingBallWin extends myDispWindow {
 				if(val) {	audMgr.startAudio();}
 				else {		audMgr.pauseAudio();}
 				break;}
-//			case usePianoNoteFiles 		: {//change display to be list of piano note files
-//				setPrivFlags(playMP3Vis,false);//turn off playing
-//				if (val) {//use piano notes files
-//					guiObjs[gIDX_curSong].setNewMax(pianoNoteList.length-1);
-//					audMgr.songIDX %= pianoNoteList.length;
-//				} else {//use song files
-//					guiObjs[gIDX_curSong].setNewMax(songList.length-1);			
-//					audMgr.songIDX %= songList.length;
-//				}				
-//				break;}
 			case sendAudioToBall 		: {break;}
 			case useForcesForBall		: {
 				//1 : force/mass-spring, 0 : kinematic
 				sendStimTypeToBall(val ? 1 : 0);
 				break;}
-			case showZoneBandRes: {
-				if(val) {setPrivFlags(showAllBandRes, false);}//either or allowed,not both
-				break;}
-			case showAllBandRes: {
-				if(val) {setPrivFlags(showZoneBandRes, false);}
-				break;}
-			case calcSingleFreq : {
-				if(!val) {setPrivFlags(showEachOctave, false);}//only show each octave results when calculating dft-based
-				break;}
-			case showEachOctave : {
-				if(val) {setPrivFlags(calcSingleFreq, true);}//only show each octave results when calculating dft-based		
+			case showZoneBandRes: {				if(val) {setPrivFlags(showAllBandRes, false);}break;}
+			case showAllBandRes: {				if(val) {setPrivFlags(showZoneBandRes, false);}break;}
+			case calcSingleFreq : {				if(!val) {setPrivFlags(showEachOctave, false);}break;}
+			case showEachOctave : {				if(val) {setPrivFlags(calcSingleFreq, true);}break;}
+			case showMelodyTrail :{//show trail of melody, else show key levels, when showing piano and not showing all freq response
 				break;}
 		}		
 	}//setPrivFlags	

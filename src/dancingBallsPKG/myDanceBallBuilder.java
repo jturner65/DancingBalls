@@ -177,9 +177,9 @@ class myDFTNoteMapper implements Callable<Boolean>{
 	
 	//hold all precalced trig for each sample rate possible, for each sample frequency derived
 	//ConcurrentSkipListMap<Float, ConcurrentSkipListMap<Float, Float[]>> cosTblSample, sinTblSample;
-
 	//precalced cos and sin of frequencies
-	ConcurrentSkipListMap<Float, Float[]> cosTbl, sinTbl;
+	//ConcurrentSkipListMap<Float, Float[]> cosTbl, sinTbl;
+	//start and ending idxs of piano keys this mapper will calculate
 	int stKey, endKey;
 	
 	//current song buffer
@@ -190,6 +190,8 @@ class myDFTNoteMapper implements Callable<Boolean>{
 	ConcurrentSkipListMap<Float, Integer> levelsPerPKeySingleCalc;	
 	//normalization value
 	float normVal;
+	//incrementer to go through buffer - only needs to be 1 for lowest 3 octaves, can be 2 for the rest
+	int bufIncr;
 	
 	//arrays hold subset of key freqs this thread will execute
 	public myDFTNoteMapper(myAudioManager _mgr,int _stIdx, int _endIdx ) {
@@ -208,6 +210,7 @@ class myDFTNoteMapper implements Callable<Boolean>{
 		System.arraycopy(mgr.dispPiano.eqTempMinFreqsHarms, _stIdx, eqTempMinFreqsHarms, 0, numValsToProcess+1);
 		int numSamplesPerKey = 5;
 		augNSth = (float) Math.exp(Math.log(2.0)/(12.0f * numSamplesPerKey));
+		bufIncr = stKey < 30 ? 1 : 2;
 
 		normVal = numSamplesPerKey * numSamplesPerKey;
 		//allFreqsUsed = preCalcRandSamples(len, numSamplesPerKey);
@@ -219,36 +222,6 @@ class myDFTNoteMapper implements Callable<Boolean>{
 		preCalcRandUniSamples(numValsToProcess, numSamplesPerKey, eqSampleFreqs,eqTempFreqsHarms, eqTempMinFreqsHarms);
 
 	}//myDFTNoteMapper
-
-	
-//	//must be set before each dft run!
-//	public void setPerRunValues(float _srte, float[] _buffer, 
-//			ConcurrentSkipListMap<Float, Float[]> _cosTbl, 
-//			ConcurrentSkipListMap<Float, Float[]> _sinTbl,
-//			ConcurrentSkipListMap<Float, Integer> _lvlsPerKeyInRange		//destination
-//			) {
-//		sampleRate = _srte;
-//		buffer = _buffer;//float array of length samplesize
-//		cosTbl = _cosTbl;
-//		sinTbl = _sinTbl;
-//		twoPiInvSamp = (float) (2.0 * Math.PI / sampleRate);
-//		//levelsPerPKeySingleCalc = _lvlsPerPKeySingleCalc;
-//		lvlsPerKeyInRange = _lvlsPerKeyInRange;	
-//	}
-	
-	//must be set before each dft run
-	public void setPerRunValues(float _srte, float[] _buffer,
-			boolean _usePianoTune,
-			ConcurrentSkipListMap<Float, Integer> _lvlsPerPKeySingleCalc,
-			ConcurrentSkipListMap<Float, Integer> _lvlsPerKeyInRange		//destination
-			) {
-		sampleRate = _srte;
-		exampleFreqsToUse= (_usePianoTune ? pianoSampleFreqs : eqSampleFreqs);	
-		buffer = _buffer;//float array of length samplesize
-		twoPiInvSamp = (float) (2.0 * Math.PI / sampleRate);
-		levelsPerPKeySingleCalc = _lvlsPerPKeySingleCalc;
-		lvlsPerKeyInRange = _lvlsPerKeyInRange;
-	}
 
 	//build a map of uniformly spaced samples between min and max freq for a key
 	private void preCalcRandUniSamples(int len, int numExamplesPerKey, float[][][] sampleFreqs, float[][] harmFreqs, float[][] minHarmFreqs){
@@ -299,7 +272,36 @@ class myDFTNoteMapper implements Callable<Boolean>{
 //		}
 //	}//calcIndivFreqLevelOnSamples
 //	
+
 	
+//	//must be set before each dft run!
+//	public void setPerRunValues(float _srte, float[] _buffer, 
+//			ConcurrentSkipListMap<Float, Float[]> _cosTbl, 
+//			ConcurrentSkipListMap<Float, Float[]> _sinTbl,
+//			ConcurrentSkipListMap<Float, Integer> _lvlsPerKeyInRange		//destination
+//			) {
+//		sampleRate = _srte;
+//		buffer = _buffer;//float array of length samplesize
+//		cosTbl = _cosTbl;
+//		sinTbl = _sinTbl;
+//		twoPiInvSamp = (float) (2.0 * Math.PI / sampleRate);
+//		//levelsPerPKeySingleCalc = _lvlsPerPKeySingleCalc;
+//		lvlsPerKeyInRange = _lvlsPerKeyInRange;	
+//	}
+	
+	//must be set before each dft run
+	public void setPerRunValues(float _srte, float[] _buffer,
+			boolean _usePianoTune,
+			ConcurrentSkipListMap<Float, Integer> _lvlsPerPKeySingleCalc,
+			ConcurrentSkipListMap<Float, Integer> _lvlsPerKeyInRange		//destination
+			) {
+		sampleRate = _srte;
+		exampleFreqsToUse= (_usePianoTune ? pianoSampleFreqs : eqSampleFreqs);	
+		buffer = _buffer;//float array of length samplesize
+		twoPiInvSamp = (float) (2.0 * Math.PI / sampleRate);
+		levelsPerPKeySingleCalc = _lvlsPerPKeySingleCalc;
+		lvlsPerKeyInRange = _lvlsPerKeyInRange;
+	}	
 	/**
 	 * calculate the individual level manually using a sample of the signal as f(t), not using precalced frequencies
 	 * TRIG IS FASTER THAN PRECALC
@@ -312,7 +314,7 @@ class myDFTNoteMapper implements Callable<Boolean>{
 			float[] harmSamples = exampleFreqsToUse[key][0];//fundamental only for now
 			for(float harm  : harmSamples) {
 				float tpHarm = harm *  twoPiInvSamp;
-				for (int t=0;t<buffer.length; ++t) {		//for every sample
+				for (int t=0;t<buffer.length; t+=bufIncr) {		//for every sample
 					float tpHarmT = t*tpHarm;
 					cosSum += buffer[t] * (float)(Math.cos(tpHarmT));
 					sinSum += buffer[t] * (float)(Math.sin(tpHarmT));

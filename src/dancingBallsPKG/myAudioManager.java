@@ -51,14 +51,14 @@ public class myAudioManager {
 	public static String[] songBanks = new String[] {"Songs", "Bach", "Piano Notes"};
 	//list of song names
 	public static String[][] songList = new String[][]{
-		{"Sati","PurpleHaze","Fur Elise","UNATCO","Hunting","SavanaDance","Karelia","Choir"},
+		{"Sati-Gnoss1","Sati-Gymn1","PurpleHaze","Fur Elise","UNATCO","Hunting","SavanaDance","Karelia","Choir"},
 		{"Cello4 EbMaj","Cello5 Cmin"},
 		{"ff-029","ff-030","ff-031","ff-050","ff-051","ff-052","ff-053","ff-054"}};
 	public int songIDX = 1, songBank = 0;
 	public final int[] songBufSize = new int[] {2048, 2048, 1024};
 	public myMP3SongHandler[][] songs;
 	public String[][] songFilenames = new String[][]{
-		{"sati.mp3","PurpleHaze.mp3","FurElise.mp3","UNATCO.mp3","Hunting.mp3","SavanaDance.mp3","karelia.mp3","choir.mp3"},
+		{"satie_gnossienne1.mp3","satie_gymnopedie1.mp3","PurpleHaze.mp3","FurElise.mp3","UNATCO.mp3","Hunting.mp3","SavanaDance.mp3","karelia.mp3","choir.mp3"},
 		{"Bach cello No. 4 in EbMaj_Prelude.mp3","Bach cello No. 5 in CMin_Prelude.mp3"},
 		{"piano-ff-029.wav","piano-ff-030.wav","piano-ff-031.wav","piano-ff-050.wav","piano-ff-051.wav","piano-ff-052.wav","piano-ff-053.wav","piano-ff-054.wav"}
 	};
@@ -219,7 +219,7 @@ public class myAudioManager {
 		//7-9 are treble range.  
 		lvlsPerPKeyDFTCalc.clear();
 		boolean usePianoTemp = usePianoTune[songBank][songIDX];
-		for(int i=0;i<4;++i) {callDFTNoteMapper.get(i).setPerRunValues(sampleRate, _buffer, usePianoTemp,lvlsPerPKeyDFTCalc, bassLvlsPerKey);}
+		for(int i=0;i<4;++i) {callDFTNoteMapper.get(i).setPerRunValues(sampleRate, _buffer, usePianoTemp, lvlsPerPKeyDFTCalc, bassLvlsPerKey);}
 		for(int i=4;i<7;++i) {callDFTNoteMapper.get(i).setPerRunValues(sampleRate, _buffer, usePianoTemp, lvlsPerPKeyDFTCalc, midLvlsPerKey);}
 		for(int i=7;i<10;++i) {callDFTNoteMapper.get(i).setPerRunValues(sampleRate, _buffer, usePianoTemp, lvlsPerPKeyDFTCalc, trblLvlsPerKey);}
 		
@@ -375,11 +375,14 @@ public class myAudioManager {
 	public void drawScreenData(float modAmtMillis) {
 		pa.hint(PConstants.DISABLE_DEPTH_TEST);
 		float bandResHeight = 10.0f;
-		boolean showBeats = win.getPrivFlags(DancingBallWin.showTapBeats);
-		if(win.getPrivFlags(DancingBallWin.showPianoNotes)) {
+		boolean showBeats = win.getPrivFlags(DancingBallWin.showTapBeats),
+				showPianoNotes = win.getPrivFlags(DancingBallWin.showPianoNotes),
+				showFreqlbls = win.getPrivFlags(DancingBallWin.showFreqLbls),
+				showAllBandRes = win.getPrivFlags(DancingBallWin.showAllBandRes);
+		if(showPianoNotes) {
 			dispPiano.drawMe();	
+			//draw band Res
 			if(win.getPrivFlags(DancingBallWin.calcSingleFreq) ) {//use single frequency DFT mechanism
-				if(!win.getPrivFlags(DancingBallWin.showAllBandRes)) {dispPiano.drawPianoBandRes( lvlsPerPKeyDFTCalc);}
 				if(win.getPrivFlags(DancingBallWin.showEachOctave)) {
 					float bandThresh = 5.0f;//TODO set this to something to shut down multi-thread results that are very low
 					//threads 0-3 are bass range
@@ -390,29 +393,23 @@ public class myAudioManager {
 					dispPiano.drawPlayedNote(trblLvlsPerKey, bandThresh, 5, 2);
 				} else {					dispPiano.drawPlayedNote(lvlsPerPKeyDFTCalc, 0, pa.gui_Green, 3);	}//draw results 
 			} else {//use FFT mechanism
-				if(!win.getPrivFlags(DancingBallWin.showAllBandRes)) {dispPiano.drawPianoBandRes(lvlsPerPKeyFundFFT);}
 				dispPiano.drawPlayedNote(lvlsPerPKeyFundFFT, 0 ,pa.gui_Green, 3);
 			}
-		}		
-		if (win.getPrivFlags(DancingBallWin.showAllBandRes)) {//if showing all bands, displace by piano keys' width
-			if(win.getPrivFlags(DancingBallWin.showPianoNotes)) {	//move over for piano				
+			if (showAllBandRes) {//if showing all bands, displace by piano keys' width
 				pa.pushMatrix();pa.pushStyle();
 				pa.translate(win.whiteKeyWidth,0,0);				
-			}
-			drawFreqBands(allBandsRes, allBandFreqs, 1.0f, pa.gui_TransRed, showBeats, win.getPrivFlags(DancingBallWin.showFreqLbls));
+			} else {
+				dispPiano.drawPianoBandRes( lvlsPerPKeyDFTCalc);
+			}	
+		}		
+		if (showAllBandRes) {//if showing all bands, displace by piano keys' width
+			drawFreqBands(allBandsRes, allBandFreqs, 1.0f, pa.gui_TransRed, showBeats,showFreqlbls);
 		}
-		else if(win.getPrivFlags(DancingBallWin.showZoneBandRes)) {drawFreqBands(bandRes, bandFreqs, bandResHeight, pa.gui_Blue, showBeats, win.getPrivFlags(DancingBallWin.showFreqLbls));}
+		else if(win.getPrivFlags(DancingBallWin.showZoneBandRes)) {drawFreqBands(bandRes, bandFreqs, bandResHeight, pa.gui_Blue, showBeats, showFreqlbls);}
 		if(showBeats) {
 			drawDetectedBeats(beatDetRes, lastBeatDetRes, getBeats(),  bandResHeight);
-//			
-//			if(win.getPrivFlags(DancingBallWin.useHumanTapBeats)) {	
-//				drawDetectedBeats(beatDetRes, lastBeatDetRes, getBeats(),  bandResHeight);}
-//				//drawBeats(tapBeats,modAmtMillis, bandResHeight);}//using human-entered tap beats 
-//			else {								
-//				drawDetectedBeats(beatDetRes, lastBeatDetRes, audioBeats,  bandResHeight);
-//			}//using music-generated beats
 		}
-		if(win.getPrivFlags(DancingBallWin.showAllBandRes) && win.getPrivFlags(DancingBallWin.showPianoNotes)) {	pa.popStyle();pa.popMatrix();	}		//undo piano translation		
+		if(showAllBandRes && showPianoNotes) {	pa.popStyle();pa.popMatrix();	}		//undo piano translation		
 		pa.hint(PConstants.ENABLE_DEPTH_TEST);		
 	}//drawScreenData
 	
