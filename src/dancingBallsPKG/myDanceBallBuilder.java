@@ -184,10 +184,13 @@ class myDFTNoteMapper implements Callable<Boolean>{
 	
 	//current song buffer
 	float[] buffer;
-	//results for this mapper's range of notes - shared with other mappers in certain freq range
+	//results for this mapper's range of notes - indiv threads 
 	ConcurrentSkipListMap<Float, Integer> lvlsPerKeyInRange;		
-	//reference to owning map
-	ConcurrentSkipListMap<Float, Integer> levelsPerPKeySingleCalc;	
+	//reference to owning map; shared among a subset of threads
+	ConcurrentSkipListMap<Float, Integer> lvlsPerPKey, lvlsPerPKeyShared;
+	
+	//reference to owning map holding note(as -key) to levels(value)
+	ConcurrentSkipListMap<Integer, Float> perPKeyLvls;
 	//normalization value
 	float normVal;
 	//incrementer to go through buffer - only needs to be 1 for lowest 3 octaves, can be 2 for the rest
@@ -292,21 +295,60 @@ class myDFTNoteMapper implements Callable<Boolean>{
 	//must be set before each dft run
 	public void setPerRunValues(float _srte, float[] _buffer,
 			boolean _usePianoTune,
-			ConcurrentSkipListMap<Float, Integer> _lvlsPerPKeySingleCalc,
+			ConcurrentSkipListMap<Float, Integer> _lvlsPerPKey,
+			ConcurrentSkipListMap<Integer, Float> _perPKeyLvls,
 			ConcurrentSkipListMap<Float, Integer> _lvlsPerKeyInRange		//destination
 			) {
 		sampleRate = _srte;
-		exampleFreqsToUse= (_usePianoTune ? pianoSampleFreqs : eqSampleFreqs);	
+		if(_usePianoTune) {
+			freqHarmsToUse = pianoFreqsHarmonics;
+			exampleFreqsToUse = pianoSampleFreqs;	
+		} else {
+			freqHarmsToUse = eqTempFreqsHarms;
+			exampleFreqsToUse = eqSampleFreqs;
+		}
 		buffer = _buffer;//float array of length samplesize
 		twoPiInvSamp = (float) (2.0 * Math.PI / sampleRate);
-		levelsPerPKeySingleCalc = _lvlsPerPKeySingleCalc;
+		lvlsPerPKey = _lvlsPerPKey;
+		perPKeyLvls = _perPKeyLvls;
 		lvlsPerKeyInRange = _lvlsPerKeyInRange;
 	}	
+	
+	public void setPerRunSharedMap(ConcurrentSkipListMap<Float, Integer> _lvlsPerKeyShared) {
+		lvlsPerPKeyShared = _lvlsPerKeyShared;
+	}
+	
+	
+	
+	public void calcIndivFreqLevelNoPreCalcOnSamples() {
+		//current buffer of song playing
+		float cosSum = 0, sinSum = 0, A;		
+		for(int key=0;key<numValsToProcess;++key) {//for every key being compared
+			cosSum =0;sinSum=0;A=0;
+			float harm = freqHarmsToUse[key][0];//fundamental only for now
+			//for(float harm  : harmSamples) {
+			float tpHarm = harm *  twoPiInvSamp;
+			for (int t=0;t<buffer.length; t+=bufIncr) {		//for every sample
+				float tpHarmT = t*tpHarm;
+				cosSum += buffer[t] * (float)(Math.cos(tpHarmT));
+				sinSum += buffer[t] * (float)(Math.sin(tpHarmT));
+			}			
+			//A = ((cosSum * cosSum) + (sinSum * sinSum))/normVal; //A[n] = sqrt (c(f)^2 + s(f)^2)
+			A = (float) Math.sqrt(((cosSum * cosSum) + (sinSum * sinSum))/normVal); //A[n] = sqrt (c(f)^2 + s(f)^2)
+			int absKey =key+stKey;
+			lvlsPerPKey.put(A, absKey);	
+			perPKeyLvls.put(absKey, A);
+			lvlsPerKeyInRange.put(A, absKey);	
+			lvlsPerPKeyShared.put(A,  absKey);
+		}		
+	}
+	
+	
 	/**
 	 * calculate the individual level manually using a sample of the signal as f(t), not using precalced frequencies
 	 * TRIG IS FASTER THAN PRECALC
 	 */	
-	public void calcIndivFreqLevelNoPreCalcOnSamples() {
+	public void calcHarmFreqLevelNoPreCalcOnSamples() {
 		//current buffer of song playing
 		float cosSum = 0, sinSum = 0, A;		
 		for(int key=0;key<numValsToProcess;++key) {//for every key being compared
@@ -320,34 +362,23 @@ class myDFTNoteMapper implements Callable<Boolean>{
 					sinSum += buffer[t] * (float)(Math.sin(tpHarmT));
 				}	           
 			}
-			A = ((cosSum * cosSum) + (sinSum * sinSum))/normVal; //A[n] = sqrt (c(f)^2 + s(f)^2)
-			levelsPerPKeySingleCalc.put(A, key+stKey);				
-			lvlsPerKeyInRange.put(A, key+stKey);	
+			//A = ((cosSum * cosSum) + (sinSum * sinSum))/normVal; //A[n] = sqrt (c(f)^2 + s(f)^2)
+			A = (float) Math.sqrt(((cosSum * cosSum) + (sinSum * sinSum))/normVal); //A[n] = sqrt (c(f)^2 + s(f)^2)
+			int absKey =key+stKey;
+			lvlsPerPKey.put(A, absKey);	
+			perPKeyLvls.put(absKey, A);
+			lvlsPerKeyInRange.put(A, absKey);	
+			lvlsPerPKeyShared.put(A,  absKey);
 		}
 	}//calcIndivFreqLevelNoPreCalcOnSamples
 	
 	@Override
 	public Boolean call() throws Exception {
-//		if (cosTbl == null) {
-//			calcIndivFreqLevelNoPreCalc();
-//		} else {
-//			calcIndivFreqLevel();				
-//		}	
-//		if (firstCall) {
-//			preCalcTrig();
-//			allFreqsUsed = null;
-//			firstCall = false;
-//		} else {
-//			if (cosTbl == null) {//would be null if no precalculated cos/sin tables existed for current song's sample rate
-//				//System.out.println("no precalc");
-		//trig is faster than precalc - precalc suffers from stutters initially, until cache is loaded for each thread (?)
-		calcIndivFreqLevelNoPreCalcOnSamples();
-//			} else {
-//				calcIndivFreqLevelOnSamples();				
-//			}	
-//		}
+		//calcIndivFreqLevelNoPreCalcOnSamples();
+		calcHarmFreqLevelNoPreCalcOnSamples();
 		return true;
 	}
 	
 
 }//myDFTNoteMapper
+

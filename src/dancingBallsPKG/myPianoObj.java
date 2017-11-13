@@ -191,38 +191,81 @@ public class myPianoObj{
 	}
 
 	/**
-	 * draw piano and display results of note detection on piano keyboard
+	 * draw results of note detection on piano keyboard
 	 * @param showingAllBandsRes whether showing all fft results.  if not can display level results on screen of analysis
 	 * @param lvlsPerPKey map sorted on volume levels, with value being piano key of frequency with that volume
 	 */
-	public void drawPianoBandRes( ConcurrentSkipListMap<Float, Integer> lvlsPerPKey) {
+	
+	private void dispSingleKeyLvlLine(Float dispLvl, Integer pianoKeyIdx, int[] clr) {
+		pa.pushMatrix();pa.pushStyle();
+		pa.translate(0,pianoKeyCtrYLocs[pianoKeyIdx],0);
+		pa.setStroke(clr, 255);				
+		pa.line(0, 0, dispLvl,0);					
+		pa.popStyle();pa.popMatrix();							
+		
+	}
+	
+	//private arrays of colors to display level bars - idx 7 should be dark cyan/cyan
+	//need to have numThreads different light and dark colors
+	private int[][] bkKeyBarClrs = new int[][] {{120,0,0},{120,50,0},{120,120,0},{50,120,0},{0,120,0}, {0,120,50}, {0,120,120}, {0,50,120},{0,0,120},{120,0,120}};
+	private int[][] wkKeyBarClrs = new int[][] {{255,0,0},{255,150,0},{255,255,0},{150,255,0},{0,255,0},{0,255,150},{0,255,255},{0,150,255},{0,0,255}, {255,0,255}};
+	public void drawPianoBandRes( ConcurrentSkipListMap<Float, Integer> lvlsPerPKey, int barWidth, int clrIdx) {		
 		if((lvlsPerPKey.size() > 0) && (lvlsPerPKey.firstKey()>0)) {
+			//float maxSqrtLvl = maxLvl/barWidth;// pa.sqrt(maxLvl)/barWidth;
 			pa.pushMatrix();pa.pushStyle();
 			pa.translate(pianoWKeyDims[0][2],0,0);
-			pa.scale(5.0f, 1.0f, 1.0f);
+			pa.scale(5.0f, 1.0f, 1.0f);				
 			for (Float freqLvl : lvlsPerPKey.keySet()) {
 				if(freqLvl == 0) {break;}
-				float dispLvl = pa.sqrt(freqLvl);
-				
+				float dispLvl = barWidth * freqLvl;//pa.log(freqLvl+1);//freqLvl/maxSqrtLvl;//( pa.sqrt(freqLvl)/maxSqrtLvl);			
 				int pianoKeyIdx = lvlsPerPKey.get(freqLvl);
-				pa.pushMatrix();pa.pushStyle();
-				pa.translate(0,pianoKeyCtrYLocs[pianoKeyIdx],0);
-				pa.setColorValStroke(isBlackKey(pianoKeyIdx) ? pa.gui_DarkCyan : pa.gui_Cyan);					
-				pa.line(0, 0, dispLvl,0);					
-				pa.popStyle();pa.popMatrix();							
+				dispSingleKeyLvlLine(dispLvl,pianoKeyIdx, isBlackKey(pianoKeyIdx) ? bkKeyBarClrs[clrIdx] : wkKeyBarClrs[clrIdx]);
 			}				
-			pa.popStyle();pa.popMatrix();							
+			pa.popStyle();pa.popMatrix();
 		}		
 	}//showPianoNotes
 	
+	//draw scrolling melody candidates - begin at edge of piano
+	public void drawMelodyCands(ConcurrentSkipListMap<Integer, ConcurrentSkipListMap<Float, Integer>> cands, int curTimeFromStart, float width) {
+		pa.pushMatrix();pa.pushStyle();
+		pa.translate(pianoWKeyDims[0][2],0,0);
+		float objWidth = 5.0f, objHWidth = .5f*objWidth;
+		for(Integer time: cands.keySet()) {
+			float timeOffset =objWidth*(curTimeFromStart - time); 
+			if(timeOffset > width) {				
+				pa.popStyle();pa.popMatrix();
+				return;}//done, don't draw off screen
+			pa.pushMatrix();pa.pushStyle();
+			pa.translate(timeOffset,0,0);
+			pa.noStroke();
+			ConcurrentSkipListMap<Float, Integer> tmpMap = cands.get(time);
+			int idx = 0;
+			for(Float lvlVal : tmpMap.keySet()) {//for each entry, draw a circle offset by timeOffset * objWidth
+				//pianoKeyIdx is key played
+				Integer pianoKeyIdx = tmpMap.get(lvlVal);
+				pa.setFill(wkKeyBarClrs[idx % wkKeyBarClrs.length],255);
+				idx++;
+				pa.pushMatrix();pa.pushStyle();
+				pa.translate(0,pianoKeyCtrYLocs[pianoKeyIdx],0);	
+				//float y=  allNotes[pianoKeyIdx].dims[3] * .5f;
+				pa.ellipse(-objHWidth,objHWidth,objWidth,objWidth);
+
+				
+				pa.popStyle();pa.popMatrix();
+			}
+			pa.popStyle();pa.popMatrix();
+		}		
+		pa.popStyle();pa.popMatrix();
+	}//drawMelodyCands
+	
 	//call with small range array from each individual thread
-	public void drawPlayedNote(ConcurrentSkipListMap<Float, Integer> lvlsPerPKey, float bandThresh, int clr, int numShown) {
+	public void drawPlayedNote(ConcurrentSkipListMap<Float, Integer> lvlsPerPKey, float bandThresh, int clrIdx, int numShown) {
 		if((lvlsPerPKey.size() > 0) && (lvlsPerPKey.firstKey() > bandThresh)) {
 			int idx = 0;	
 			float highestLevel = lvlsPerPKey.firstKey();
 			for(Float freqLvl : lvlsPerPKey.keySet()) {	
 				if(freqLvl == 0) {break;}
-				drawNoteCircle(lvlsPerPKey.get(freqLvl), idx++, freqLvl, highestLevel, clr);
+				drawNoteCircle(lvlsPerPKey.get(freqLvl), idx++, freqLvl, highestLevel, clrIdx);
 				if (idx > numShown-1) {break;}
 			}			
 		}		
@@ -266,8 +309,8 @@ public class myPianoObj{
 	public void drawNoteCircle(int idx, int ord, float str, float maxStr, int clr1) {
 		pa.pushMatrix();pa.pushStyle();
 		if(str == maxStr) {
-			pa.setColorValFill(clr1, 255);
-			//pa.fill(0,255,0,255);		
+			//pa.setColorValFill(clr1, 255);
+			pa.setFill(wkKeyBarClrs[clr1],255);		
 			pa.stroke(0,0,0,255);			
 		} else {
 			int mod = 255 - (20*ord);
@@ -278,7 +321,7 @@ public class myPianoObj{
 		pa.strokeWeight(1.0f);
 		pa.translate(allNotes[idx].dims[0],allNotes[idx].dims[1],0);
 		float y=  allNotes[idx].dims[3] * .5f;
-		pa.ellipse(allNotes[idx].dims[2]-y,y,2*y,2*y);
+		pa.ellipse(allNotes[idx].dims[2]-y,y,allNotes[idx].dims[3],allNotes[idx].dims[3]);
 		pa.popStyle();pa.popMatrix();		
 	}
 	

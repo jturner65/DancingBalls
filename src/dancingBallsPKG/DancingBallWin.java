@@ -37,7 +37,10 @@ public class DancingBallWin extends myDispWindow {
 		gIDX_zoneMmbrToShow = 5,
 		gIDX_curSongBank	= 6,
 		gIDX_curSong 		= 7,
-		gIDX_winSel 		= 8;
+		gIDX_numNotesByLvl  = 8,		//top # of notes to show per lvl-mapping result 
+		gIDX_audThresh		= 9,		//fraction of max level seen in entire sample set to display as key hits (0 means display all) - only used for multi-thread res
+		gIDX_typeDFTToShow 	= 10,		//whether to show results for global max, freq zone max or per-thread max note levels
+		gIDX_winSel 		= 11;
 	//initial values - need one per object
 	public float[] uiVals = new float[]{
 			deltaT,
@@ -46,10 +49,15 @@ public class DancingBallWin extends myDispWindow {
 			minVInNBD,
 			zoneToShow,
 			zoneMmbrToShow,
-			0,	//song bank in audMgr
-			1,//songIDX, in audMgr			
+			myAudioManager.songBank,	//initial song bank in audMgr
+			myAudioManager.songIDX,//initial songIDX, in audMgr	
+			1,					//top # of notes to show per lvl-mapping result (min 1)
+			20.0f,				//threshold fraction of max level seen, below which notes are not shown on keyboard
+			0,				//default dft to show -> global
 			0//	curWindowIDX in audMgr	
 	};			//values of 8 ui-controlled quantities
+	
+	public String[] dftResTypeToShow = new String[] {"Global","Per Zone","Per Thread"};
 
 	public final int numGUIObjs = uiVals.length;											//# of gui objects for ui	
 	public float timeStepMult = 1.0f;													//multiplier to modify timestep to make up for lag
@@ -77,8 +85,8 @@ public class DancingBallWin extends myDispWindow {
 			showFreqLbls		= 15,		//overlay frequency labels on display of energy bars
 			showPianoNotes		= 16,		//display piano notes being played
 			showMelodyTrail		= 17,		//display "piano roll" trail of melody, otherwise show levels of signal for each piano key
-			calcSingleFreq		= 18,		//analyze signal with single frequencies
-			showEachOctave 		= 19; 	
+			calcSingleFreq		= 18;		//analyze signal with single frequencies
+			//showEachOctave 		= 19; 	
 	public static final int numPrivFlags = 20;
 	
 	//piano display
@@ -116,19 +124,22 @@ public class DancingBallWin extends myDispWindow {
 				"Debugging","Mod DelT By FRate","Random Ball Verts","Showing Vert Norms","Showing Zones", 
 				"Stim Zone and Mate", "Playing MP3","Mass-Spring Ball", "Dancing", 
 				"Stim Ball W/Beats","Showing Beats","Use Human Tap Beats", 
-				"Showing Ctr Freq Vals","Showing Zone EQ", "Showing All Band Eq","Showing Piano","Showing Melody Trail","Showing Per Thd Note","Note Lvls w/Indiv F"	
+				"Showing Ctr Freq Vals","Showing Zone EQ", "Showing All Band Eq","Showing Piano","Showing Melody Trail",//"Showing Per-Thd Notes",
+				"Note Lvls w/Indiv F"	
 		};
 		falsePrivFlagNames = new String[]{			//needs to be in order of flags
 				"Enable Debug","Fixed DelT","Uniform Ball Verts","Hiding Vert Norms", "Hiding Zones",
 				"Stim Only Zones","Stopped MP3","Kinematics Ball","Not Dancing", 
 				"Stim Ball W/Audio","Hiding Beats","Use Detected Beats",  
-				"Hiding Ctr Freq Vals", "Hiding Zone EQ", "Hiding All Band Eq", "Hiding Piano","Showing Key lvls","Showing One Note", "Note Lvls w/FFT"
+				"Hiding Ctr Freq Vals", "Hiding Zone EQ", "Hiding All Band Eq", "Hiding Piano","Showing Key lvls",//"Showing Glbl Max Note", 
+				"Note Lvls w/FFT"
 		};
 		privModFlgIdxs = new int[]{
 				debugAnimIDX, modDelT,randVertsForSphere,showVertNorms,showZones,
 				stimZoneMates,playMP3Vis, useForcesForBall, sendAudioToBall,  
 				stimWithTapBeats, showTapBeats, useHumanTapBeats, 
-				showFreqLbls, showZoneBandRes, showAllBandRes, showPianoNotes, showMelodyTrail, showEachOctave, calcSingleFreq
+				showFreqLbls, showZoneBandRes, showAllBandRes, showPianoNotes, showMelodyTrail, //showEachOctave, 
+				calcSingleFreq
 		};
 		numClickBools = privModFlgIdxs.length;	
 		initPrivBtnRects(0,numClickBools);
@@ -205,8 +216,9 @@ public class DancingBallWin extends myDispWindow {
 				break;}
 			case showZoneBandRes: {				if(val) {setPrivFlags(showAllBandRes, false);}break;}
 			case showAllBandRes: {				if(val) {setPrivFlags(showZoneBandRes, false);}break;}
-			case calcSingleFreq : {				if(!val) {setPrivFlags(showEachOctave, false);}break;}
-			case showEachOctave : {				if(val) {setPrivFlags(calcSingleFreq, true);}break;}
+			case calcSingleFreq : {				
+				break;}
+			//case showEachOctave : {				if(val) {setPrivFlags(calcSingleFreq, true);}break;}
 			case showMelodyTrail :{//show trail of melody, else show key levels, when showing piano and not showing all freq response
 				break;}
 		}		
@@ -229,6 +241,9 @@ public class DancingBallWin extends myDispWindow {
 			{0,10000,1},					//zone member to show if showing zones on sphere (% list size, so can be huge)
 			{0.0, myAudioManager.songBanks.length-1, 0.1},	//song bank selected
 			{0.0, myAudioManager.songList[(int)uiVals[gIDX_curSongBank]].length-1, 0.1},	//song/clip selected - start with initial bank
+			{1,10,1},						//Top # of notes to show per lvl mapping result
+			{0,100.0f,1.0f},					//% of max volume to use as cutuff, below which notes will not display
+			{0,2,1},							//type of results to display 
 			{0.0, windowNames.length-1, 1.0},	//window function selected
 		};		//min max mod values for each modifiable UI comp	
 
@@ -241,6 +256,9 @@ public class DancingBallWin extends myDispWindow {
 			uiVals[gIDX_zoneMmbrToShow],
 			uiVals[gIDX_curSongBank],
 			uiVals[gIDX_curSong],
+			uiVals[gIDX_numNotesByLvl],
+			uiVals[gIDX_audThresh],
+			uiVals[gIDX_typeDFTToShow],
 			uiVals[gIDX_winSel]
 		};								//starting value
 		
@@ -253,6 +271,9 @@ public class DancingBallWin extends myDispWindow {
 				"Zone Member to Show",
 				"Song Bank",
 				"MP3 Clip",
+				"# Max Lvl Keys to Show",
+				"% of Max Key Lvl as Disp Thresh",
+				"DFT Result Types To Show",
 				"FFT Window func"
 		};								//name/label of component	
 		
@@ -265,6 +286,9 @@ public class DancingBallWin extends myDispWindow {
 			{true, false, true},
 			{true, false, true},
 			{true, true, true},
+			{true, true, true},
+			{true, false, true},
+			{false, false,true},
 			{true, true, true},
 			{true, true, true}
 		};						//per-object  list of boolean flags
@@ -288,7 +312,6 @@ public class DancingBallWin extends myDispWindow {
 //		stClkY += sizeClkY;				
 //		uiClkCoords[3] = stClkY;
 //	}
-
 	
 	@Override
 	protected void setUIWinVals(int UIidx) {
@@ -333,11 +356,20 @@ public class DancingBallWin extends myDispWindow {
 
 				audMgr.changeCurrentSong((int)uiVals[UIidx],(int)uiVals[gIDX_curSong]);
 				ball.resetVertLocs();	
-				break;
-			}
+				break;}
 			case gIDX_curSong 	: {
 				audMgr.changeCurrentSong((int)uiVals[gIDX_curSongBank],(int)uiVals[gIDX_curSong]);//changeCurrentSong((int)val);
 				ball.resetVertLocs();
+				break;}
+			case gIDX_numNotesByLvl :{//send value to audioMgr
+				audMgr.numNotesToShow = (int)(uiVals[gIDX_numNotesByLvl]);				
+				break;}
+			case gIDX_audThresh : {
+				audMgr.audThreshold = uiVals[gIDX_audThresh]/100.0f;	//convert % to multiplier
+				break;}
+			case gIDX_typeDFTToShow :{
+				//setPrivFlags(calcSingleFreq, true);//force to be true if this changes
+				audMgr.dftThdResToShow = (int)(uiVals[gIDX_typeDFTToShow]);	
 				break;}
 			case gIDX_winSel		: {
 				audMgr.changeCurrentWindowfunc((int)val);	
@@ -352,6 +384,7 @@ public class DancingBallWin extends myDispWindow {
 		switch(UIidx){
 			case gIDX_curSongBank :{ return myAudioManager.songBanks[validx %myAudioManager.songBanks.length];}
 			case gIDX_curSong : {return myAudioManager.songList[(int)uiVals[gIDX_curSongBank]][validx];}
+			case gIDX_typeDFTToShow : {return dftResTypeToShow[(validx % dftResTypeToShow.length)];}
 					
 //					getPrivFlags(this.usePianoNoteFiles) ? 
 //							pianoNoteList[(validx % pianoNoteList.length)] :	
