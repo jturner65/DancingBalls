@@ -209,7 +209,8 @@ public class myPianoObj{
 	//need to have numThreads different light and dark colors
 	private int[][] bkKeyBarClrs = new int[][] {{120,0,0},{120,50,0},{120,120,0},{50,120,0},{0,120,0}, {0,120,50}, {0,120,120}, {0,50,120},{0,0,120},{120,0,120}};
 	private int[][] wkKeyBarClrs = new int[][] {{255,0,0},{255,150,0},{255,255,0},{150,255,0},{0,255,0},{0,255,150},{0,255,255},{0,150,255},{0,0,255}, {255,0,255}};
-	public void drawPianoBandRes( ConcurrentSkipListMap<Float, Integer> lvlsPerPKey, int barWidth, int clrIdx) {		
+	//scaleFact is ratio of max level seen so far for current song, so that bars won't go off screen
+	public void drawPianoBandRes( ConcurrentSkipListMap<Float, Integer> lvlsPerPKey, float scaleFact, int barWidth, int clrIdx) {		
 		if((lvlsPerPKey.size() > 0) && (lvlsPerPKey.firstKey()>0)) {
 			//float maxSqrtLvl = maxLvl/barWidth;// pa.sqrt(maxLvl)/barWidth;
 			pa.pushMatrix();pa.pushStyle();
@@ -217,7 +218,7 @@ public class myPianoObj{
 			pa.scale(5.0f, 1.0f, 1.0f);				
 			for (Float freqLvl : lvlsPerPKey.keySet()) {
 				if(freqLvl == 0) {break;}
-				float dispLvl = barWidth * freqLvl;//pa.log(freqLvl+1);//freqLvl/maxSqrtLvl;//( pa.sqrt(freqLvl)/maxSqrtLvl);			
+				float dispLvl = barWidth * freqLvl /scaleFact;//pa.log(freqLvl+1);//freqLvl/maxSqrtLvl;//( pa.sqrt(freqLvl)/maxSqrtLvl);			
 				int pianoKeyIdx = lvlsPerPKey.get(freqLvl);
 				dispSingleKeyLvlLine(dispLvl,pianoKeyIdx, isBlackKey(pianoKeyIdx) ? bkKeyBarClrs[clrIdx] : wkKeyBarClrs[clrIdx]);
 			}				

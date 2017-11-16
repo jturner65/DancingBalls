@@ -39,7 +39,7 @@ public class DancingBallWin extends myDispWindow {
 		gIDX_curSong 		= 7,
 		gIDX_numNotesByLvl  = 8,		//top # of notes to show per lvl-mapping result 
 		gIDX_audThresh		= 9,		//fraction of max level seen in entire sample set to display as key hits (0 means display all) - only used for multi-thread res
-		gIDX_typeDFTToShow 	= 10,		//whether to show results for global max, freq zone max or per-thread max note levels
+		gIDX_typeDFTToShow 	= 10,		//whether to show results for 0:global max, 1:freq zone max or 2:per-thread max note levels
 		gIDX_winSel 		= 11;
 	//initial values - need one per object
 	public float[] uiVals = new float[]{
@@ -125,14 +125,14 @@ public class DancingBallWin extends myDispWindow {
 				"Stim Zone and Mate", "Playing MP3","Mass-Spring Ball", "Dancing", 
 				"Stim Ball W/Beats","Showing Beats","Use Human Tap Beats", 
 				"Showing Ctr Freq Vals","Showing Zone EQ", "Showing All Band Eq","Showing Piano","Showing Melody Trail",//"Showing Per-Thd Notes",
-				"Note Lvls w/Indiv F"	
+				"Lvls via Indiv Freq"	
 		};
 		falsePrivFlagNames = new String[]{			//needs to be in order of flags
 				"Enable Debug","Fixed DelT","Uniform Ball Verts","Hiding Vert Norms", "Hiding Zones",
 				"Stim Only Zones","Stopped MP3","Kinematics Ball","Not Dancing", 
 				"Stim Ball W/Audio","Hiding Beats","Use Detected Beats",  
 				"Hiding Ctr Freq Vals", "Hiding Zone EQ", "Hiding All Band Eq", "Hiding Piano","Showing Key lvls",//"Showing Glbl Max Note", 
-				"Note Lvls w/FFT"
+				"Lvls via FFT"
 		};
 		privModFlgIdxs = new int[]{
 				debugAnimIDX, modDelT,randVertsForSphere,showVertNorms,showZones,
@@ -353,7 +353,6 @@ public class DancingBallWin extends myDispWindow {
 				uiVals[gIDX_curSong] %= myAudioManager.songList[(int)uiVals[UIidx]].length;
 				//change song list dropdown max to be this bank's song list length-1
 				guiObjs[gIDX_curSong].setNewMax(myAudioManager.songList[(int)uiVals[UIidx]].length-1);
-
 				audMgr.changeCurrentSong((int)uiVals[UIidx],(int)uiVals[gIDX_curSong]);
 				ball.resetVertLocs();	
 				break;}
