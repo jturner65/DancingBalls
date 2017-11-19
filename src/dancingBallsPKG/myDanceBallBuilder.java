@@ -161,6 +161,8 @@ class myDanceBallMapper implements Runnable{
 
 class myDFTNoteMapper implements Callable<Boolean>{
 	DancingBallWin win;
+	static int count=0;
+	int ID;
 	myAudioManager mgr;
 	//how much to multiply a low freq to go to the next larger frequency to cover the equispaced sampling for each note span
 	final float augNSth;
@@ -190,15 +192,15 @@ class myDFTNoteMapper implements Callable<Boolean>{
 	ConcurrentSkipListMap<Float, Integer> lvlsPerPKey, lvlsPerPKeyShared;
 	
 	//reference to owning map holding note(as -key) to levels(value)
-	ConcurrentSkipListMap<Integer, Float> perPKeyLvls;
-	//normalization value
-	float normVal;
-	//incrementer to go through buffer - only needs to be 1 for lowest 3 octaves, can be 2 for the rest
-	int bufIncr;
-	
+	//array of values is the past n values, plus one level for average over past n values, and last index is current level
+	int curKeylvlIdx;//current index
+	ConcurrentSkipListMap<Integer, Float[]> perPKeyLvls;
+	//which function to use to calculate levels - set when song changed
+	int funcToUse = 0;
 	//arrays hold subset of key freqs this thread will execute
 	public myDFTNoteMapper(myAudioManager _mgr,int _stIdx, int _endIdx ) {
 		mgr=_mgr;
+		ID = count++;
 		stKey = _stIdx;
 		endKey = _endIdx;
 		numValsToProcess=_endIdx - _stIdx + 1;
@@ -214,10 +216,11 @@ class myDFTNoteMapper implements Callable<Boolean>{
 		System.arraycopy(mgr.dispPiano.eqTempMinFreqsHarms, _stIdx, eqTempMinFreqsHarms, 0, numValsToProcess+1);
 		int numSamplesPerKey = 5;
 		augNSth = (float) Math.exp(Math.log(2.0)/(12.0f * numSamplesPerKey));
-		bufIncr = stKey < 30 ? 1 : 2;
+		//bufIncr = stKey < 30 ? 1 : 2;
 
-		normVal = numSamplesPerKey * numSamplesPerKey;
+		//normVal = numSamplesPerKey * numSamplesPerKey/(1.0f * bufIncr * bufIncr);
 		//allFreqsUsed = preCalcRandSamples(len, numSamplesPerKey);
+		//for each key to process, for each harmonic multiple (fund==idx 0), for each sample
 		pianoSampleFreqs = new float[numValsToProcess][][];		
 		eqSampleFreqs = new float[numValsToProcess][][];		
 
@@ -259,18 +262,18 @@ class myDFTNoteMapper implements Callable<Boolean>{
 	//set values relevant to each song, when they change
 	//bufMult is how big the buffer should be - only needs to be big enough for 1 
 	//sample for high frequency ranges, but lower ranges perform better with a bigger buffer
-	public void setPerSongValues(float _srte, int _smplBufSize, int _bufMult) {
+	public void setPerSongValues(float _srte, int _smplBufSize, int _bufMult, int _funcToUse) {
+		//if((ID == 0) || (ID == 7) ){System.out.println("setPerSongValues in ID:" + ID + " buff mult : " + _bufMult + " buffer size :"+(_bufMult * _smplBufSize));}
 		sampleRate = _srte;
+		funcToUse = _funcToUse;
 		twoPiInvSamp = (float) (2.0 * Math.PI / sampleRate);
 		buffer = new float[_bufMult * _smplBufSize];		
 	}
 	
 	//must be set before each dft run
-	public void setPerRunValues(//float _srte, 
-			float[] _buffer,
-			boolean _usePianoTune,
+	public void setPerRunValues(float[] _buffer,int _curProcIdx,boolean _usePianoTune, //boolean debug,
 			ConcurrentSkipListMap<Float, Integer> _lvlsPerPKey,
-			ConcurrentSkipListMap<Integer, Float> _perPKeyLvls,
+			ConcurrentSkipListMap<Integer, Float[]> _perPKeyLvls,
 			ConcurrentSkipListMap<Float, Integer> _lvlsPerKeyInRange		//destination
 			) {
 		//sampleRate = _srte;
@@ -281,12 +284,15 @@ class myDFTNoteMapper implements Callable<Boolean>{
 			freqHarmsToUse = eqTempFreqsHarms;
 			exampleFreqsToUse = eqSampleFreqs;
 		}
-		//buffer here is treated like a stack - first move old values over 1 "window" of _buffer.length size
+		//if(ID == 0) {System.out.println("setPerRunValues in ID:" + ID + " : len of  exampleFreqsToUse : " + exampleFreqsToUse.length + " _usePianoTune : " + _usePianoTune);}
 		int keptLen = buffer.length-_buffer.length;
-		if(keptLen > 0) {System.arraycopy(buffer, 0, buffer, _buffer.length, keptLen);}
+		//if(debug) {if((ID == 0) || (ID == 7) ){System.out.println("setPerRunValues in ID:" + ID + " : size of dft lcl buffer : " + buffer.length  + " keptLen : " + keptLen + " _bufferLen : " + _buffer.length);}}
+		curKeylvlIdx = _curProcIdx;
+		//buffer here is treated like a stack - first move old values over 1 "window" of _buffer.length size
+		if(keptLen > 0) {System.arraycopy(buffer, _buffer.length, buffer, 0, keptLen);}
 		//now copy new sample to buffer at end of buffer
 		System.arraycopy(_buffer, 0, buffer, keptLen, _buffer.length);
-		buffer = _buffer;//float array of length samplesize
+		//buffer = _buffer;//float array of length samplesize
 		lvlsPerPKey = _lvlsPerPKey;
 		perPKeyLvls = _perPKeyLvls;
 		lvlsPerKeyInRange = _lvlsPerKeyInRange;
@@ -296,64 +302,104 @@ class myDFTNoteMapper implements Callable<Boolean>{
 		lvlsPerPKeyShared = _lvlsPerKeyShared;
 	}
 	
+	private void setValues(int absKey, double cosSum, double sinSum, float freq) {
+		//float A = (float) Math.sqrt(freq *((cosSum * cosSum) + (sinSum * sinSum)));///normVal;// (float) Math.sqrt(((cosSum * cosSum) + (sinSum * sinSum))/normVal);
+		float A =  (float) Math.sqrt( ((cosSum * cosSum) + (sinSum * sinSum)));///normVal;// (float) Math.sqrt(((cosSum * cosSum) + (sinSum * sinSum))/normVal);
+		lvlsPerPKey.put(A, absKey);	
+		//perPKeyLvls.put(absKey, A);
+		lvlsPerKeyInRange.put(A, absKey);	
+		lvlsPerPKeyShared.put(A, absKey);
+		
+		Float[] tmp = perPKeyLvls.get(absKey);
+		tmp[tmp.length-1] = A;
+		//Float divVal = (tmp.length-2.0f), oldVal = tmp[curKeylvlIdx]/divVal;
+		Float oldVal = tmp[curKeylvlIdx];
+		tmp[curKeylvlIdx] = A;
+		tmp[tmp.length-2] = tmp[tmp.length-2] - oldVal + A; 
+	}//setValues
 	
 	//only fundamental frequencies
-	public void calcIndivFreqLevelNoPreCalcOnSamples() {
+	public void calcOneSampleFreqLevelAllHarms() {//single sample of fundamental - actual key center freq
 		//current buffer of song playing
-		float cosSum = 0, sinSum = 0, A;		
+		double cosSum = 0, sinSum = 0;		
 		for(int key=0;key<numValsToProcess;++key) {//for every key being compared
-			cosSum =0;sinSum=0;A=0;
+			cosSum =0;sinSum=0;
+			float[] harmonics = freqHarmsToUse[key];
+			//scale by fundamental result, so lower freqs don't benefit from higher freqs
+			float tpHarm = harmonics[0] *  twoPiInvSamp;		
+			for (int t=0;t<buffer.length;  ++t) {		//for every sample
+				float tpHarmT = t*tpHarm;
+				cosSum += buffer[t] * (Math.cos(tpHarmT));
+				sinSum += buffer[t] * (Math.sin(tpHarmT));
+			}	
+			double fundScaleVal =  Math.sqrt((cosSum * cosSum) + (sinSum * sinSum));
+			cosSum =0;sinSum=0;
+			for(int h=0; h< harmonics.length; ++h) {
+				tpHarm = harmonics[h] *  twoPiInvSamp;				
+				for (int t=0;t<buffer.length;  ++t) {		//for every sample
+					float tpHarmT = t*tpHarm;
+					cosSum += buffer[t] * (Math.cos(tpHarmT));
+					sinSum += buffer[t] * (Math.sin(tpHarmT));
+				}	
+			}
+			setValues(key+stKey, fundScaleVal* cosSum, fundScaleVal* sinSum, harmonics[0]);//fundamental as scaling multiplier
+		}		
+	}//calcIndivFreqLevelNoPreCalcOnSamples
+	
+	
+	//only fundamental frequencies
+	public void calcOneSampleFundFreqLevel() {//single sample of fundamental - actual key center freq
+		//current buffer of song playing
+		double cosSum = 0, sinSum = 0;		
+		for(int key=0;key<numValsToProcess;++key) {//for every key being compared
+			cosSum =0;sinSum=0;
 			float harm = freqHarmsToUse[key][0];//fundamental only for now
 			//for(float harm  : harmSamples) {
 			float tpHarm = harm *  twoPiInvSamp;
-			for (int t=0;t<buffer.length; t+=bufIncr) {		//for every sample
+			for (int t=0;t<buffer.length;  ++t) {		//for every sample
 				float tpHarmT = t*tpHarm;
-				cosSum += buffer[t] * (float)(Math.cos(tpHarmT));
-				sinSum += buffer[t] * (float)(Math.sin(tpHarmT));
+				cosSum += buffer[t] * (Math.cos(tpHarmT));
+				sinSum += buffer[t] * (Math.sin(tpHarmT));
 			}			
-			//A = ((cosSum * cosSum) + (sinSum * sinSum))/normVal; //A[n] = sqrt (c(f)^2 + s(f)^2)
-			A = (float) Math.sqrt(((cosSum * cosSum) + (sinSum * sinSum))/normVal); //A[n] = sqrt (c(f)^2 + s(f)^2), over # of samples sq to normalize values
-			int absKey =key+stKey;
-			lvlsPerPKey.put(A, absKey);	
-			perPKeyLvls.put(absKey, A);
-			lvlsPerKeyInRange.put(A, absKey);	
-			lvlsPerPKeyShared.put(A,  absKey);
+			setValues(key+stKey, cosSum,  sinSum, harm);
 		}		
-	}
+	}//calcOneSampleFundFreqLevel
 	
 	
 	/**
 	 * calculate the individual level manually using a sample of the signal as f(t), not using precalced frequencies
 	 * TRIG IS FASTER THAN PRECALC.  which is odd.
 	 */	
-	public void calcHarmFreqLevelNoPreCalcOnSamples() {
+	public void calcAllSmplFundFreqLevel() {//multiple samples of fundamental
 		//current buffer of song playing
-		float cosSum = 0, sinSum = 0, A;		
+		double cosSum = 0, sinSum = 0;		
 		for(int key=0;key<numValsToProcess;++key) {//for every key being compared
-			cosSum =0;sinSum=0;A=0;
-			float[] harmSamples = exampleFreqsToUse[key][0];//fundamental only for now
-			for(float harm  : harmSamples) {
+			cosSum =0;sinSum=0;
+			float[] harmSamples = exampleFreqsToUse[key][0];//fundamental only for now - all samples' fundamental freq
+			for(float harm  : harmSamples) {			//for each sample
 				float tpHarm = harm *  twoPiInvSamp;
-				for (int t=0;t<buffer.length; t+=bufIncr) {		//for every sample
+				for (int t=0;t<buffer.length; ++t) {		//for every sample
 					float tpHarmT = t*tpHarm;
-					cosSum += buffer[t] * (float)(Math.cos(tpHarmT));
-					sinSum += buffer[t] * (float)(Math.sin(tpHarmT));
+					cosSum += buffer[t] * (Math.cos(tpHarmT));
+					sinSum += buffer[t] * (Math.sin(tpHarmT));
 				}	           
 			}
-			//A = ((cosSum * cosSum) + (sinSum * sinSum))/normVal; //A[n] = sqrt (c(f)^2 + s(f)^2)
-			A = (float) Math.sqrt(((cosSum * cosSum) + (sinSum * sinSum))/normVal); //A[n] = sqrt (c(f)^2 + s(f)^2), over # of samples sq to normalize values
-			int absKey =key+stKey;
-			lvlsPerPKey.put(A, absKey);	
-			perPKeyLvls.put(absKey, A);
-			lvlsPerKeyInRange.put(A, absKey);	
-			lvlsPerPKeyShared.put(A,  absKey);
+			setValues(key+stKey,  cosSum/harmSamples.length,  sinSum/harmSamples.length, harmSamples[harmSamples.length/2]);
 		}
-	}//calcIndivFreqLevelNoPreCalcOnSamples
+	}//calcAllSmplFundFreqLevel
 	
 	@Override
 	public Boolean call() throws Exception {
-		//calcIndivFreqLevelNoPreCalcOnSamples();
-		calcHarmFreqLevelNoPreCalcOnSamples();
+		//System.out.println("ID : " + ID + " func to use : " + funcToUse);
+		switch(funcToUse) {
+			case 0 : {calcOneSampleFreqLevelAllHarms(); break;}//1 sample, all harmonics
+			case 1 : {calcOneSampleFundFreqLevel(); break;}//1 sample, fundamental only
+			case 2 : {calcAllSmplFundFreqLevel(); break;}//all samples, fundamental only
+			default : {calcAllSmplFundFreqLevel(); break;}
+		}
+		//calcOneSampleFreqLevelAllHarms();
+		//calcOneSampleFundFreqLevel();
+		//calcAllSmplFundFreqLevel();
 		return true;
 	}
 	
