@@ -75,9 +75,13 @@ public class myGUIObj {
 		return val;
 	}	
 	//make shift-click on lists move by mod value regardless of modMultSetting
-	public double clkModVal(double mod){return modVal (mod/modMult);}
+	public double clkModVal(double mod){
+		return modVal(getFlags(hasListValsIDX) ? mod/modMult : mod);
+	}
 	public double modVal(double mod){
+		//p.outStr2Scr("clkModVal : mod : " + mod + " modMult : " + modMult+ " mod*modMult:"+(mod*modMult)+" val : " +val+ " val += modMult :"+ (val+(mod*modMult)));
 		val += (mod*modMult);
+
 		if(getFlags(treatAsIntIDX)){val = Math.round(val);}
 		if(val<minVal){val = minVal;}
 		else if(val>maxVal){val = maxVal;}

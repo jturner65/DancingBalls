@@ -1,6 +1,6 @@
 package dancingBallsPKG;
 
-import java.util.ArrayList;
+import java.util.*;
 import java.util.concurrent.ConcurrentSkipListMap;
 
 
@@ -236,10 +236,22 @@ public class myPianoObj{
 			pa.text(""+numFramesOn[i], 0, .25f*keyY);			
 			pa.popStyle();pa.popMatrix();
 		}
-		pa.popStyle();pa.popMatrix();
-		
-	}
+		pa.popStyle();pa.popMatrix();		
+	}//drawNumFramesOn
 	
+	//draw current lvl for each key
+	public void drawKeyLvlVals(ConcurrentSkipListMap<Float, Integer> lvlsPerPKey) {
+		pa.pushMatrix();pa.pushStyle();
+		pa.translate(pianoWKeyDims[0][2],0,0);
+		for(Float lvl:lvlsPerPKey.keySet()) {
+			pa.pushMatrix();pa.pushStyle();
+			pa.translate(0,pianoKeyCtrYLocs[lvlsPerPKey.get(lvl)],0);
+			pa.setColorValFill(DancingBalls.gui_Cyan);//(keyLvls[i]==1 ? DancingBalls.gui_Cyan:DancingBalls.gui_Gray);			
+			pa.text(""+String.format("%.4f",lvl), 0, .25f*keyY);			
+			pa.popStyle();pa.popMatrix();
+		}
+		pa.popStyle();pa.popMatrix();		
+	}//drawNumFramesOn	
 	//draw scrolling melody candidates - begin at edge of piano
 	public void drawMelodyCands(ConcurrentSkipListMap<Integer, ConcurrentSkipListMap<Float, Integer>> cands, int curTimeFromStart, float width, int transForNums) {
 		pa.pushMatrix();pa.pushStyle();

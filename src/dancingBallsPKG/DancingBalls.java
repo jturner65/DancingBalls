@@ -264,7 +264,7 @@ public class DancingBalls extends PApplet{
 			case 's' :
 			case 'S' : {save(sketchPath() + "\\"+prjNmShrt+"_"+dateStr+"\\"+prjNmShrt+"_img"+timeStr + ".jpg");break;}//save picture of current image			
 			default : {	}
-	}//switch	
+		}//switch	
 		
 		if((!flags[shiftKeyPressed])&&(key==CODED)){setFlags(shiftKeyPressed,(keyCode  == 16));} //16 == KeyEvent.VK_SHIFT
 		if((!flags[altKeyPressed])&&(key==CODED)){setFlags(altKeyPressed,(keyCode  == 18));}//18 == KeyEvent.VK_ALT
@@ -297,16 +297,16 @@ public class DancingBalls extends PApplet{
 	public void mouseMoved(){for(int i =0; i<numDispWins; ++i){if (dispWinFrames[i].handleMouseMove(mouseX, mouseY,c.getMseLoc(sceneCtrVals[sceneIDX]))){return;}}}
 	public void mousePressed() {
 		//verify left button if(mouseButton == LEFT)
-	setFlags(mouseClicked, true);
-	if(mouseButton == LEFT){			mouseClicked(0);} 
-	else if (mouseButton == RIGHT) {	mouseClicked(1);}
-	//for(int i =0; i<numDispWins; ++i){	if (dispWinFrames[i].handleMouseClick(mouseX, mouseY,c.getMseLoc(sceneCtrVals[sceneIDX]))){	return;}}
+		setFlags(mouseClicked, true);
+		if(mouseButton == LEFT){			mouseClicked(0);} 
+		else if (mouseButton == RIGHT) {	mouseClicked(1);}
+		//for(int i =0; i<numDispWins; ++i){	if (dispWinFrames[i].handleMouseClick(mouseX, mouseY,c.getMseLoc(sceneCtrVals[sceneIDX]))){	return;}}
 	}// mousepressed	
 	
 	private void mouseClicked(int mseBtn){ for(int i =0; i<numDispWins; ++i){if (dispWinFrames[i].handleMouseClick(mouseX, mouseY,c.getMseLoc(sceneCtrVals[sceneIDX]),mseBtn)){return;}}}		
 	private void moveZoom(float diff){dz-=diff;}
 	public void mouseDragged(){//pmouseX is previous mouse x
-	if((flags[shiftKeyPressed]) && (canMoveView[curFocusWin])){		//modifying view - always bypass HUD windows if doing this
+		if((flags[shiftKeyPressed]) && (canMoveView[curFocusWin])){		//modifying view - always bypass HUD windows if doing this
 			flags[modView]=true;
 			if(mouseButton == LEFT){			rx-=PI*(mouseY-pmouseY)/height; ry+=PI*(mouseX-pmouseX)/width;} 
 			else if (mouseButton == RIGHT) {	moveZoom(mouseY-pmouseY);}//dz-=(float)(mouseY-pmouseY);}

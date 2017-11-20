@@ -36,14 +36,14 @@ public class myNoteIntervalTuple {
 	public myNoteIntervalTuple setFirstTransition(int _note, int _transtime) {
 		dur[0]=_transtime - stTime;
 		notes[1] = _note;
+		transTuple[0] = notes[1]-notes[0];
+		transTuple[1] = dur[0];
 		return this;
 	}
 	
 	public myNoteIntervalTuple finishInterval(int _note,int _endTime) {
 		notes[2]=_note;
 		dur[1] = _endTime - dur[0]- stTime;
-		transTuple[0] = notes[1]-notes[0];
-		transTuple[1] = dur[0];
 		transTuple[2] = notes[2]-notes[1];
 		transTuple[3] = dur[1];	
 		return this;	

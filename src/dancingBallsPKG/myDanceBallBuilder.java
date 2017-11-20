@@ -262,10 +262,9 @@ class myDFTNoteMapper implements Callable<Boolean>{
 	//set values relevant to each song, when they change
 	//bufMult is how big the buffer should be - only needs to be big enough for 1 
 	//sample for high frequency ranges, but lower ranges perform better with a bigger buffer
-	public void setPerSongValues(float _srte, int _smplBufSize, int _bufMult, int _funcToUse) {
+	public void setPerSongValues(float _srte, int _smplBufSize, int _bufMult) {
 		//if((ID == 0) || (ID == 7) ){System.out.println("setPerSongValues in ID:" + ID + " buff mult : " + _bufMult + " buffer size :"+(_bufMult * _smplBufSize));}
 		sampleRate = _srte;
-		funcToUse = _funcToUse;
 		twoPiInvSamp = (float) (2.0 * Math.PI / sampleRate);
 		buffer = new float[_bufMult * _smplBufSize];		
 	}
@@ -274,8 +273,8 @@ class myDFTNoteMapper implements Callable<Boolean>{
 	public void setPerRunValues(float[] _buffer,int _curProcIdx,boolean _usePianoTune, //boolean debug,
 			ConcurrentSkipListMap<Float, Integer> _lvlsPerPKey,
 			ConcurrentSkipListMap<Integer, Float[]> _perPKeyLvls,
-			ConcurrentSkipListMap<Float, Integer> _lvlsPerKeyInRange		//destination
-			) {
+			ConcurrentSkipListMap<Float, Integer> _lvlsPerKeyInRange,		//destination
+			int _funcToUse) {
 		//sampleRate = _srte;
 		if(_usePianoTune) {
 			freqHarmsToUse = pianoFreqsHarmonics;
@@ -284,6 +283,7 @@ class myDFTNoteMapper implements Callable<Boolean>{
 			freqHarmsToUse = eqTempFreqsHarms;
 			exampleFreqsToUse = eqSampleFreqs;
 		}
+		funcToUse = _funcToUse;
 		//if(ID == 0) {System.out.println("setPerRunValues in ID:" + ID + " : len of  exampleFreqsToUse : " + exampleFreqsToUse.length + " _usePianoTune : " + _usePianoTune);}
 		int keptLen = buffer.length-_buffer.length;
 		//if(debug) {if((ID == 0) || (ID == 7) ){System.out.println("setPerRunValues in ID:" + ID + " : size of dft lcl buffer : " + buffer.length  + " keptLen : " + keptLen + " _bufferLen : " + _buffer.length);}}
@@ -395,7 +395,7 @@ class myDFTNoteMapper implements Callable<Boolean>{
 			case 0 : {calcOneSampleFreqLevelAllHarms(); break;}//1 sample, all harmonics
 			case 1 : {calcOneSampleFundFreqLevel(); break;}//1 sample, fundamental only
 			case 2 : {calcAllSmplFundFreqLevel(); break;}//all samples, fundamental only
-			default : {calcAllSmplFundFreqLevel(); break;}
+			default : {calcOneSampleFundFreqLevel(); break;}
 		}
 		//calcOneSampleFreqLevelAllHarms();
 		//calcOneSampleFundFreqLevel();

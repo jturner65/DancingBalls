@@ -807,7 +807,8 @@ public abstract class myDispWindow {
 			for(int j=0; j<guiObjs.length; ++j){
 				if(guiObjs[j].checkIn(mouseX, mouseY)){	
 					if(pa.flags[pa.shiftKeyPressed]){//allows for click-mod
-						int mult = mseBtn * -2 + 1;	//+1 for left, -1 for right btn	
+						float mult = mseBtn * -2.0f + 1;	//+1 for left, -1 for right btn	
+						pa.outStr2Scr("Mult : " + (mult *pa.clickValModMult()));
 						guiObjs[j].clkModVal(mult * pa.clickValModMult());
 						setFlags(uiObjMod,true);
 					} else {										//has drag mod
