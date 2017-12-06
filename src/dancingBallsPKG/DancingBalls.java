@@ -422,7 +422,7 @@ public class DancingBalls extends PApplet{
 //		dispWinFrames[wIdx] = new DancingBallWin(this, winTitles[wIdx], fIdx,winFillClrs[wIdx], winStrkClrs[wIdx], winRectDimOpen[wIdx], winRectDimClose[wIdx], winDescr[wIdx],canDrawInWin[wIdx]);
 		
 		for(int i =0; i < numDispWins; ++i){
-			dispWinFrames[i].initDrwnTrajs();
+			//dispWinFrames[i].initDrwnTrajs();		//drawn trajectories not used in this application (so far)
 			dispWinFrames[i].setFlags(myDispWindow.is3DWin, dispWinIs3D[i]);
 			dispWinFrames[i].setTrajColors(winTrajFillClrs[i], winTrajStrkClrs[i]);
 		}				

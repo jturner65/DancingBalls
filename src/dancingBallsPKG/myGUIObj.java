@@ -39,8 +39,7 @@ public class myGUIObj {
 		name = _name;
 		xOff = _off[0];
 		yOff = _off[1];
-		//dispText = new String("UI Obj "+ID+" : "+name + " : ");
-		dispText = new String(""+name + " : ");
+		setDispText(name);
 		start = new myVector(_start); end = new myVector(_end);
 		minVal=_minMaxMod[0]; maxVal = _minMaxMod[1]; val = _initVal;modMult = _minMaxMod[2];
 		initFlags();
@@ -66,6 +65,7 @@ public class myGUIObj {
 		}
 	}//setFlag	
 	
+	public void setDispText(String newDisp) {dispText = new String(""+newDisp + " : ");}
 	public double getVal(){return val;}	
 	public void setNewMax(double _newval){	maxVal = _newval;val = ((val >= minVal)&&(val<=maxVal)) ? val : (val < minVal) ? minVal : maxVal;		}
 	public void setNewMin(double _newval){	minVal = _newval;val = ((val >= minVal)&&(val<=maxVal)) ? val : (val < minVal) ? minVal : maxVal;		}

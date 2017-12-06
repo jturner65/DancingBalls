@@ -1,5 +1,6 @@
 package dancingBallsPKG;
 
+import java.io.*;
 import java.util.concurrent.ConcurrentSkipListMap;
 
 import ddf.minim.*;
@@ -10,6 +11,7 @@ import ddf.minim.ugens.*;
 import javax.sound.midi.*;
 
 public abstract class mySongHandler {
+	public DancingBalls pa;
 	protected Minim minim;
 	public String fileName, dispName;
 	//max level seen so far - idx 0 is dft, idx1 is fft
@@ -27,10 +29,10 @@ public abstract class mySongHandler {
 	protected float[][] feBuffer, fdBuffer;
 	protected long[] fTimer;
 
-	public mySongHandler(Minim _minim, String _fname, String _dname, int _sbufSize) {
-		minim=_minim; fileName=_fname; dispName=_dname;songBufSize=_sbufSize;
+	public mySongHandler(DancingBalls _pa,Minim _minim, String _fname, String _dname, int _sbufSize) {
+		pa=_pa;minim=_minim; fileName=_fname; dispName=_dname;songBufSize=_sbufSize;
 		barDispMaxLvl = new float[2];		
-		barDispMaxLvl[0]=.01f;barDispMaxLvl[1]=.01f;
+		barDispMaxLvl[0]=.01f; barDispMaxLvl[1]=.01f;
 		sampleRate=0;
 	}
 	
@@ -38,7 +40,9 @@ public abstract class mySongHandler {
 		numZones = _numZones;//number of zones for dancing ball (6)
 		minFreqBand = fftMinBandwidth;//minimum frequency to consider (== minimum bandwidth fft is required to handle)
 		setupFreqAras();
-		barDispMaxLvl = new float[2];		barDispMaxLvl[0]=.01f;barDispMaxLvl[1]=.01f;	
+		barDispMaxLvl = new float[2]; barDispMaxLvl[0]=.01f; barDispMaxLvl[1]=.01f;
+		//initialize beat detection data
+		initBeatDet();
 		//individual  handling for each type of song handler (midi or mp3)
 		setForwardValsIndiv(win);
 	}//setForwardVals
@@ -163,8 +167,8 @@ class myMP3SongHandler extends mySongHandler{
 	 * @param _dname name to display
 	 * @param _sbufSize song buffer size
 	 */
-	public myMP3SongHandler(Minim _minim, String _fname, String _dname, int _sbufSize) {
-		super(_minim,_fname, _dname, _sbufSize);
+	public myMP3SongHandler(DancingBalls _pa,Minim _minim, String _fname, String _dname, int _sbufSize) {
+		super(_pa,_minim,_fname, _dname, _sbufSize);
 		playMe = minim.loadFile(fileName, songBufSize);
 		songLength = playMe.length();
 		fft = new FFT(playMe.bufferSize(), playMe.sampleRate() );
@@ -185,8 +189,8 @@ class myMP3SongHandler extends mySongHandler{
 	
 	@Override
 	protected void setupFreqArasIndiv() {
+		//fft-related indexes for starting and ending frequencies for each zone
 		stFreqIDX = new int[numZones]; endFreqIDX = new int[numZones];
-		float maxFreqMult = 9.9f;//max multiplier to minFreqBand to consider
 		//multiplier for frequencies to span minFreqBand * ( 1.. maxFreqMult) ==> 2 ^ maxFreqMult/numZones
 		for(int i=0; i<numZones;++i) {
 			stFreqIDX[i] = fft.freqToIndex(stFreqs[i]);
@@ -273,6 +277,7 @@ class myMP3SongHandler extends mySongHandler{
 	public void pause() {	playMe.pause(); if (playMe.position() >= .95*songLength) {playMe.rewind();}}
 	@Override
 	public void rewind() {  playMe.rewind();}
+	//return the buffer of audio samples currently being played
 	@Override
 	public float[] mixBuffer() {return playMe.mix.toArray();}
 	//change current playing location
@@ -300,159 +305,242 @@ class myMidiSongHandler extends mySongHandler{
 	private Sequence sequence;
 	// output pipe
 	public AudioOutput out;
+	private Long songTickLen, startTickLoc;
+	private float ticksPerMillis;
+	//most recent start of this sequence, used to subtract current time to find...
+	private int startTime;
+	//midi receiver manages 
+	private MidiReceiver midiRec;
 	
-	public myMidiSongHandler(Minim _minim, String _fname, String _dname, int _sbufSize) {
-		super(_minim,_fname, _dname, _sbufSize);
-		// TODO Auto-generated constructor stub
-	}
+	//up to 16 channels of up to 127 notes playing - need to block on this 
+	public float[][] midi_notesLvls, pianoNoteLvls;
 
+	
+	public myMidiSongHandler(DancingBalls _pa,Minim _minim, String _fname, String _dname, int _sbufSize) {
+		super(_pa,_minim,_fname, _dname, _sbufSize);
+		out = minim.getLineOut();	
+		sampleRate = out.sampleRate();
+		// try to get the default sequencer from JavaSound-if it fails, we print a message to the console and don't do any of the sequencing.
+		try{
+			// get a disconnected sequencer. this should prevent us from hearing the general midi sounds the sequecer is automatically hooked up to.
+			sequencer = MidiSystem.getSequencer(false);
+		    sequencer.open();
+		    //load squence
+		    sequence = MidiSystem.getSequence(pa.createInput(fileName));
+		    pa.outStr2Scr("Midi :"+fileName+"|# tracks :" + sequence.getTracks().length);
+		    sequencer.setSequence(sequence);
+		    midi_notesLvls = new float[16][];
+		    pianoNoteLvls = new float[16][];
+		    for(int i=0;i<midi_notesLvls.length;++i) {	midi_notesLvls[i] = new float[127]; pianoNoteLvls[i] = new float[88];   }//piano keys start at idx 21 lvls per key
+		    midiRec = new MidiReceiver(out, this);
+		    // hook up an instance of our Receiver to the Sequencer's Transmitter
+		    sequencer.getTransmitter().setReceiver(midiRec);		    
+		}
+		catch( MidiUnavailableException ex ){ System.out.println( "No default sequencer." );}
+		catch( InvalidMidiDataException ex ){System.out.println( "The midi file was not a midi file." );}
+		catch( IOException ex ) { System.out.println( "Had a problem accessing the midi file." );}
+		songLength = (int) (sequence.getMicrosecondLength()/1000);
+		songTickLen = sequence.getTickLength();
+		ticksPerMillis = songTickLen/(1.0f*songLength);
+	}//myMidiSongHandler
+	
 	@Override
 	protected void stepAudio() {
-		// TODO Auto-generated method stub
-		
+		//get currently playing notes on all channels in midi receiver - might have to block on midi_notesLvls since possibly running in separate thread(?)
+		for(int i=0;i<midi_notesLvls.length; ++i) {
+			System.arraycopy(midi_notesLvls[i], 20, pianoNoteLvls[i], 0, pianoNoteLvls[i].length);
+		}
 	}
 
 	@Override
-	protected void setupFreqArasIndiv() {
-		// TODO Auto-generated method stub
-		
-	}
-
+	public boolean isPlaying() {return sequencer.isRunning();}
 	@Override
-	protected void setForwardValsIndiv(WindowFunction win) {
-		// TODO Auto-generated method stub
-		
-	}
-
+	public void play() {sequencer.start();}
 	@Override
-	public boolean isPlaying() {
-		// TODO Auto-generated method stub
-		return false;
-	}
-
-	@Override
-	public void play() {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void play(int millis) {
-		// TODO Auto-generated method stub
-		
+	public void play(int millis) {//set play start position, in millis from beginning
+		sequencer.setLoopStartPoint((long) (ticksPerMillis * millis));
+		sequencer.start();
 	}
 
 	@Override
 	public void pause() {
-		// TODO Auto-generated method stub
-		
+		sequencer.stop();
 	}
 
 	@Override
-	public void rewind() {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
+	public void rewind() {sequencer.setLoopStartPoint(0);	}
+	@Override //uses audio output from minim output stream
 	public float[] mixBuffer() {
-		// TODO Auto-generated method stub
-		return null;
+		return out.mix.toArray();
 	}
 
 	@Override
 	public void modPlayLoc(float modAmt) {
-		// TODO Auto-generated method stub
-		
+		long curPos = sequencer.getTickPosition();
+		int dispSize = songLength/20;
+		long newPos = (long) (curPos + (dispSize * modAmt));
+		if(newPos < 0) { newPos = 0;} else if (newPos > songLength-1){newPos = songLength-1;}
+		sequencer.setLoopStartPoint(newPos);
 	}
 
 	@Override
 	public boolean donePlaying() {
-		// TODO Auto-generated method stub
-		return false;
+		long curPos = sequencer.getTickPosition();
+		return ((curPos >= songTickLen-1) || (!sequencer.isRunning()));
 	}
 
 	@Override
-	public int getPlayPos() {
+	public int getPlayPos() {	return (int) (sequencer.getTickPosition()/ticksPerMillis);	}
+
+	@Override
+	public float[][] getFwdBandsFromAudio() {//all audio bands from fft
 		// TODO Auto-generated method stub
-		return 0;
+		return new float[2][0];
 	}
 
 	@Override
-	public float[][] getFwdBandsFromAudio() {
+	public float[][] getFwdZoneBandsFromAudio() {//all zone bands from fft
 		// TODO Auto-generated method stub
-		return null;
+		return new float[2][0];
 	}
 
-	@Override
-	public float[][] getFwdZoneBandsFromAudio() {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
+	@Override //provides levels from midi commands
 	public void getFwdFreqLevelsInHarmonicBands(float[][] keyMinAra, ConcurrentSkipListMap<Float, Integer> res1, ConcurrentSkipListMap<Integer, Float[]> res2, int curIdx) {
-		// TODO Auto-generated method stub
-		
+		float[] keyLoudness = new float[keyMinAra.length-1];		
+		//boundsara holds boundaries of min/max freqs for each key
+		for (int chn = 0;chn<pianoNoteLvls.length;++chn) {
+			for (int key=0;key<keyLoudness.length; ++key) {keyLoudness[key] += pianoNoteLvls[chn][key];}			
+		}
+		for (int key=0;key<keyLoudness.length; ++key) {
+			float freqLvl = keyLoudness[key];
+			res1.put(freqLvl, key);
+			Float[] tmp = res2.get(key);
+			tmp[tmp.length-1] = freqLvl;			
+			Float oldVal = tmp[curIdx];
+			tmp[curIdx] = freqLvl;
+			tmp[tmp.length-2] = tmp[tmp.length-2] - oldVal + freqLvl; 				
+		}	
+	
+		float maxLvl = res1.firstKey();		
+		barDispMaxLvl[1] = (barDispMaxLvl[1] < maxLvl ? maxLvl : barDispMaxLvl[1]);
 	}	
-
-	//need JavaSound interface receiver in order to be send midi messages from the Sequencer.
-	//we then set an instance of this class as the Receiver
-	//for on of the Sequencer's Trasmitters.
-	//See: http://docs.oracle.com/javase/6/docs/api/javax/sound/midi/Receiver.html
-	class MidiReceiver implements Receiver{
-		public void close() {}
-
-		public void send( MidiMessage msg, long timeStamp ){ 
-			// we only care about NoteOn midi messages.
-			// here's how you check for that
-			if ( msg instanceof ShortMessage ){
-				ShortMessage sm = (ShortMessage)msg;
-				// if you want to handle messages other than NOTE_ON, you can refer to the constants defined in 
-				// ShortMessage: http://docs.oracle.com/javase/6/docs/api/javax/sound/midi/ShortMessage.html
-				// And figure out what Data1 and Data2 will be, refer to the midi spec: http://www.midi.org/techspecs/midimessages.php
-				if ( sm.getCommand() == ShortMessage.NOTE_ON ){
-					// note number, between 1 and 127
-					int note = sm.getData1();
-					// velocity, between 1 and 127
-					int vel  = sm.getData2();
-					// we could also use sm.getChannel() to do something different depending on the channel of the message
-	     
-					// see below the draw method for the definition of this sound generating Instrument
-					out.playNote( 0, 0.1f, new Synth( note, vel ) ); 
-				}
-			}
-		}
-	}
-	// the Instrument implementation we use for playing notes we have to explicitly specify the Instrument interface
-	// from Minim because there is also an Instrument interface in javax.sound.midi. 
-	class Synth implements ddf.minim.ugens.Instrument{
-		public Oscil wave;
-		public Damp env;
-		public int noteNumber;
-		
-		public Synth( int note, int velocity ){
-			noteNumber = note;
-			float freq = Frequency.ofMidiNote( noteNumber ).asHz();
-			float amp  = (float)(velocity-1) / 126.0f;
-		  
-			wave = new Oscil( freq, amp, Waves.QUARTERPULSE );
-			// Damp arguments are: attack time, damp time, and max amplitude
-			env  = new Damp( 0.001f, 0.1f, 1.0f );
-		  
-			wave.patch( env );
-		}//ctor
-		
-		public void noteOn( float dur ){
-			//attach visual here
-			// make sound
-			env.activate();
-			env.patch( out );
-		}
-		
-		public void noteOff(){
-			env.unpatchAfterDamp( out );
-		}
-	}
+	@Override
+	protected void setupFreqArasIndiv() {}
+	@Override
+	protected void setForwardValsIndiv(WindowFunction win) {}
 	
 }//myMidiSongHandler
+
+//need JavaSound interface receiver in order to be send midi messages from the Sequencer.
+//we then set an instance of this class as the Receiver
+//for on of the Sequencer's Trasmitters.
+//See: http://docs.oracle.com/javase/7/docs/api/javax/sound/midi/Receiver.html
+class MidiReceiver implements Receiver{
+	private AudioOutput out;
+	
+//	//up to 16 channels of up to 127 notes playing
+	public Synth[][] instrNotes;
+	//owning handler - send notes to mapping array
+	public myMidiSongHandler hndl;
+	
+	public MidiReceiver(AudioOutput _out, myMidiSongHandler _hndl) {
+		out=_out;hndl=_hndl;
+		instrNotes = new Synth[16][];
+		Synth[] tmpAra;
+		for(int ch=0;ch<instrNotes.length;++ch) {
+			tmpAra = new Synth[127];
+			//TODO make different instruments for each midi channel
+			for(int i=0;i<tmpAra.length;++i) {tmpAra[i] = new Synth(out, (i+1), 10);}
+			instrNotes[ch]=tmpAra;
+		}
+	}
+	public void close() {}
+
+	public void send(MidiMessage msg, long timeStamp){ 
+		if (msg instanceof ShortMessage){
+			ShortMessage sm = (ShortMessage)msg;
+			int command = sm.getCommand();
+			int chan = sm.getChannel();
+			switch(command) {
+				case ShortMessage.NOTE_ON : {					
+					int note = sm.getData1();		// note number, between 1 and 127
+					int vel  = sm.getData2();		// velocity, between 1 and 127
+					instrNotes[chan][note-1].setAmplitude(vel);
+					hndl.midi_notesLvls[chan][note-1] = instrNotes[chan][note-1].getTtlAmplitude();
+					out.playNote(0, 100.0f, instrNotes[chan][note-1]); 
+					break;}
+				case ShortMessage.NOTE_OFF :{
+					// note number, between 1 and 127
+					int note = sm.getData1();
+					int vel  = sm.getData2();		
+					// velocity, between 1 and 127
+					instrNotes[chan][note-1].setAmplitude(vel);
+					hndl.midi_notesLvls[chan][note-1] = 0;
+					instrNotes[chan][note-1].noteOff();
+					break;}
+			}//switch
+			
+		// refer to the constants defined in 
+		// ShortMessage: http://docs.oracle.com/javase/7/docs/api/javax/sound/midi/ShortMessage.html
+		// what Data1 and Data2 will be, refer to the midi spec: http://www.midi.org/techspecs/midimessages.php
+		}
+	}
+}//MidiReceiver
+
+// the Instrument implementation we use for playing notes: we have to explicitly specify the Instrument interface
+// from Minim because there is also an Instrument interface in javax.sound.midi. 
+class Synth implements ddf.minim.ugens.Instrument{
+	public Oscil[] waves;
+	public Damp env;
+	public int noteNumber;
+	private AudioOutput out;
+	public float[] ampAra;					//array of amplitudes for each wave gen
+	public float ttlAmp, divMult = 2.0f;					//divisor muliplier for each wave in harmonic series
+	public Summer sum;
+	public Synth(AudioOutput _out, int note, int velocity ){
+		out=_out;noteNumber = note;
+		float freq = Frequency.ofMidiNote(noteNumber).asHz();
+		waves = new Oscil[8];
+		ampAra = new float[waves.length];
+		setBaseAmplitude(velocity);
+		sum = new Summer();		
+		// Damp arguments are: attack time, damp time, and max amplitude
+		env  = new Damp( 0.001f, 0.1f, 1.0f );
+		for(int i=0;i<waves.length;++i) {
+			waves[i]=new Oscil(freq*(i+1), ampAra[i], Waves.SINE);
+			waves[i].patch(sum);
+		}
+		//waves[0].patch(sum);
+//		//tie waves generator into envelope
+		sum.patch(env);
+	}//ctor
+	
+	//set array of per-waveform amplitudes
+	protected void setBaseAmplitude(int velocity) {
+		float div = 1.0f, baseAmpl = (float)(velocity-1) / 126.0f;
+		ttlAmp = 0;
+		for(int i=0;i<ampAra.length; ++i) {
+			ampAra[i] = baseAmpl/div;
+			div *= divMult;	
+			ttlAmp += ampAra[i];
+		}	
+	}//setBaseAmplitude
+	
+	public void setAmplitude(int velocity) {
+		setBaseAmplitude(velocity);
+		for(int i=0;i<waves.length;++i) {waves[i].setAmplitude(ampAra[i]);}
+	}
+	
+	public float getTtlAmplitude() {return ttlAmp;	}
+	
+	public void noteOn(float dur ){
+		//make sound
+		env.activate();
+		env.patch(out);
+	}
+	
+	public void noteOff(){
+		//stop sound - remove envelope from output
+		env.unpatchAfterDamp(out);
+	}
+}

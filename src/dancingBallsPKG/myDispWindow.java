@@ -207,6 +207,13 @@ public abstract class myDispWindow {
 		this.uiClkCoords[3] += yOff;
 		initPrivFlagColors();
 	}//initPrivBtnRects
+	//find index in flag name arrays of passed boolean IDX
+	protected int getFlagAraIdxOfBool(int idx) {
+		for(int i=0;i<privModFlgIdxs.length;++i) {if(idx == privModFlgIdxs[i]) {return i;}	}
+		//not found
+		return -1;
+	}
+
 	
 	//set baseclass flags  //setFlags(showIDX, 
 	public void setFlags(int idx, boolean val){
@@ -470,7 +477,7 @@ public abstract class myDispWindow {
 			trajNameAra[i] = "traj_"+(i+1);
 		}
 		initTrajStructs();		
-		setupGUIObjsAras();					//rebuild UI object stuff
+		//setupGUIObjsAras();					//rebuild UI object stuff
 		initDrwnTrajIndiv();				
 	}
 	

@@ -152,6 +152,31 @@ public class DancingBallWin extends myDispWindow {
 		numClickBools = privModFlgIdxs.length;	
 		initPrivBtnRects(0,numClickBools);
 	}//initAllPrivBtns
+	//song types
+	public static final int mp3Song = 0, midiSong = 1;
+	//set labels of boolean buttons 
+	private void setLabel(int idx, String tLbl, String fLbl) {truePrivFlagNames[idx] = tLbl;falsePrivFlagNames[idx] = fLbl;}//	
+	//update button text based on what type of song is being played (midi or mp3)
+	public void updateButtons(int songType) {
+		pa.outStr2Scr("updateButtons start");
+		switch(songType) {
+		case mp3Song : {			
+			setLabel(getFlagAraIdxOfBool(playMP3Vis), "Playing MP3", "Stopped MP3");			
+			setLabel(getFlagAraIdxOfBool(calcSingleFreq), "Lvls via Indiv Freq", "Lvls via FFT");
+			guiObjs[gIDX_curSong].setDispText("MP3 Clip");
+			break;}
+		case midiSong :{
+			setLabel(getFlagAraIdxOfBool(playMP3Vis), "Playing Midi", "Stopped Midi");
+			setLabel(getFlagAraIdxOfBool(calcSingleFreq), "DFT levels", "Actual Midi lvls");
+			guiObjs[gIDX_curSong].setDispText("Midi Clip");
+			break;}
+		default : {//default to mp3 song
+			setLabel(getFlagAraIdxOfBool(playMP3Vis), "Playing MP3", "Stopped MP3");			
+			setLabel(getFlagAraIdxOfBool(calcSingleFreq), "Lvls via Indiv Freq", "Lvls via FFT");			
+			guiObjs[gIDX_curSong].setDispText("MP3 Clip");
+			break;}
+		}		
+	}//updateButtons
 	
 	@Override
 	protected void initMe() {
@@ -241,6 +266,7 @@ public class DancingBallWin extends myDispWindow {
 	//initialize structure to hold modifiable menu regions
 	@Override
 	protected void setupGUIObjsAras(){	
+		pa.outStr2Scr("setupGUIObjsAras start");
 		guiMinMaxModVals = new double [][]{
 			{0,1.0f,.001f},					//timestep           		gIDX_TimeStep 	
 			{200,10000,10},						//# of vertices

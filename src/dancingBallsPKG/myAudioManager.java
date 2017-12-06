@@ -82,9 +82,10 @@ public class myAudioManager {
 	public static int songIDX = 1, songBank = 0;
 	//threshold below which audio is ignored - fraction of max level seen. set by UI
 	public static float audThreshold = .55f;
-	public static String[] songBanks = new String[] {"Piano Scales","Piano Songs", "Misc Songs", "Bach Cello", "Piano Notes"};
+	public static String[] songBanks = new String[] {"Midi","Piano Scales","Piano Songs", "Misc Songs", "Bach Cello", "Piano Notes"};
 	//list of song names
 	public static String[][] songList = new String[][]{
+		{"Fugue1 Midi","Fugue 2 Midi","Fugue 3 Midi"},
 		{"Chromatic F#","Ab","A","Bb","B","C#","C","D","Eb","E","F#","F","G","Pentatonic F#","WholeTone C#","WholeTone C"},		
 		{"WellTmprdClav CMaj","Sati-Gnoss1","Sati-Gymn1","Fur Elise"},
 		{"PurpleHaze","UNATCO","Hunting","SavanaDance","Karelia","Choir"},
@@ -92,13 +93,16 @@ public class myAudioManager {
 		{"ff-029","ff-030","ff-031","ff-050","ff-051","ff-052","ff-053","ff-054"}};
 	//song buffer size on per-bank basis
 	//public final int songBufSize = 1024;
-	public final int[] songBufSize = new int[] {1024, 1024, 2048, 2048, 1024};
+	public final int[] songBufSize = new int[] {1024,1024,1024, 2048, 2048, 1024};
 	//which dft function to use - needs an entry per song
 	//0:per sample, all harms, 1 : per sample, fund only, 2:all samples, fund only
 	//set by UI
 	public static int calcFuncToUse = 1;
 	public mySongHandler[][] songs;
+	//0==mp3, 1==midi, used to determine display strings for some UI features
+	public int [][] songTypes;
 	public String[][] songFilenames = new String[][]{
+		{"fugue1.mid","fugue2.mid","fugue3.mid"},
 		{"scales_ChromaticF Sharp.mp3","scales_A Flat.mp3","scales_A.mp3",
 		"scales_B Flat.mp3","scales_B.mp3","scales_C Sharp.mp3","scales_C.mp3","scales_D.mp3","scales_E Flat.mp3","scales_E.mp3",
 		"scales_F Sharp.mp3","scales_F.mp3","scales_G.mp3","scales_Pentatonic on F Sharp.mp3","scales_WholeToneC Sharp.mp3","scales_WholeToneC.mp3"},
@@ -127,7 +131,8 @@ public class myAudioManager {
 	
 	private void initMe() {
 		initFlags();
-		songs = new myMP3SongHandler[songBanks.length][];
+		songs = new mySongHandler[songBanks.length][];
+		songTypes = new int[songBanks.length][];
 		//ConcurrentSkipListMap<Float, Integer> allFreqsUsed = 
 		dispPiano.initPianoFreqs();
 		//initialize tap beat structures
@@ -172,7 +177,6 @@ public class myAudioManager {
 	
 	protected void setFFTVals() {
 		for(int b=0;b<songBanks.length;++b) {
-			//for(int i=0;i<songs[b].length;++i){songs[b][i].setForwardVals(windowList[curWindowIDX], fftMinBandwidth, fftBandsPerOctave, numZones);}
 			for(int i=0;i<songs[b].length;++i){songs[b][i].setForwardVals(windowList[curWindowIDX], fftMinBandwidth, numZones);}
 		}
 	}//setFFTVals
@@ -180,12 +184,18 @@ public class myAudioManager {
 	protected void loadSongsAndFFT() {
 		sampleRates = new ConcurrentSkipListMap<Float, Integer>();//hold only sample rates that we have seen
 		for(int b=0;b<songBanks.length;++b) {
-			myMP3SongHandler[] tmpSongs = new myMP3SongHandler[songFilenames[b].length];
-			for(int i=0;i<songFilenames[b].length;++i){	
-				tmpSongs[i]= new myMP3SongHandler(pa.minim, 
-					songFilenames[b][i], 
-					songList[b][i], 
-					songBufSize[b]);	
+			mySongHandler[] tmpSongs = new mySongHandler[songFilenames[b].length];
+			songTypes[b] = new int[songFilenames[b].length];
+			for(int i=0;i<songFilenames[b].length;++i){
+				String songName =songFilenames[b][i];
+				if(songName.toLowerCase().contains(".mid")) {
+					songTypes[b][i]=win.midiSong;
+					tmpSongs[i]= new myMidiSongHandler(pa,pa.minim, songName, songList[b][i], songBufSize[b]);
+					pa.outStr2Scr("Make Midi song "+ songName);
+				} else {
+					songTypes[b][i]=win.mp3Song;
+					tmpSongs[i]= new myMP3SongHandler(pa,pa.minim, songName, songList[b][i], songBufSize[b]);						
+				}
 				sampleRates.put(tmpSongs[i].sampleRate, 1);}		
 			songs[b] = tmpSongs;
 		}
@@ -199,6 +209,8 @@ public class myAudioManager {
 		//ball.resetVertLocs();
 		songBank = (newSongBank % songs.length);
 		songIDX = (newSongIDX % songs[songBank].length);
+		//update display buttons based on new song
+		win.updateButtons(songTypes[songBank][songIDX]);
 		//re-init struct holding keys turned on
 		numFramesOn = new int[2][myPianoObj.numKeys];
 		turnOnKey = new boolean[2][myPianoObj.numKeys];
@@ -383,6 +395,7 @@ public class myAudioManager {
 	//set current time and put top x candidates for melody in array melodyCandidates
 	private void procPerRunRes(int calcIDX, int animMillis) {
 		//set global min audio threshold for display based on loudest key - set by UI
+		if(lvlsPerPKey[calcIDX].size() == 0) {return;}
 		minAudThres[calcIDX] = audThreshold * lvlsPerPKey[calcIDX].firstKey();
 		ConcurrentSkipListMap<Float, Integer> tmp = buildDescMap();
 		//if noisy audio and loudest key is less than noisegate lvl, this will not process melody candidates, puts blank melody map in current position of melody candidates structure
