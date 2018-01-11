@@ -1,8 +1,11 @@
 package dancingBallsPKG;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.*;
 
+import ddf.minim.Minim;
 import ddf.minim.analysis.*;
 import processing.core.PConstants;
 
@@ -19,8 +22,9 @@ public class myAudioManager {
 	public static final int 
 			debugIDX			= 0,
 			fftLoadedIDX		= 1,
-			audioLoadedIDX		= 2;
-	public static final int numFlags = 3;	
+			audioLoadedIDX		= 2,
+			audFMgrLoadedIDX	= 3;
+	public static final int numFlags = 4;	
 	//handled sample rates based on songs loaded - put sample rates in keys
 	public ConcurrentSkipListMap<Float, Integer> sampleRates;	
 	//idx's of arrays for different analysis results
@@ -78,19 +82,27 @@ public class myAudioManager {
 	private int frameWindow = 10;
 	//per bank arrays of buffer size, song handlers, song file names
 	//current song index and songBank (bank corresponds to songs or piano samples)
-	//list of song banks - use to pick either songs or piano notes
-	public static int songIDX = 1, songBank = 0;
+	//list of song banks - use to pick either songs or piano notes or midi files
+	public static int songType = 0, songBank = 0, songIDX = 1;
+	
+	//handler to manage structure of audio files under "data" dir
+	public myAudioFileManager audioFileIO;
+	
+	
 	//threshold below which audio is ignored - fraction of max level seen. set by UI
 	public static float audThreshold = .55f;
-	public static String[] songBanks = new String[] {"Midi","Piano Scales","Piano Songs", "Misc Songs", "Bach Cello", "Piano Notes"};
+	
+	//TODO : replace with audio manager
+	public static String[] songDirList = new String[] {"Midi", "Audio"};	
+	public static String[][] songBanks = new String[][] {{"Midi"},{"Piano Scales","Piano Songs", "Misc Songs", "Bach Cello", "Piano Notes"}};
 	//list of song names
-	public static String[][] songList = new String[][]{
-		{"Fugue1 Midi","Fugue 2 Midi","Fugue 3 Midi"},
-		{"Chromatic F#","Ab","A","Bb","B","C#","C","D","Eb","E","F#","F","G","Pentatonic F#","WholeTone C#","WholeTone C"},		
+	public static String[][][] songList = new String[][][]{
+		{{"Fugue1 Midi","Fugue 2 Midi","Fugue 3 Midi"}},
+		{{"Chromatic F#","Ab","A","Bb","B","C#","C","D","Eb","E","F#","F","G","Pentatonic F#","WholeTone C#","WholeTone C"},		
 		{"WellTmprdClav CMaj","Sati-Gnoss1","Sati-Gymn1","Fur Elise"},
 		{"PurpleHaze","UNATCO","Hunting","SavanaDance","Karelia","Choir"},
 		{"Cello4 EbMaj","Cello5 Cmin"},
-		{"ff-029","ff-030","ff-031","ff-050","ff-051","ff-052","ff-053","ff-054"}};
+		{"ff-029","ff-030","ff-031","ff-050","ff-051","ff-052","ff-053","ff-054"}}};
 	//song buffer size on per-bank basis
 	//public final int songBufSize = 1024;
 	public final int[] songBufSize = new int[] {1024,1024,1024, 2048, 2048, 1024};
@@ -98,19 +110,24 @@ public class myAudioManager {
 	//0:per sample, all harms, 1 : per sample, fund only, 2:all samples, fund only
 	//set by UI
 	public static int calcFuncToUse = 1;
-	public mySongHandler[][] songs;
+	public mySongHandler[][][] songs;
 	//0==mp3, 1==midi, used to determine display strings for some UI features
-	public int [][] songTypes;
-	public String[][] songFilenames = new String[][]{
-		{"fugue1.mid","fugue2.mid","fugue3.mid"},
-		{"scales_ChromaticF Sharp.mp3","scales_A Flat.mp3","scales_A.mp3",
+	public int [][][] songTypes;
+	public String[][][] songFilenames = new String[][][]{
+		{{"fugue1.mid","fugue2.mid","fugue3.mid"}},
+		{{"scales_ChromaticF Sharp.mp3","scales_A Flat.mp3","scales_A.mp3",
 		"scales_B Flat.mp3","scales_B.mp3","scales_C Sharp.mp3","scales_C.mp3","scales_D.mp3","scales_E Flat.mp3","scales_E.mp3",
 		"scales_F Sharp.mp3","scales_F.mp3","scales_G.mp3","scales_Pentatonic on F Sharp.mp3","scales_WholeToneC Sharp.mp3","scales_WholeToneC.mp3"},
 		{"WTK_Cmaj.mp3","satie_gnossienne1.mp3","satie_gymnopedie1.mp3","FurElise.mp3"},
 		{"PurpleHaze.mp3","UNATCO.mp3","Hunting.mp3","SavanaDance.mp3","karelia.mp3","choir.mp3"},
 		{"Bach cello No. 4 in EbMaj_Prelude.mp3","Bach cello No. 5 in CMin_Prelude.mp3"},
-		{"piano-ff-029.wav","piano-ff-030.wav","piano-ff-031.wav","piano-ff-050.wav","piano-ff-051.wav","piano-ff-052.wav","piano-ff-053.wav","piano-ff-054.wav"}
+		{"piano-ff-029.wav","piano-ff-030.wav","piano-ff-031.wav","piano-ff-050.wav","piano-ff-051.wav","piano-ff-052.wav","piano-ff-053.wav","piano-ff-054.wav"}}
 	};
+	
+	//New structs to hold current songs, current banks, and current audio file types
+	public String[] curSongList, curBankList,curTypeList;
+	
+	
 	//current index of fft windowing function, from ui
 	public int curWindowIDX = 0;	
 	public WindowFunction[] windowList = new WindowFunction[]{FFT.NONE, FFT.BARTLETT, FFT.BARTLETTHANN, FFT.BLACKMAN, FFT.COSINE, FFT.GAUSS, FFT.HAMMING, FFT.HANN, FFT.LANCZOS, FFT.TRIANGULAR};	
@@ -131,19 +148,26 @@ public class myAudioManager {
 	
 	private void initMe() {
 		initFlags();
-		songs = new mySongHandler[songBanks.length][];
-		songTypes = new int[songBanks.length][];
+		songs = new mySongHandler[songDirList.length][][];
+		songTypes = new int[songDirList.length][][];
 		//ConcurrentSkipListMap<Float, Integer> allFreqsUsed = 
 		dispPiano.initPianoFreqs();
 		//initialize tap beat structures
 		initTapBeatStructs();
-		//load all songs, add sample rate to 
+		//load audio IO manager to maintain internal hierarchy of song structures
+		pa.outStr2Scr("Start building audio File IO @ Millis since start of program : " + (pa.millis() - pa.glblStartSimTime));
+		audioFileIO = new myAudioFileManager(pa, win, this, pa.minim,Paths.get(pa.sketchPath(),"Data"));
+		curTypeList = audioFileIO.getTypeSubdirNames();
+		
+		pa.outStr2Scr("End building audio File IO @ Millis since start of program : "+ (pa.millis() - pa.glblStartSimTime));// + " type list size : " + curTypeList.length);	
+		
+		//load all songs, add sample rate  
 		loadSongsAndFFT();		
 		//launch thread to precalculate all trig stuff : not needed with multi-threading dft calc - math is fast enough without this
 		//pa.th_exec.execute(new myTrigPrecalc(this, allFreqsUsed) );
 		//build DFT threads and precalc local cos/sin values
 		initDFTAnalysisThrds(10);	
-		changeCurrentSong(songBank, songIDX);
+		changeCurrentSong(songType, songBank, songIDX);
 	}//initMe
 	
 	private void initFlags() {flags = new int[1 + numFlags/32]; for(int i = 0; i<numFlags; ++i){setFlags(i,false);}}
@@ -171,46 +195,74 @@ public class myAudioManager {
 		for(int i=0;i<numZones; ++i) {	tapBeats[i] = new myBeat(pa,i,stTime);	audioBeats[i] = new myBeat(pa,i,stTime);	}		
 	}//initTapBeatStructs
 	
-	private mySongHandler getCurrentClip() {return songs[songBank][songIDX];}
+	private mySongHandler getCurrentClip() {return songs[songType][songBank][songIDX];}
 	//either returns current song or current piano clip
-	protected mySongHandler getCurrentClip(int bankIdx, int songIdx) {return songs[bankIdx][songIdx];}
+	//protected mySongHandler getCurrentClip(int bankIdx, int songIdx) {return songs[songType][bankIdx][songIdx];}
+	protected mySongHandler getCurrentClip(int newTypeIDX, int bankIdx, int songIdx) {return songs[newTypeIDX][bankIdx][songIdx];}
 	
 	protected void setFFTVals() {
-		for(int b=0;b<songBanks.length;++b) {
-			for(int i=0;i<songs[b].length;++i){songs[b][i].setForwardVals(windowList[curWindowIDX], fftMinBandwidth, numZones);}
+		for(int t=0;t<songs.length;++t) {
+			for(int b=0;b<songs[t].length;++b) {
+				for(int i=0;i<songs[t][b].length;++i){songs[t][b][i].setForwardVals(windowList[curWindowIDX], fftMinBandwidth, numZones);}
+			}
 		}
 	}//setFFTVals
 	
+	//TODO replace with myAudioFileManager - need to manage bigger structure of songs than what can be loaded into memory
 	protected void loadSongsAndFFT() {
 		sampleRates = new ConcurrentSkipListMap<Float, Integer>();//hold only sample rates that we have seen
-		for(int b=0;b<songBanks.length;++b) {
-			mySongHandler[] tmpSongs = new mySongHandler[songFilenames[b].length];
-			songTypes[b] = new int[songFilenames[b].length];
-			for(int i=0;i<songFilenames[b].length;++i){
-				String songName =songFilenames[b][i];
-				if(songName.toLowerCase().contains(".mid")) {
-					songTypes[b][i]=win.midiSong;
-					tmpSongs[i]= new myMidiSongHandler(pa,pa.minim, songName, songList[b][i], songBufSize[b]);
-					pa.outStr2Scr("Make Midi song "+ songName);
-				} else {
-					songTypes[b][i]=win.mp3Song;
-					tmpSongs[i]= new myMP3SongHandler(pa,pa.minim, songName, songList[b][i], songBufSize[b]);						
-				}
-				sampleRates.put(tmpSongs[i].sampleRate, 1);}		
-			songs[b] = tmpSongs;
+		AudioFile tmpFile;
+		for(int t=0;t<songDirList.length;++t) {
+			String[][] songFileNamesForType = songFilenames[t],
+					songListForType = songList[t];
+			String[] songBanksForType = songBanks[t];
+			mySongHandler[][] tmpSongsPerType = new mySongHandler[songBanksForType.length][];
+			//in case different file type gets improperly mapped - probably ignorable TODO verify
+			int [][] songTypePerType = new int[songBanksForType.length][];
+			for(int b=0;b<songBanksForType.length;++b) {
+				mySongHandler[] tmpSongs = new mySongHandler[songFileNamesForType[b].length];
+				songTypePerType[b] = new int[songFileNamesForType[b].length];
+				for(int i=0;i<songFileNamesForType[b].length;++i){
+					String songName =songFileNamesForType[b][i];
+					if(songName.toLowerCase().contains(".mid")) {
+						songTypePerType[b][i]=win.midiSong;
+						tmpFile = new AudioFile(Paths.get(pa.sketchPath(),"Data",songName), songListForType[b][i], songTypePerType[b][i], null);
+						tmpSongs[i]= new myMidiSongHandler(pa,pa.minim, tmpFile, songBufSize[b]);
+						pa.outStr2Scr("Make Midi song "+ songName);
+					} else {
+						songTypePerType[b][i]=win.mp3Song;
+						tmpFile = new AudioFile(Paths.get(pa.sketchPath(),"Data",songName), songListForType[b][i], songTypePerType[b][i], null);
+						tmpSongs[i]= new myMP3SongHandler(pa,pa.minim, tmpFile, songBufSize[b]);						
+					}
+					sampleRates.put(tmpSongs[i].sampleRate, 1);}		
+				tmpSongsPerType[b] = tmpSongs;
+			}
+			songs[t]= tmpSongsPerType;
+			songTypes[t] = songTypePerType;
 		}
 		setFlags(audioLoadedIDX,true);
 		setFlags(fftLoadedIDX, true);
 		setFFTVals();
 	}//loadSongList() 
 	
-	public void changeCurrentSong(int newSongBank, int newSongIDX){
-		getCurrentClip(songBank, songIDX).pause();//pause current song
+	public void changeCurrentSong(int newSongType, int newSongBank, int newSongIDX){
+		getCurrentClip(songType, songBank, songIDX).pause();//pause current song
 		//ball.resetVertLocs();
-		songBank = (newSongBank % songs.length);
-		songIDX = (newSongIDX % songs[songBank].length);
+//		songType = newSongType % curTypeList.length;
+//need to modify newSongBank and newSongIDX to be modulo 
+//		curBankList = audioFileIO.getBanksInType(songType);
+//		curSongList = audioFileIO.getSongsInBank(songType, songBank);
+		
+		
+		//TODO fix this to be directory driven using audioFileIO
+		
+		songType = (newSongType % songs.length);
+		songBank = (newSongBank % songs[songType].length);
+		songIDX = (newSongIDX % songs[songType][songBank].length);
+		
+
 		//update display buttons based on new song
-		win.updateButtons(songTypes[songBank][songIDX]);
+		win.updateButtons(songTypes[songType][songBank][songIDX]);
 		//re-init struct holding keys turned on
 		numFramesOn = new int[2][myPianoObj.numKeys];
 		turnOnKey = new boolean[2][myPianoObj.numKeys];
@@ -247,7 +299,7 @@ public class myAudioManager {
 		intervals[1].clear();
 		//need to reinitialize analysis results structures
 		initLvlMaps();
-		getCurrentClip(songBank,songIDX).play();
+		getCurrentClip().play();
 	}//startAudio	
 	
 	//(re) initialize song analysis maps
@@ -261,10 +313,10 @@ public class myAudioManager {
 	//stop all clips from playing
 	protected void stopAllPlaying() {
 		pauseTimeMillis = pa.millis();
-		for(int b=0;b<songs.length;++b){for(int i=0;i<songs[b].length;++i){	songs[b][i].pause();	}	}	
+		for(int t=0;t<songs.length;++t) {for(int b=0;b<songs[t].length;++b){for(int i=0;i<songs[t][b].length;++i){	songs[t][b][i].pause();	}	}	}
 	}
 	//rewind current song
-	public void rewindSong() {if(win.getPrivFlags(DancingBallWin.playMP3Vis)){getCurrentClip(songBank,songIDX).rewind();}}
+	public void rewindSong() {if(win.getPrivFlags(DancingBallWin.playMP3Vis)){getCurrentClip().rewind();}}
 	
 	//convenience function to build descending-sorted maps
 	public ConcurrentSkipListMap<Float, Integer> buildDescMap(){return new ConcurrentSkipListMap<Float, Integer>(new Comparator<Float>() { @Override public int compare(Float o1, Float o2) {   return o2.compareTo(o1);}});}
@@ -327,7 +379,7 @@ public class myAudioManager {
 
 	//set song-dependent values in each thread when song changes
 	private void setDFTRunValsForCurSong() {
-		mySongHandler song = getCurrentClip(songBank,songIDX);
+		mySongHandler song = getCurrentClip();
 		//pa.outStr2Scr("setDFTRunValsForCurSong : Setting values in threads for song bank : " + songBank);
 		for(int i=0;i<perThLvlPerKey.length;++i) {
 			callDFTNoteMapper.get(i).setPerSongValues(song.sampleRate, songBufSize[songBank], (i < 4 ? 2 : 1));
@@ -453,9 +505,9 @@ public class myAudioManager {
 					oldInterval = intervals[calcIDX].get(timeOfLastInterval[calcIDX]);
 					if(oldInterval!=null) {
 						oldInterval.finishInterval(loudestNote,animMillis);//win.getPrivFlags(DancingBallWin.calcSingleFreq) ? dftResIDX : fftResIDX
-						if((win.getPrivFlags(DancingBallWin.playMP3Vis)) && (calcIDX == dftResIDX)) {
-							pa.outStr2Scr("Old Interval : " + oldInterval.toString() + " animMillis : "+animMillis+"|new loudest note : " + loudestNote );
-						}
+//						if((win.getPrivFlags(DancingBallWin.playMP3Vis)) && (calcIDX == dftResIDX)) {
+//							pa.outStr2Scr("Old Interval : " + oldInterval.toString() + " animMillis : "+animMillis+"|new loudest note : " + loudestNote );
+//						}
 					}
 				}
 				timeOfLastInterval[calcIDX]= animMillis;
@@ -480,6 +532,8 @@ public class myAudioManager {
 	}//buildIntervals
 	
 	
+	//TODO allow for multiple instruments, espeically with regard to midi (specify by channel/instrument) as arrays
+	private int curChan = 0;
 	private void calcPianoKeyMappings(mySongHandler song, int animMillis) {
 		//analyze frequencies of center notes of piano manually using DFT approx or via fft
 		//toArray makes copy of mix buffer
@@ -488,9 +542,9 @@ public class myAudioManager {
 		try {callDFTMapperFtrs = pa.th_exec.invokeAll(callDFTNoteMapper);for(Future<Boolean> f: callDFTMapperFtrs) { f.get(); }} catch (Exception e) { e.printStackTrace(); }
 		song.setDFTMaxLvl(lvlsPerPKey[dftResIDX].firstKey());
 		procPerRunRes(dftResIDX, animMillis);	
-
 		//once dft threads are done, process fft
-		song.getFwdFreqLevelsInHarmonicBands(dispPiano.pianoMinFreqsHarmonics, lvlsPerPKey[fftResIDX], perKeyLvls[fftResIDX],curKeyLvlIdx);
+		//TODO Allow for multiple instruments by calling this repeatedly for each channel - specifically for midi
+		song.getFwdFreqLevelsInHarmonicBands(dispPiano.pianoMinFreqsHarmonics, lvlsPerPKey[fftResIDX], perKeyLvls[fftResIDX],curKeyLvlIdx, curChan);
 		procPerRunRes(fftResIDX, animMillis);		
 	}//calcPianoKeyMappings
 	
@@ -499,7 +553,7 @@ public class myAudioManager {
 	//set process audio for each frame
 	public boolean processAudioData(float animTimeMod) {
 		boolean updateBall = false;
-		mySongHandler song = getCurrentClip(songBank,songIDX);
+		mySongHandler song = getCurrentClip();
 		if(song.isPlaying()) {
 			song.stepAudio();
 			float[][] res ;

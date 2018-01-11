@@ -8,7 +8,7 @@ public class DancingBallWin extends myDispWindow {
 	//set # zones here
 	public static final int numZones = 6;	
 	//Dancing Ball object
-	public myDancingBall ball;
+	public myDancer ball;
 	//piano visualization object
 	public myPianoObj dispPiano;	
 	//audio manager - move all audio processing to this object
@@ -35,14 +35,15 @@ public class DancingBallWin extends myDispWindow {
 		gIDX_minVertNBHD	= 3,
 		gIDX_zoneToShow		= 4,
 		gIDX_zoneMmbrToShow = 5,
-		gIDX_curSongBank	= 6,
-		gIDX_curSong 		= 7,
-		gIDX_numNotesByLvl  = 8,		//top # of notes to show per lvl-mapping result 
-		gIDX_audThresh		= 9,		//fraction of max level seen in entire sample set to display as key hits (0 means display all) - only used for multi-thread res
-		gIDX_typeDFTToShow 	= 10,		//whether to show results for 0:global max, 1:freq zone max or 2:per-thread max note levels
-		gIDX_noiseGate		= 11,		//absolute level below which input is ignored for interval calculation/piano roll display
-		gIDX_DFTCalcType	= 12,		//list of possible calculation types
-		gIDX_winSel 		= 13;
+		gIDX_curSongDir	= 6,		//either midi or "mp3" (catch all for audio)
+		gIDX_curSongBank	= 7,
+		gIDX_curSong 		= 8,
+		gIDX_numNotesByLvl  = 9,		//top # of notes to show per lvl-mapping result 
+		gIDX_audThresh		= 10,		//fraction of max level seen in entire sample set to display as key hits (0 means display all) - only used for multi-thread res
+		gIDX_typeDFTToShow 	= 11,		//whether to show results for 0:global max, 1:freq zone max or 2:per-thread max note levels
+		gIDX_noiseGate		= 12,		//absolute level below which input is ignored for interval calculation/piano roll display
+		gIDX_DFTCalcType	= 13,		//list of possible calculation types
+		gIDX_winSel 		= 14;
 	//initial values - need one per object
 	public float[] uiVals = new float[]{
 			deltaT,
@@ -51,6 +52,7 @@ public class DancingBallWin extends myDispWindow {
 			minVInNBD,
 			zoneToShow,
 			zoneMmbrToShow,
+			myAudioManager.songType,						//initial song type in audMgr
 			myAudioManager.songBank,						//initial song bank in audMgr
 			myAudioManager.songIDX,							//initial songIDX, in audMgr	
 			myAudioManager.numNotesToShow,					//loudest # of notes to show per lvl-mapping result (min 1)
@@ -158,7 +160,7 @@ public class DancingBallWin extends myDispWindow {
 	private void setLabel(int idx, String tLbl, String fLbl) {truePrivFlagNames[idx] = tLbl;falsePrivFlagNames[idx] = fLbl;}//	
 	//update button text based on what type of song is being played (midi or mp3)
 	public void updateButtons(int songType) {
-		pa.outStr2Scr("updateButtons start");
+		//pa.outStr2Scr("updateButtons start");
 		switch(songType) {
 		case mp3Song : {			
 			setLabel(getFlagAraIdxOfBool(playMP3Vis), "Playing MP3", "Stopped MP3");			
@@ -206,12 +208,13 @@ public class DancingBallWin extends myDispWindow {
 	 * build dancing ball
 	 */	
 	private void rebuildDancer() {
-		ball.buildVertsAndNorms(ballRadius, ballNumVerts, getPrivFlags(randVertsForSphere));
+		//ball.buildVertsAndNorms(ballRadius, ballNumVerts, getPrivFlags(randVertsForSphere));
+		ball.rebuildMe();
 	}//buildDancingBall
 	
 	//set ball reset all verts in zones being displaced, before changing to a new zone
 	private void resetDancerDisplacement() {
-		ball.resetVertLocs(zoneToShow, zoneMmbrToShow, true);
+		ball.resetConfig();//ball.resetVertLocs(zoneToShow, zoneMmbrToShow, true);//removed this to make general
 	}	
 	
 	//set once ball is either being rebuilt or is finished being built
@@ -268,15 +271,16 @@ public class DancingBallWin extends myDispWindow {
 	protected void setupGUIObjsAras(){	
 		pa.outStr2Scr("setupGUIObjsAras start");
 		guiMinMaxModVals = new double [][]{
-			{0,1.0f,.001f},					//timestep           		gIDX_TimeStep 	
+			{0,1.0f,.001f},						//timestep           		gIDX_TimeStep 	
 			{200,10000,10},						//# of vertices
 			{50,1000,10},						//ball at-rest radius
-			{5, 100, 5},				//min neighborhood size fraction of number of verts			
-			{0,numZones-1,1},				//zone to show if showing zones on sphere
-			{0,10000,1},					//zone member to show if showing zones on sphere (% list size, so can be huge)
+			{5, 100, 5},						//min neighborhood size fraction of number of verts			
+			{0,numZones-1,1},					//zone to show if showing zones on sphere
+			{0,10000,1},						//zone member to show if showing zones on sphere (% list size, so can be huge)
+			{0.0, 2, 0.1},						//either "midi" or "mp3" - audio type either midi sequence or audio file
 			{0.0, myAudioManager.songBanks.length-1, 0.1},	//song bank selected
 			{0.0, myAudioManager.songList[(int)uiVals[gIDX_curSongBank]].length-1, 0.1},	//song/clip selected - start with initial bank
-			{1,10,1},						//Top # of notes to show per lvl mapping result
+			{1,10,1},							//Top # of notes to show per lvl mapping result
 			{0,100.0f,1.0f},					//% of max volume to use as cutuff, below which notes will not display
 			{0,2,1},							//type of results to display 
 			{0.0,5.0,0.1},						//absolute noise gate/noise floor
@@ -291,6 +295,7 @@ public class DancingBallWin extends myDispWindow {
 			uiVals[gIDX_minVertNBHD],
 			uiVals[gIDX_zoneToShow],
 			uiVals[gIDX_zoneMmbrToShow],
+			uiVals[gIDX_curSongDir],
 			uiVals[gIDX_curSongBank],
 			uiVals[gIDX_curSong],
 			uiVals[gIDX_numNotesByLvl],
@@ -308,6 +313,7 @@ public class DancingBallWin extends myDispWindow {
 				"Min Ratio # Verts in NBHD",
 				"Zone to show on Sphere",
 				"Zone Member to Show",
+				"Audio Type",
 				"Song Bank",
 				"MP3 Clip",
 				"# Max Lvl Keys to Show",
@@ -326,6 +332,7 @@ public class DancingBallWin extends myDispWindow {
 			{true, false, true},
 			{true, false, true},
 			{true, false, true},
+			{true, true, true},
 			{true, true, true},
 			{true, true, true},
 			{true, false, true},
@@ -384,24 +391,41 @@ public class DancingBallWin extends myDispWindow {
 				break;}
 			case gIDX_zoneMmbrToShow :{
 				resetDancerDisplacement();
-				zoneMmbrToShow = ((int)val) % ball.zonePoints[zoneToShow].length;
+				zoneMmbrToShow = ((int)val) % ball.getZoneSize(zoneToShow);
 				//reset UI display value to be zoneMmbrToShow
 				guiObjs[UIidx].setVal(zoneMmbrToShow);
 				break;}
-			case gIDX_curSongBank : {
+			case gIDX_curSongDir :{//changing current song type
+				//change song type
+				setPrivFlags(playMP3Vis,false);//turn off playing
+				uiVals[gIDX_curSongDir] = val % myAudioManager.songList.length;
+				int curSongDir=(int)uiVals[gIDX_curSongDir];
+				//change bank display and max vals
+				//change current song bank value to be legal within song list for this type
+				uiVals[gIDX_curSongBank] %= myAudioManager.songList[curSongDir].length;
+				//change song list dropdown max to be this bank's song list length-1
+				guiObjs[gIDX_curSongBank].setNewMax(myAudioManager.songList[curSongDir].length-1);
+				//change current song
+				audMgr.changeCurrentSong(curSongDir,(int)uiVals[gIDX_curSongBank],(int)uiVals[gIDX_curSong]);//changeCurrentSong((int)val);				
+				ball.resetConfig();	
+				break;}
+			case gIDX_curSongBank : {//changing current bank within song type
+				//need to set songs available from this bank
+				int curSongDir=(int)uiVals[gIDX_curSongDir];
 				//change banks - stop music
 				setPrivFlags(playMP3Vis,false);//turn off playing
-				uiVals[UIidx] = val % myAudioManager.songList.length;
+				uiVals[gIDX_curSongBank] = val % myAudioManager.songList[curSongDir].length;
+				int curSongBank = (int)uiVals[gIDX_curSongBank];
 				//change current song idx value to be legal within song list for this bank
-				uiVals[gIDX_curSong] %= myAudioManager.songList[(int)uiVals[UIidx]].length;
+				uiVals[gIDX_curSong] %= myAudioManager.songList[curSongDir][curSongBank].length;
 				//change song list dropdown max to be this bank's song list length-1
-				guiObjs[gIDX_curSong].setNewMax(myAudioManager.songList[(int)uiVals[UIidx]].length-1);
-				audMgr.changeCurrentSong((int)uiVals[gIDX_curSongBank],(int)uiVals[gIDX_curSong]);
-				ball.resetVertLocs();	
+				guiObjs[gIDX_curSong].setNewMax(myAudioManager.songList[curSongDir][curSongBank].length-1);
+				audMgr.changeCurrentSong(curSongDir,curSongBank,(int)uiVals[gIDX_curSong]);
+				ball.resetConfig();	
 				break;}
-			case gIDX_curSong 	: {
-				audMgr.changeCurrentSong((int)uiVals[gIDX_curSongBank],(int)uiVals[gIDX_curSong]);//changeCurrentSong((int)val);
-				ball.resetVertLocs();
+			case gIDX_curSong 	: {//changing current song within bank within type
+				audMgr.changeCurrentSong((int)uiVals[gIDX_curSongDir],(int)uiVals[gIDX_curSongBank],(int)uiVals[gIDX_curSong]);//changeCurrentSong((int)val);
+				ball.resetConfig();
 				break;}
 			case gIDX_numNotesByLvl :{//send value to audioMgr
 				myAudioManager.numNotesToShow = (int)(uiVals[gIDX_numNotesByLvl]);				
@@ -429,9 +453,13 @@ public class DancingBallWin extends myDispWindow {
 	//if any ui values have a string behind them for display
 	@Override
 	protected String getUIListValStr(int UIidx, int validx) {
+		int curSongDirIDX = (int)uiVals[gIDX_curSongDir],
+			curSongBankIDX = (int)uiVals[gIDX_curSongBank];
+			
 		switch(UIidx){
-			case gIDX_curSongBank :{ return myAudioManager.songBanks[validx %myAudioManager.songBanks.length];}
-			case gIDX_curSong : {return myAudioManager.songList[(int)uiVals[gIDX_curSongBank]][validx];}
+			case gIDX_curSongDir :{ return myAudioManager.songDirList[validx %myAudioManager.songDirList.length];}
+			case gIDX_curSongBank :{ return myAudioManager.songBanks[curSongDirIDX][validx %myAudioManager.songBanks[curSongDirIDX].length];}
+			case gIDX_curSong : {return myAudioManager.songList[curSongDirIDX][curSongBankIDX][validx%myAudioManager.songList[curSongDirIDX][curSongBankIDX].length];}
 			case gIDX_typeDFTToShow : {return dftResTypeToShow[(validx % dftResTypeToShow.length)];}
 			case gIDX_DFTCalcType : {return dftCalcTypeToUse[(validx % dftCalcTypeToUse.length)];}
 					
@@ -495,7 +523,7 @@ public class DancingBallWin extends myDispWindow {
 		
 		//pa.outStr2Scr("took : " + (pa.millis() - stVal) + " millis to processAudioData()");
 		//int stVal = pa.millis();//takes around 90 millis to draw ball
-		ball.drawMe(animTimeMod,zoneToShow,getPrivFlags(showZones), getPrivFlags(stimZoneMates), getPrivFlags(showVertNorms));
+		ball.drawMe(animTimeMod);//,zoneToShow,getPrivFlags(showZones), getPrivFlags(stimZoneMates), getPrivFlags(showVertNorms));
 		//pa.outStr2Scr("took : " + (pa.millis() - stVal) + " millis to ball.drawMe()");
 	}//drawMe	
 	
@@ -507,36 +535,6 @@ public class DancingBallWin extends myDispWindow {
 		//draw any custom menu stuff here
 		pa.popStyle();					pa.popMatrix();		
 	}//drawCustMenuObjs
-
-	
-	/**
-	 * send to ball(s) all values necessary for step of simulation.  
-	 * these include, if mass-spring : 
-	 * 		ks vals dependent on beat freqs
-	 * 		
-	 * if kinematic : 
-	 * 
-	 * and for both types : 
-	 * 		ui-selected zone(s) and zone members for each zone to display
-	 * 		beat detection results and last beat detection results (previous frame)
-	 */
-	private void setBallSimulateVals() {
-		//need to pre-calculate per-zone beat frequencies that we want to use to excite zones
-		float[] zoneFreqs = new float[numZones];
-		//TODO determine per-zone spring constants by using beat frequency in each zone (evolving)
-		//1.1254 as zonefreq gives ks=50 in ball
-		myBeat[] beats = audMgr.getBeats();
-		for(int i=0;i<numZones;++i) {
-			float btFreq = beats[i].getBeatFreq();
-			//zoneFreqs[i] = (btFreq <= 0 ? 1.1254f : btFreq);//this value results in 50 ks
-			zoneFreqs[i] = (btFreq <= 0 ? 2.0f : btFreq);//this value results in 158 ks
-		}//
-		//set ball zone spring constants TODO use beat frequencies
-		ball.setZoneKs(zoneFreqs);
-		
-		//set all required values for ball stimulation
-		ball.setBallSimVals(zoneToShow,zoneMmbrToShow,audMgr.beatDetRes,audMgr.lastBeatDetRes);		
-	}//setBallSimulateVals
 	
 	@Override
 	//modAmtMillis is time passed per frame in milliseconds
@@ -545,7 +543,7 @@ public class DancingBallWin extends myDispWindow {
 		//int stVal = pa.millis();//takes around 5 millis to sim ball
 		if(getPrivFlags(sendAudioToBall)) {
 			//ball.stimulateBall(getPrivFlags(useForces), modAmtMillis);
-			setBallSimulateVals();
+			ball.setSimVals();
 			ball.simMe( modAmtMillis,  getPrivFlags(stimWithTapBeats),  getPrivFlags(useForcesForBall)); 
 		}
 		//pa.outStr2Scr("took : " + (pa.millis() - stVal) + " millis to ball simulate");
@@ -554,15 +552,10 @@ public class DancingBallWin extends myDispWindow {
 	@Override
 	protected void stopMe() {System.out.println("Stop");	resetDancerDisplacement();}
 	//debug function
-	public void dbgFunc0(){
-		//display ball's zone's x,y,z for each zone type's zones
-		ball.debugAllZones();
-		//zones to use : 
-	}	
+	public void dbgFunc0(){		ball.debug0();}//display ball's zone's x,y,z for each zone type's zones	
 	public void dbgFunc1(){		}	
 	public void dbgFunc2(){		}	
 	public void dbgFunc3(){		}	
-	public void dbgFunc4(){		}	
 	@Override
 	public void clickDebug(int btnNum){
 		pa.outStr2Scr("click debug in "+name+" : btn : " + btnNum);

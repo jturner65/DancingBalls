@@ -262,7 +262,7 @@ public class DancingBalls extends PApplet{
 			case 'a' :
 			case 'A' : {setFlags(saveAnim,!flags[saveAnim]);break;}						//start/stop saving every frame for making into animation
 			case 's' :
-			case 'S' : {save(sketchPath() + "\\"+prjNmShrt+"_"+dateStr+"\\"+prjNmShrt+"_img"+timeStr + ".jpg");break;}//save picture of current image			
+			case 'S' : {save(sketchPath() +File.separatorChar+prjNmShrt+"_"+dateStr+File.separatorChar+prjNmShrt+"_img"+timeStr + ".jpg");break;}//save picture of current image			
 			default : {	}
 		}//switch	
 		
@@ -372,6 +372,7 @@ public class DancingBalls extends PApplet{
 		}
 	}//handleFileCmd
 	
+	//load strings of data from a text File named file
 	public void loadFromFile(File file){
 		if (file == null) {
 		    outStr2Scr("Load was cancelled.");
@@ -456,8 +457,6 @@ public class DancingBalls extends PApplet{
 	
 	//size of printed text (default is 12)
 	public static final int txtSz = 10;
-	//constant path strings for different file types
-	public static final String fileDelim = "\\";
 	//mouse wheel sensitivity
 	public static final float mouseWhlSens = 20.0f;
 	
@@ -690,7 +689,7 @@ public class DancingBalls extends PApplet{
 		
 		initCamView();
 		simCycles = 0;
-		screenShotPath = sketchPath() + "\\"+prjNmShrt+"_" + (int) random(1000)+"\\";
+		screenShotPath = sketchPath() +File.separatorChar+prjNmShrt+"_" + (int) random(1000)+File.separatorChar;
 	}				
 		//init boolean state machine flags for program
 	public void initBoolFlags(){
@@ -991,7 +990,7 @@ public class DancingBalls extends PApplet{
 	}//
 	
 	/**
-	 * builds a list of N regularly placed vertices for a sphere of radius rad centered at 0,0,0
+	 * builds a list of N regularly placed vertices for a sphere of radius rad centered at ctr
 	 * See How to generate equidistributed points on the surface of a sphere by Markus Deserno
 	 */	
 	public myVectorf[][] getRegularSphereList(float rad, int N, float scaleZ) {
@@ -1013,18 +1012,13 @@ public class DancingBalls extends PApplet{
 	
 	
 	//find random point on a sphere of radius rad centered at ctr, and norm vector from center to point
-	public myVectorf[] getRandPosOnSphere(double rad, myVectorf ctr, float scale){
+	public myVectorf[] getRandPosOnSphere(double rad, float scale) {//, myVectorf ctr){
 		myVectorf[] res = new myVectorf[2];//idx 0 norm from center, idx 1 location in space (norm * rad + ctr
-		//do{
 		double 	cosTheta = ThreadLocalRandom.current().nextDouble(-1,1), sinTheta =  Math.sin(Math.acos(cosTheta)),
 				phi = ThreadLocalRandom.current().nextDouble(0,PConstants.TWO_PI);
-//		res[0] = new myVectorf(sinTheta * Math.cos(phi), sinTheta * Math.sin(phi),cosTheta);
-//		res[1] = myVectorf._mult(res[0],rad);
-//		res[1]._add(ctr);
 		res[1] = new myVectorf(sinTheta * Math.cos(phi)*rad, sinTheta * Math.sin(phi)*rad,cosTheta *rad* scale);
 		res[0] = myVectorf._normalize(res[1]);
-		res[1]._add(ctr);
-	//} while (pos.z < 0);
+		//res[1]._add(ctr);
 		return res;
 	}
 

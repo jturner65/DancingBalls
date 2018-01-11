@@ -23,7 +23,7 @@ public class myDanceBallBuilder implements Callable<Boolean> {
 	 * @return map of per-zone point neighborhoods of myRndrdParts
 	 */	
 	private void buildMapAroundZonePoint(){
-		int NBDSize = d.pa.max(d.verts.length/d.numZoneVerts[mapIDX],d.win.minVInNBD);
+		int NBDSize = d.pa.max((int)(d.verts.length/(1.0*d.numZoneVerts[mapIDX])),d.win.minVInNBD);
 		Float dist;
 		//TODO redo this more efficiently
 		for(Integer i=0;i<zonePts.length;++i) {
@@ -54,19 +54,25 @@ public class myDanceBallBuilder implements Callable<Boolean> {
 class myDanceBallMapper implements Runnable{
 	private myDancingBall d;
 	private static float PI = (float) Math.PI, TWO_PI = PI*PI;
+	List<myDanceBallBuilder> callBallBuilder = new ArrayList<myDanceBallBuilder>();
+	List<Future<Boolean>> callBBFtrs = new ArrayList<Future<Boolean>>();		
 
 	public myDanceBallMapper(myDancingBall _d) {
 		d = _d;		
-	}
-	
-	private void buildFreqZoneMap() {
-		List<myDanceBallBuilder> callBallBuilder = new ArrayList<myDanceBallBuilder>();
-		List<Future<Boolean>> callBBFtrs = new ArrayList<Future<Boolean>>();		
-		//want at least min # of verts per zone
+		callBallBuilder = new ArrayList<myDanceBallBuilder>();
+		callBBFtrs = new ArrayList<Future<Boolean>>();	
 		for(int i =0;i<d.numZones;++i) {
 		//	int NBDSize = d.pa.max(d.verts.length/d.numZoneVerts[i],d.win.minVInNBD);
 			callBallBuilder.add(new myDanceBallBuilder(d, i));
 		}
+	}
+	
+	private void buildFreqZoneMap() {
+		//want at least min # of verts per zone
+//		for(int i =0;i<d.numZones;++i) {
+//		//	int NBDSize = d.pa.max(d.verts.length/d.numZoneVerts[i],d.win.minVInNBD);
+//			callBallBuilder.add(new myDanceBallBuilder(d, i));
+//		}
 		try {callBBFtrs = d.pa.th_exec.invokeAll(callBallBuilder);for(Future<Boolean> f: callBBFtrs) { f.get(); }} catch (Exception e) { e.printStackTrace(); }			
 	}
 

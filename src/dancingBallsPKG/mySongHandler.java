@@ -13,7 +13,7 @@ import javax.sound.midi.*;
 public abstract class mySongHandler {
 	public DancingBalls pa;
 	protected Minim minim;
-	public String fileName, dispName;
+	public AudioFile songFile;
 	//max level seen so far - idx 0 is dft, idx1 is fft
 	public float[] barDispMaxLvl;
 	//length in millis, minimum frequency in fft, # of zones to map energy to
@@ -29,12 +29,20 @@ public abstract class mySongHandler {
 	protected float[][] feBuffer, fdBuffer;
 	protected long[] fTimer;
 
-	public mySongHandler(DancingBalls _pa,Minim _minim, String _fname, String _dname, int _sbufSize) {
-		pa=_pa;minim=_minim; fileName=_fname; dispName=_dname;songBufSize=_sbufSize;
+	public mySongHandler(DancingBalls _pa,Minim _minim, AudioFile _songFile, int _sbufSize) {
+		pa=_pa;minim=_minim; songFile = _songFile;		
+		songBufSize=_sbufSize;
 		barDispMaxLvl = new float[2];		
 		barDispMaxLvl[0]=.01f; barDispMaxLvl[1]=.01f;
 		sampleRate=0;
-	}
+		String fileName = songFile.getFileNameForLoad(this);
+		if(fileName == null) {
+			pa.outStr2Scr("WARNING in mySongHandler : Attempted to load file classified as directory : " + fileName);
+		} else {
+			boolean songLoaded=loadAudio(fileName);
+			if(!songLoaded) {		pa.outStr2Scr("WARNING in mySongHandler : Failed to load Audio File : " + songFile);}
+		}
+	}//ctor
 	
 	public void setForwardVals(WindowFunction win, int fftMinBandwidth, int _numZones) {
 		numZones = _numZones;//number of zones for dancing ball (6)
@@ -123,6 +131,8 @@ public abstract class mySongHandler {
 	private float specAverage(float[] ara){float avg = 0,num = 0;for (int i=1; i<ara.length; ++i){	if (ara[i]>0)	{avg += ara[i];++num;}	}if (num > 0){avg /= num;}return avg;}
 	private float calcVar(float[] ara, float val){float V = (float)Math.pow(ara[0] - val, 2);for(int i=1; i<ara.length; ++i){V += (float)Math.pow(ara[i] - val, 2);} V/=ara.length;return V;}		
 	
+	//load audio
+	protected abstract boolean loadAudio(String fileName);
 	//grab next set of samples/data to analyze for audio
 	protected abstract void stepAudio();
 	//individual handling of setup function
@@ -147,7 +157,7 @@ public abstract class mySongHandler {
 	//analysis results
 	public abstract float[][] getFwdBandsFromAudio();
 	public abstract float[][] getFwdZoneBandsFromAudio();
-	public abstract void getFwdFreqLevelsInHarmonicBands(float[][] keyMinAra, ConcurrentSkipListMap<Float, Integer> res1, ConcurrentSkipListMap<Integer, Float[]> res2, int curIdx);
+	public abstract void getFwdFreqLevelsInHarmonicBands(float[][] keyMinAra, ConcurrentSkipListMap<Float, Integer> res1, ConcurrentSkipListMap<Integer, Float[]> res2, int curIdx, int instIDX);
 	
 }//mySongHandler
 
@@ -167,9 +177,8 @@ class myMP3SongHandler extends mySongHandler{
 	 * @param _dname name to display
 	 * @param _sbufSize song buffer size
 	 */
-	public myMP3SongHandler(DancingBalls _pa,Minim _minim, String _fname, String _dname, int _sbufSize) {
-		super(_pa,_minim,_fname, _dname, _sbufSize);
-		playMe = minim.loadFile(fileName, songBufSize);
+	public myMP3SongHandler(DancingBalls _pa,Minim _minim,  AudioFile _songFile, int _sbufSize) {
+		super(_pa,_minim,_songFile, _sbufSize);
 		songLength = playMe.length();
 		fft = new FFT(playMe.bufferSize(), playMe.sampleRate() );
 		insertAt = 0;
@@ -177,7 +186,12 @@ class myMP3SongHandler extends mySongHandler{
 		sampleRate = playMe.sampleRate();
 		//System.out.println("Song: " + dispName + " sample rate : " + playMe.sampleRate());
 	}
-	
+
+	@Override
+	protected boolean loadAudio(String fileName) {
+		playMe = minim.loadFile(fileName, songBufSize);
+		return true;
+	}
 	//set values required for fft calcs.	
 	@Override
 	protected void setForwardValsIndiv(WindowFunction win) {
@@ -242,7 +256,8 @@ class myMP3SongHandler extends mySongHandler{
 	 * @param boundsAra array per key of min frequencies of each key's fundamental and harmonic
 	 */
 	@Override
-	public void getFwdFreqLevelsInHarmonicBands(float[][] keyMinAra, ConcurrentSkipListMap<Float, Integer> res1, ConcurrentSkipListMap<Integer, Float[]> res2, int curIdx){
+	public void getFwdFreqLevelsInHarmonicBands(float[][] keyMinAra, ConcurrentSkipListMap<Float, Integer> res1, ConcurrentSkipListMap<Integer, Float[]> res2, int curIdx, int instIDX){
+		//instChans is ignored, used for midi songs to specify midi channel
 		float[] keyLoudness = new float[keyMinAra.length-1];		
 		//boundsara holds boundaries of min/max freqs for each key
 		for (int key=0;key<keyMinAra.length-1; ++key) {keyLoudness[key] = fft.calcAvg(keyMinAra[key][0], keyMinAra[key+1][0]);}			
@@ -294,6 +309,7 @@ class myMP3SongHandler extends mySongHandler{
 	//get position in current song
 	@Override
 	public int getPlayPos() {return playMe.position();}
+
 }//myMP3SongHandler
 
 
@@ -316,33 +332,42 @@ class myMidiSongHandler extends mySongHandler{
 	public float[][] midi_notesLvls, pianoNoteLvls;
 
 	
-	public myMidiSongHandler(DancingBalls _pa,Minim _minim, String _fname, String _dname, int _sbufSize) {
-		super(_pa,_minim,_fname, _dname, _sbufSize);
-		out = minim.getLineOut();	
+	public myMidiSongHandler(DancingBalls _pa,Minim _minim, AudioFile _songFile, int _sbufSize) {
+		super(_pa,_minim,_songFile, _sbufSize);
 		sampleRate = out.sampleRate();
-		// try to get the default sequencer from JavaSound-if it fails, we print a message to the console and don't do any of the sequencing.
+		ticksPerMillis = 1;
+	}//myMidiSongHandler
+	
+	@Override
+	protected boolean loadAudio(String fileName) {
 		try{
 			// get a disconnected sequencer. this should prevent us from hearing the general midi sounds the sequecer is automatically hooked up to.
 			sequencer = MidiSystem.getSequencer(false);
 		    sequencer.open();
-		    //load squence
-		    sequence = MidiSystem.getSequence(pa.createInput(fileName));
-		    pa.outStr2Scr("Midi :"+fileName+"|# tracks :" + sequence.getTracks().length);
+		    //load sequence
+		    InputStream strm = pa.createInput(fileName);
+		    if(strm==null) {
+		    	pa.outStr2Scr("Null Strm : file name to create stream : " + fileName);
+		    }
+		    sequence = MidiSystem.getSequence(strm);
 		    sequencer.setSequence(sequence);
+			out = minim.getLineOut();	
 		    midi_notesLvls = new float[16][];
 		    pianoNoteLvls = new float[16][];
 		    for(int i=0;i<midi_notesLvls.length;++i) {	midi_notesLvls[i] = new float[127]; pianoNoteLvls[i] = new float[88];   }//piano keys start at idx 21 lvls per key
 		    midiRec = new MidiReceiver(out, this);
 		    // hook up an instance of our Receiver to the Sequencer's Transmitter
 		    sequencer.getTransmitter().setReceiver(midiRec);		    
-		}
-		catch( MidiUnavailableException ex ){ System.out.println( "No default sequencer." );}
-		catch( InvalidMidiDataException ex ){System.out.println( "The midi file was not a midi file." );}
-		catch( IOException ex ) { System.out.println( "Had a problem accessing the midi file." );}
-		songLength = (int) (sequence.getMicrosecondLength()/1000);
-		songTickLen = sequence.getTickLength();
-		ticksPerMillis = songTickLen/(1.0f*songLength);
-	}//myMidiSongHandler
+			Sequence sequence = sequencer.getSequence();
+			songLength = (int) (sequence.getMicrosecondLength()/1000);
+			songTickLen = sequence.getTickLength();
+			ticksPerMillis = songTickLen/(1.0f*songLength);		}
+		catch( MidiUnavailableException ex ){ System.out.println( "No default sequencer." );return false;}
+		catch( InvalidMidiDataException ex ){System.out.println( "The midi file was not a midi file." );return false;}
+		catch( IOException ex ) { System.out.println( "Had a problem accessing the midi file." );return false;}
+		return true;
+	}//loadAudio
+	
 	
 	@Override
 	protected void stepAudio() {
@@ -405,12 +430,12 @@ class myMidiSongHandler extends mySongHandler{
 	}
 
 	@Override //provides levels from midi commands
-	public void getFwdFreqLevelsInHarmonicBands(float[][] keyMinAra, ConcurrentSkipListMap<Float, Integer> res1, ConcurrentSkipListMap<Integer, Float[]> res2, int curIdx) {
+	public void getFwdFreqLevelsInHarmonicBands(float[][] keyMinAra, ConcurrentSkipListMap<Float, Integer> res1, ConcurrentSkipListMap<Integer, Float[]> res2, int curIdx, int instIDX) {
 		float[] keyLoudness = new float[keyMinAra.length-1];		
-		//boundsara holds boundaries of min/max freqs for each key
-		for (int chn = 0;chn<pianoNoteLvls.length;++chn) {
-			for (int key=0;key<keyLoudness.length; ++key) {keyLoudness[key] += pianoNoteLvls[chn][key];}			
-		}
+		//either consider all channels together, or specify a channel instChans
+		//for (int chnIDX = 0;chnIDX<instChans.length;++chnIDX) {
+			for (int key=0;key<keyLoudness.length; ++key) {keyLoudness[key] += pianoNoteLvls[instIDX][key];}			
+		//}
 		for (int key=0;key<keyLoudness.length; ++key) {
 			float freqLvl = keyLoudness[key];
 			res1.put(freqLvl, key);
@@ -428,7 +453,7 @@ class myMidiSongHandler extends mySongHandler{
 	protected void setupFreqArasIndiv() {}
 	@Override
 	protected void setForwardValsIndiv(WindowFunction win) {}
-	
+
 }//myMidiSongHandler
 
 //need JavaSound interface receiver in order to be send midi messages from the Sequencer.
