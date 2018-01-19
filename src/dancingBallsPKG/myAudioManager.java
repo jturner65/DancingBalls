@@ -714,10 +714,11 @@ public class myAudioManager {
 		boolean showBeats = win.getPrivFlags(DancingBallWin.showTapBeats),
 				showPianoNotes = win.getPrivFlags(DancingBallWin.showPianoNotes),
 				showFreqlbls = win.getPrivFlags(DancingBallWin.showFreqLbls),
-				showDFTRes = win.getPrivFlags(DancingBallWin.calcSingleFreq),
-				showMelodyTrail = win.getPrivFlags(DancingBallWin.showMelodyTrail),
 				showAllBandRes = win.getPrivFlags(DancingBallWin.showAllBandRes);
 		if(showPianoNotes) {
+			boolean showDFTRes = win.getPrivFlags(DancingBallWin.calcSingleFreq),
+					showMelodyTrail = win.getPrivFlags(DancingBallWin.showMelodyTrail);
+
 			dispPiano.drawMe();
 			int barWidth = 400; //width of bar to draw
 			
@@ -733,7 +734,7 @@ public class myAudioManager {
 			//dispPiano.drawNumFramesOn(numFramesOn[ftIDX]);
 			//dispPiano.drawKeyLvlVals(lvlsPerPKey[ftIDX]);
 			int transForNum = 0;
-			if(maxLvl >= pa.epsValCalc) {
+			if((maxLvl >= pa.epsValCalc) && !(showAllBandRes)) {//don't show piano results if showing all band res
 				if(showMelodyTrail) {dispPiano.drawMelodyCands(melodyCandidates[ftIDX], curTimeFromStartSmpl, win.rectDim[2], transForNum);}
 				if(showDFTRes) {//use single frequency DFT mechanism
 					if(dftThdResToShow == 2) {//win.getPrivFlags(DancingBallWin.showEachOctave)) {
