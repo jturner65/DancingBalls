@@ -155,16 +155,13 @@ public class myAudioManager {
 		//structure holding tree of info regarding audio data on disk
 		//instead being loaded in individual runnable
 		//audioFileIO = new myAudioFileManager(this, pa.minim,Paths.get(pa.sketchPath(),"Data"));
-		pa.th_exec.execute(new myAudFileMgrLoader(this));	
-		
-		//load all songs, add sample rate  
-		
+		pa.th_exec.execute(new myAudFileMgrLoader(this));			
+		//load all songs, add sample rate  		
 		songs = new mySongHandler[songDirList.length][][];
 		songTypes = new int[songDirList.length][][];
-		sampleRates = new ConcurrentSkipListMap<Float, Integer>();//hold only sample rates that we have seen
-		
-		//TODO move this to be called when audio file manager is loaded (since audioFileIO object will drive it)
-		//pa.th_exec.execute(new mySongLoadMapper(this));
+		sampleRates = new ConcurrentSkipListMap<Float, Integer>();//hold only sample rates that we have seen		
+		//TODO move this to be called when audio file manager is loaded when built using audio file manager
+		pa.th_exec.execute(new mySongLoadMapper(this));
 		//launch thread to precalculate all trig stuff : not needed with multi-threading dft calc - math is fast enough without this
 		//pa.th_exec.execute(new myTrigPrecalc(this, allFreqsUsed) );
 		//build DFT threads and precalc local cos/sin values
@@ -190,13 +187,27 @@ public class myAudioManager {
 				if(val) {
 					curTypeList = audioFileIO.getTypeSubdirNames();
 					pa.outStr2Scr("End building audio File IO @ Millis since start of program : "+ (pa.timeSinceStart()));
-					pa.th_exec.execute(new mySongLoadMapper(this));
 				}
 				break;}
 		}
 		
 	}//setFlags
+
 	
+	
+	//clear pre-preprocessing flag - call from thread executing processing
+	public void clearPreProcMidi() {
+		//when finished clear flag : 
+		win.setPrivFlags(win.procMidiData, false);		
+	}
+	
+	//launch preprocessing of midi data
+	public void preprocMidiData() {
+		if (!getFlags(audFMgrLoadedIDX)) {clearPreProcMidi();return;}//if audiofilemanager is not loaded, then just ignore this request
+		//fire and forget midi processing
+		
+		pa.th_exec.execute(new myMidiFileProcMapper(this));
+	}
 
 	//initialize array of mybeat to hold results of tapped beat data
 	protected void initTapBeatStructs() {

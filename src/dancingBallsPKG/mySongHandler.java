@@ -456,21 +456,21 @@ class myMidiSongHandler extends mySongHandler{
 
 }//myMidiSongHandler
 
-//need JavaSound interface receiver in order to be send midi messages from the Sequencer.
+//need JavaSound interface receiver in order to send midi messages from the Sequencer.
 //we then set an instance of this class as the Receiver
-//for on of the Sequencer's Trasmitters.
-//See: http://docs.oracle.com/javase/7/docs/api/javax/sound/midi/Receiver.html
+//for one of the Sequencer's Trasmitters.
+//See: http://docs.oracle.com/javase/8/docs/api/javax/sound/midi/Receiver.html
 class MidiReceiver implements Receiver{
 	private AudioOutput out;
 	
-//	//up to 16 channels of up to 127 notes playing
+//	//up to 32 channels of up to 127 notes playing -- note, only 16 channels of audio.  others may be control channels TODO : examine this with midi files with  > 16 tracks.
 	public Synth[][] instrNotes;
 	//owning handler - send notes to mapping array
 	public myMidiSongHandler hndl;
 	
 	public MidiReceiver(AudioOutput _out, myMidiSongHandler _hndl) {
 		out=_out;hndl=_hndl;
-		instrNotes = new Synth[16][];
+		instrNotes = new Synth[32][];
 		Synth[] tmpAra;
 		for(int ch=0;ch<instrNotes.length;++ch) {
 			tmpAra = new Synth[127];
@@ -489,7 +489,7 @@ class MidiReceiver implements Receiver{
 			switch(command) {
 				case ShortMessage.NOTE_ON : {					
 					int note = sm.getData1();		// note number, between 1 and 127
-					int vel  = sm.getData2();		// velocity, between 1 and 127
+					int vel  = sm.getData2();		// velocity, between 1 and 127 (if 0 means note off)
 					instrNotes[chan][note-1].setAmplitude(vel);
 					hndl.midi_notesLvls[chan][note-1] = instrNotes[chan][note-1].getTtlAmplitude();
 					out.playNote(0, 100.0f, instrNotes[chan][note-1]); 
@@ -506,7 +506,7 @@ class MidiReceiver implements Receiver{
 			}//switch
 			
 		// refer to the constants defined in 
-		// ShortMessage: http://docs.oracle.com/javase/7/docs/api/javax/sound/midi/ShortMessage.html
+		// ShortMessage: http://docs.oracle.com/javase/8/docs/api/javax/sound/midi/ShortMessage.html
 		// what Data1 and Data2 will be, refer to the midi spec: http://www.midi.org/techspecs/midimessages.php
 		}
 	}

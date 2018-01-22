@@ -263,26 +263,27 @@ public class DancingBallWin extends myDispWindow {
 			
 			//launch pre-proc of midi data - consume audio file manager and preprocess all midi data for use in ML algs.  save results to file
 			case procMidiData : {
-				if(val) {preprocMidiData();}
+				if(val) {audMgr.preprocMidiData();}
 				else {
-					//stuff to do if setting false
+					//stuff to do if setting false - probably nothing
 				}
 				break;
 			}
 		}		
 	}//setPrivFlags	
-	
-	//clear pre-preprocessing flag - call from thread executing processing
-	private void clearPreProcMidi() {
-		//when finished set : 
-		setPrivFlags(procMidiData, false);		
-	}
-	
-	//launch preprocessing of midi data
-	private void preprocMidiData() {
-		
-		
-	}
+//	
+//	//clear pre-preprocessing flag - call from thread executing processing
+//	private void clearPreProcMidi() {
+//		//when finished set : 
+//		setPrivFlags(procMidiData, false);		
+//	}
+//	
+//	//launch preprocessing of midi data
+//	private void preprocMidiData() {
+//		//fire and forget midi processing
+//		
+//		
+//	}
 	
 	//send current desired stimualtion type to ball based on UI input
 	private void sendStimTypeToBall(int stimType) {

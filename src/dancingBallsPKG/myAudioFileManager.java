@@ -20,18 +20,45 @@ public class myAudioFileManager {
 	//reference to minim functionality
 	public Minim minim;	
 	//root directory containing all audio files
-	private AudioDir root;
-	
+	private AudioDir root;	
 	//list of all non-dir AudioFiles
-	//public ArrayList<AudioFile> audFiles;
+	public ArrayList<AudioFile>[] midiFiles;
+	//current count of each arraylist membership
+	private int[] midiFileAraCount;
 
 	public myAudioFileManager(myAudioManager _mgr, Minim _minim, Path _rootDirPath) {
 		mgr=_mgr;minim=_minim;
-		//audFiles = new ArrayList<AudioFile>();
-		//root = new AudioDir(this, _rootDirPath,_rootDirPath.toString(), null);			
-		root = new AudioDir(_rootDirPath,_rootDirPath.toString(), null);			
-		//pa.outStr2Scr("Total # of files : " + AudioDir.numFiles);
+		midiFiles = new ArrayList[mgr.pa.numThreadsAvail-1];
+		midiFileAraCount = new int[midiFiles.length];
+		for(int i=0;i<midiFiles.length;++i) {				
+			midiFiles[i] = new ArrayList<AudioFile>();
+			midiFileAraCount[i]=0;
+		}		
+		root = new AudioDir(this, _rootDirPath,_rootDirPath.toString(), null);			
+		//root = new AudioDir(_rootDirPath,_rootDirPath.toString(), null);
+//		int sum =0;
+//		for(int i=0;i<midiFileAraCount.length;++i) {
+//			mgr.pa.outStr2Scr("Total # of midi files for idx "+ i +" : " + midiFileAraCount[i] + " | size : "+ midiFiles[i].size());
+//			sum+=midiFileAraCount[i];
+//		}
+//		mgr.pa.outStr2Scr("Total # of midi files : " + sum);
 	}//myAudioFileManager
+	
+	
+	private int findIdxOfSmallestArray() {
+		int idx =-1;
+		int minCount = Integer.MAX_VALUE;
+		for(int i=0;i<midiFileAraCount.length;++i) {if(midiFileAraCount[i]<minCount) {minCount = midiFileAraCount[i];idx = i;}	}
+		return idx;
+	}
+	//save file to smallest of array lists of files.  this is done so that multi-threading can be more easily parsed
+	//using this process this way makes #s uneven, but takes advantage of spatial locality on hard drive - all files in same directory are in same thread
+	public void saveMidiFilesToAra(ArrayList<AudioFile> tmpMidiFiles) {
+		int idx = findIdxOfSmallestArray();
+		//add array to smallest current array
+		midiFiles[idx].addAll(tmpMidiFiles);
+		midiFileAraCount[idx] = midiFiles[idx].size();
+	}
 	
 	//root holds either midi or mp3 dirs, directories under these are banks, files under each bank directory, and their subdirectories, are songs
 	//
@@ -91,8 +118,8 @@ public class myAudioFileManager {
 class AudioFile{
 	//fully qualified file name (to navigate to this object in OS) and (shortened) display name
 	protected Path filePath;
-	//shortened display name
-	public String dispName, chkName;
+	//shortened display name, all lowercase name, "composer" name (from subdir of "midi" directory (not parent directory, may be nested))
+	public String dispName, chkName, composerName;
 	//type is 0 if mp3/wav, 1 if midi, types < 0 are unhandled
 	//-1 is directory, -2 is unhandled file type (not a song file or a midi file)
 	public int type;
@@ -102,12 +129,17 @@ class AudioFile{
 	protected mySongHandler hndlr;
 	//containing directory - if null then this is root directory (must be type -1)
 	public AudioDir parentDir;
+	//composer directory - sometimes parentDir, but not always
+	public AudioDir composerDir;
 	//depth in hierarchy - 0 == is root, 1 == in root dir, etc
 	public int lvl=0;
 	
 	public AudioFile( Path _fPath,String _dname, int _type, AudioDir _parentDir) {
 		filePath=_fPath;dispName=_dname; chkName=dispName.toLowerCase();type=_type;parentDir=_parentDir;
 		if(parentDir != null) {lvl = parentDir.lvl+1;}
+		if(lvl < 3) {			composerDir = null;} 
+		else if (lvl == 3) {	composerDir = parentDir;} 
+		else {					composerDir = parentDir.composerDir;}
 		isLoaded=false;
 		hndlr = null;
 	}
@@ -127,7 +159,7 @@ class AudioFile{
 
 //class to maintain info about a directory holding audio data on disk, including references to sub dirs and contained files
 class AudioDir extends AudioFile{
-	//public static myAudioFileManager mgr;
+	public static myAudioFileManager mgr;
 	//subdirectories under this directory, keyed by display name
 	//private ArrayList<AudioDir> subDirs;
 	private ConcurrentSkipListMap<String, AudioDir> subDirs;
@@ -140,10 +172,12 @@ class AudioDir extends AudioFile{
 	//# of audio files in entire structure
 	public static int numFiles = 0;
 	
-	public AudioDir(Path _fPath,String _dname, AudioDir _parent) {
+	public AudioDir(myAudioFileManager _mgr,Path _fPath,String _dname, AudioDir _parent) {
 		super(_fPath,_dname,-1,_parent);
-		//mgr = _mgr;
+		mgr = _mgr;
 		loadDirStruct();
+		//composer directory is lvl 2 directory
+		//mgr.mgr.pa.outStr2Scr("directory : " + this.dispName + " level : " + this.lvl);
 	}
 	
 	//load directory structure, making new AudioFiles and AudioDirs for elements in structure, 
@@ -152,6 +186,7 @@ class AudioDir extends AudioFile{
 		//verify fileName is directory
 		String dirName = filePath.toString();
 		File folder = new File(dirName);
+		ArrayList<AudioFile> tmpMidiFiles = new ArrayList<AudioFile>();
 		subDirs = new ConcurrentSkipListMap<String, AudioDir>();
 		audioFiles = new ConcurrentSkipListMap<String, AudioFile>();
 		if(!folder.isDirectory()) {
@@ -182,20 +217,22 @@ class AudioDir extends AudioFile{
 					AudioFile tmp = new AudioFile(fPath, newDispName, type,this);
 					//System.out.println("new disp name : " + tmp.dispName);
 					audioFiles.put(tmp.dispName,tmp);
-					//add reference to audio file in flat list in mgr, parsed in multi-threaded environment to load audio
-					//mgr.audFiles.add(tmp);
+					//add reference to midi files in array - these will be put in one of the #threadsAvail arraylists in audioFileManager
+					if((type ==1) && (tmp.lvl >2 )) {
+						tmpMidiFiles.add(tmp);
+					}
 				}
 		    } else if (listOfFiles[i].isDirectory()) {									//directory
 				//System.out.println("------->Directory name : " + dispName );
-		    	//AudioDir tmp = new AudioDir(mgr, fPath, tmpDispName, this);
-		    	AudioDir tmp = new AudioDir(fPath, tmpDispName, this);
-				//System.out.println("------->End files under Directory name : " + dispName + " | directory has : " + tmp.getNumAudioFiles() + " audio files and " + tmp.getNumSubDirs() + " subdirs\n" );
+		    	AudioDir tmp = new AudioDir(mgr, fPath, tmpDispName, this);
+		    	//System.out.println("------->End files under Directory name : " + dispName + " | directory has : " + tmp.getNumAudioFiles() + " audio files and " + tmp.getNumSubDirs() + " subdirs\n" );
 		    	subDirs.put(tmp.dispName,tmp);
 			} else {System.out.println("Under Dir " + dirName + " found neither File nor Directory : " + listOfFiles[i].getName());}//neither file nor directory, probably not possible
 		}//get OS list of all elements under fileName directory
 		//set up arrays of keyset names
 		subDirsNames= subDirs.keySet().toArray(new String[0]);
 		audioFilesNames = audioFiles.keySet().toArray(new String[0]);
+		mgr.saveMidiFilesToAra(tmpMidiFiles);
 	}//loadDirStruct()
 	
 	//UI-consumed lists
