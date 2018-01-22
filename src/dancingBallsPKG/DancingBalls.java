@@ -47,7 +47,10 @@ public class DancingBalls extends PApplet{
 			
 	public String msClkStr = "";
 			
-	public int glblStartSimTime, glblLastSimTime;
+	public int glblStartSimTime,			//begin of draw
+		glblLastSimTime,					//begin of last draw
+		glblStartProgTime;					//start of program
+	
 	//enums used for note and key data
 
 	public static String[] ForceType2str = {"None", "Gravity-type force (scalar particle quantity)", "Air Drag-type force (vector particle quantity)", "Attractor", "Repulsor", "Damped Spring", "Force back to ThetaBar"};
@@ -115,7 +118,8 @@ public class DancingBalls extends PApplet{
 		initVisOnce();						//always first
 		sceneIDX = 1;//(flags[show3D] ? 1 : 0);
 		glblStartSimTime = millis();
-		glblLastSimTime =  millis();		
+		glblLastSimTime =  millis();	
+		glblStartProgTime = millis();
 		numThreadsAvail = Runtime.getRuntime().availableProcessors();
 		initAudio();
 		pr("# threads : "+ numThreadsAvail);
@@ -128,6 +132,8 @@ public class DancingBalls extends PApplet{
 		setCamView(); 
 		initProgram();
 	}	
+	
+	public int timeSinceStart() {return millis() - glblStartProgTime;}
 	//called multiple times, whenever re-initing
 	public void initProgram(){
 		initVisProg();				//always first

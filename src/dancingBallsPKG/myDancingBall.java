@@ -128,6 +128,7 @@ public class myDancingBall extends myDancer {
 				
 		buildZonePoints();	
 		//build vertMapper callable to map sphere verts to zones
+		//NOTE vertMapper needs to be rebuilt if numZones should change
 		vertMapper = new myDanceBallMapper(this);
 	}//beginInit
 	

@@ -15,18 +15,20 @@ import ddf.minim.Minim;
  * @author john
  */
 public class myAudioFileManager {
-	public DancingBalls pa;
 	//owning audio manager
 	public myAudioManager mgr;
-	//owning window 
-	public DancingBallWin win;
 	//reference to minim functionality
 	public Minim minim;	
 	//root directory containing all audio files
-	private AudioDir root;	
+	private AudioDir root;
+	
+	//list of all non-dir AudioFiles
+	//public ArrayList<AudioFile> audFiles;
 
-	public myAudioFileManager(DancingBalls _pa, DancingBallWin _win, myAudioManager _mgr, Minim _minim, Path _rootDirPath) {
-		pa=_pa;win=_win;mgr=_mgr;minim=_minim;
+	public myAudioFileManager(myAudioManager _mgr, Minim _minim, Path _rootDirPath) {
+		mgr=_mgr;minim=_minim;
+		//audFiles = new ArrayList<AudioFile>();
+		//root = new AudioDir(this, _rootDirPath,_rootDirPath.toString(), null);			
 		root = new AudioDir(_rootDirPath,_rootDirPath.toString(), null);			
 		//pa.outStr2Scr("Total # of files : " + AudioDir.numFiles);
 	}//myAudioFileManager
@@ -45,12 +47,8 @@ public class myAudioFileManager {
 	
 	public AudioDir getTypeSubdir(int type) {
 		//first get subdir matching type
-		String chkStr;
-		if(type==win.midiSong) {		chkStr="midi";} 
-		else if(type==win.mp3Song) {	chkStr="mp3";} 
-		else {//unknown type
-			return null;
-		}
+		String chkStr = mgr.getSongType(type);
+		if(chkStr==null) {return null;}//unknown type			
 		return root.getSubDirByName(chkStr);	
 	}
 	
@@ -129,6 +127,7 @@ class AudioFile{
 
 //class to maintain info about a directory holding audio data on disk, including references to sub dirs and contained files
 class AudioDir extends AudioFile{
+	//public static myAudioFileManager mgr;
 	//subdirectories under this directory, keyed by display name
 	//private ArrayList<AudioDir> subDirs;
 	private ConcurrentSkipListMap<String, AudioDir> subDirs;
@@ -143,6 +142,7 @@ class AudioDir extends AudioFile{
 	
 	public AudioDir(Path _fPath,String _dname, AudioDir _parent) {
 		super(_fPath,_dname,-1,_parent);
+		//mgr = _mgr;
 		loadDirStruct();
 	}
 	
@@ -173,7 +173,7 @@ class AudioDir extends AudioFile{
 				else {								type=-2;}							//not handled song file or midi file
 				
 				if(type == -3) {
-					System.out.println("Unhandled : parent directory " + this.filePath.toString() + " contains file name : " + tmpDispName + " | ext : " + ext + " type : " + type);
+					System.out.println("Unknown file type : parent directory '" + this.filePath.toString() + "' contains file name : '" + tmpDispName + "' | ext : " + ext + " type : " + type);
 				}
 				if(type>=0) {//<0 means not a handled audio file type
 					++numFiles;
@@ -182,9 +182,12 @@ class AudioDir extends AudioFile{
 					AudioFile tmp = new AudioFile(fPath, newDispName, type,this);
 					//System.out.println("new disp name : " + tmp.dispName);
 					audioFiles.put(tmp.dispName,tmp);
+					//add reference to audio file in flat list in mgr, parsed in multi-threaded environment to load audio
+					//mgr.audFiles.add(tmp);
 				}
 		    } else if (listOfFiles[i].isDirectory()) {									//directory
 				//System.out.println("------->Directory name : " + dispName );
+		    	//AudioDir tmp = new AudioDir(mgr, fPath, tmpDispName, this);
 		    	AudioDir tmp = new AudioDir(fPath, tmpDispName, this);
 				//System.out.println("------->End files under Directory name : " + dispName + " | directory has : " + tmp.getNumAudioFiles() + " audio files and " + tmp.getNumSubDirs() + " subdirs\n" );
 		    	subDirs.put(tmp.dispName,tmp);
