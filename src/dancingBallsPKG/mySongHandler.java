@@ -1,6 +1,7 @@
 package dancingBallsPKG;
 
 import java.io.*;
+import java.nio.file.Path;
 import java.util.concurrent.ConcurrentSkipListMap;
 
 import ddf.minim.*;
@@ -35,11 +36,11 @@ public abstract class mySongHandler {
 		barDispMaxLvl = new float[2];		
 		barDispMaxLvl[0]=.01f; barDispMaxLvl[1]=.01f;
 		sampleRate=0;
-		String fileName = songFile.getFileNameForLoad(this);
-		if(fileName == null) {
-			pa.outStr2Scr("WARNING in mySongHandler : Attempted to load file classified as directory : " + fileName);
+		Path filePath = songFile.getFilePathForLoad(this);
+		if(filePath == null) {
+			pa.outStr2Scr("WARNING in mySongHandler : Attempted to load file classified as directory : " + filePath.toString());
 		} else {
-			boolean songLoaded=loadAudio(fileName);
+			boolean songLoaded=loadAudio(filePath);
 			if(!songLoaded) {		pa.outStr2Scr("WARNING in mySongHandler : Failed to load Audio File : " + songFile);}
 		}
 	}//ctor
@@ -132,7 +133,7 @@ public abstract class mySongHandler {
 	private float calcVar(float[] ara, float val){float V = (float)Math.pow(ara[0] - val, 2);for(int i=1; i<ara.length; ++i){V += (float)Math.pow(ara[i] - val, 2);} V/=ara.length;return V;}		
 	
 	//load audio
-	protected abstract boolean loadAudio(String fileName);
+	protected abstract boolean loadAudio(Path fileName);
 	//grab next set of samples/data to analyze for audio
 	protected abstract void stepAudio();
 	//individual handling of setup function
@@ -188,8 +189,8 @@ class myMP3SongHandler extends mySongHandler{
 	}
 
 	@Override
-	protected boolean loadAudio(String fileName) {
-		playMe = minim.loadFile(fileName, songBufSize);
+	protected boolean loadAudio(Path filePath) {
+		playMe = minim.loadFile(filePath.toString(), songBufSize);
 		return true;
 	}
 	//set values required for fft calcs.	
@@ -328,7 +329,7 @@ class myMidiSongHandler extends mySongHandler{
 	//midi receiver manages 
 	private MidiReceiver midiRec;
 	
-	//up to 16 channels of up to 127 notes playing - need to block on this 
+	//up to 16 channels of up to 127 notes playing - need to block on this ?
 	public float[][] midi_notesLvls, pianoNoteLvls;
 
 	
@@ -339,17 +340,20 @@ class myMidiSongHandler extends mySongHandler{
 	}//myMidiSongHandler
 	
 	@Override
-	protected boolean loadAudio(String fileName) {
+	protected boolean loadAudio(Path filePath) {
 		try{
-			// get a disconnected sequencer. this should prevent us from hearing the general midi sounds the sequecer is automatically hooked up to.
+		    //load sequence
+			File f = filePath.toFile();
+		    if(f==null) {
+		    	pa.outStr2Scr("Null File obj : file not found : " + filePath);
+		    	return false;
+		    }
+		    //format = MidiSystem.getMidiFileFormat(f);
+		    sequence = MidiSystem.getSequence(f);
+
+		    // get a disconnected sequencer. this should prevent us from hearing the general midi sounds the sequecer is automatically hooked up to.
 			sequencer = MidiSystem.getSequencer(false);
 		    sequencer.open();
-		    //load sequence
-		    InputStream strm = pa.createInput(fileName);
-		    if(strm==null) {
-		    	pa.outStr2Scr("Null Strm : file name to create stream : " + fileName);
-		    }
-		    sequence = MidiSystem.getSequence(strm);
 		    sequencer.setSequence(sequence);
 			out = minim.getLineOut();	
 		    midi_notesLvls = new float[16][];
@@ -358,7 +362,7 @@ class myMidiSongHandler extends mySongHandler{
 		    midiRec = new MidiReceiver(out, this);
 		    // hook up an instance of our Receiver to the Sequencer's Transmitter
 		    sequencer.getTransmitter().setReceiver(midiRec);		    
-			Sequence sequence = sequencer.getSequence();
+			//Sequence sequence = sequencer.getSequence();
 			songLength = (int) (sequence.getMicrosecondLength()/1000);
 			songTickLen = sequence.getTickLength();
 			ticksPerMillis = songTickLen/(1.0f*songLength);		}
@@ -366,8 +370,7 @@ class myMidiSongHandler extends mySongHandler{
 		catch( InvalidMidiDataException ex ){System.out.println( "The midi file was not a midi file." );return false;}
 		catch( IOException ex ) { System.out.println( "Had a problem accessing the midi file." );return false;}
 		return true;
-	}//loadAudio
-	
+	}//loadAudio	
 	
 	@Override
 	protected void stepAudio() {
@@ -463,14 +466,14 @@ class myMidiSongHandler extends mySongHandler{
 class MidiReceiver implements Receiver{
 	private AudioOutput out;
 	
-//	//up to 32 channels of up to 127 notes playing -- note, only 16 channels of audio.  others may be control channels TODO : examine this with midi files with  > 16 tracks.
+//	//up to 16 channels of up to 127 notes playing -- note, only 16 channels of audio.  midi tracks != channels
 	public Synth[][] instrNotes;
 	//owning handler - send notes to mapping array
 	public myMidiSongHandler hndl;
 	
 	public MidiReceiver(AudioOutput _out, myMidiSongHandler _hndl) {
 		out=_out;hndl=_hndl;
-		instrNotes = new Synth[32][];
+		instrNotes = new Synth[16][];
 		Synth[] tmpAra;
 		for(int ch=0;ch<instrNotes.length;++ch) {
 			tmpAra = new Synth[127];

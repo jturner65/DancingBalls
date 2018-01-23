@@ -9,13 +9,11 @@ public abstract class myDispWindow {
 	public DancingBalls pa;
 	public static int winCnt = 0;
 	public int ID;	
-	public String name, winText;	
-	
-		
+	public String name, winText;		
 	public int[] fillClr, strkClr;
 	public int trajFillClrCnst, trajStrkClrCnst;
 	public float[] rectDim, closeBox, rectDimClosed, mseClickCrnr;	
-	public static final float gridYMult = 1.0f/67.0f, gridXMult = .5625f * gridYMult;
+	//public static final float gridYMult = 1.0f/67.0f, gridXMult = .5625f * gridYMult;
 	public static final float xOff = 20 , yOff = 20.0f * (DancingBalls.txtSz/12.0f), btnLblYOff = 2 * yOff, rowStYOff = yOff*.15f;
 	public static final int topOffY = 40;			//offset values to render boolean menu on side of screen - offset at top before drawing
 	public static final float clkBxDim = 10;//size of interaction/close window box in pxls
@@ -77,6 +75,10 @@ public abstract class myDispWindow {
 	public String[] guiObjNames;							//display labels for UI components	
 	//idx 0 is treat as int, idx 1 is obj has list vals, idx 2 is object gets sent to windows
 	public boolean[][] guiBoolVals;						//array of UI flags for UI objects
+
+	
+	//offset to bottom of custom window menu 
+	protected float custMenuOffset;
 
 	//drawn trajectory
 	public myDrawnSmplTraj tmpDrawnTraj;						//currently drawn curve and all handling code - send to instanced owning screen
@@ -754,16 +756,16 @@ public abstract class myDispWindow {
 		return null;		
 	}
 	
-//	//stuff to do when shown/hidden
-//	public void setShow(boolean val){
-//		dispFlags[showIDX)=val;
-//		setClosedBox();
-//		if(!dispFlags[showIDX)){//not showing window
-//			closeMe();//specific instancing window implementation stuff
-//		} else {
-//			showMe();
-//		}
-//	}
+	//stuff to do when shown/hidden
+	public void setShow(boolean val){
+		setFlags(showIDX,val);
+		setClosedBox();
+		if(!getFlags(showIDX)){//not showing window
+			closeMe();//specific instancing window implementation stuff
+		} else {
+			showMe();
+		}
+	}
 	
 	protected void toggleWindowState(){
 		//pa.outStr2Scr("Attempting to close window : " + this.name);
@@ -1109,29 +1111,29 @@ class mySideBarMenu extends myDispWindow{
 	//GUI Buttons
 	public float minBtnClkY;			//where buttons should start on side menu
 
-	public static final String[] guiBtnRowNames = new String[]{//"Show Editor Window",
+	public static final String[] guiBtnRowNames = new String[]{ "Window",
 			"DEBUG","File"};
 
 	public static final int 
-			//btnShowWinIdx = 0, 				//which window to show
-			btnDBGSelCmpIdx = 0,			//debug
-			btnFileCmdIdx = 1;				//load/save files
+			btnShowWinIdx = 0, 				//which window to show
+			btnDBGSelCmpIdx = 1,			//debug
+			btnFileCmdIdx = 2;				//load/save files
 	//names for each row of buttons - idx 1 is name of row
 	public final String[][] guiBtnNames = new String[][]{
-		//new String[]{"3D window", "2D window"},							//display specific windows - multi-select/ always on if sel
+		new String[]{"John's Window", "Yury's Window"},							//display specific windows - multi-select/ always on if sel
 		new String[]{"Data 1","Data 2","Data 3","Data 4"},			//DEBUG - momentary
 		new String[]{"Load","Save"}							//load an existing score, save an existing score - momentary		
 	};
 	//whether buttons are momentary or not (on only while being clicked)
 	public boolean[][] guiBtnInst = new boolean[][]{
-		//new boolean[]{false,false},         					//display specific windows - multi-select/ always on if sel
+		new boolean[]{false,false},         					//display specific windows - multi-select/ always on if sel
 		new boolean[]{true,true,true,true},                   		//delete - momentary
 		new boolean[]{true,true},			              					//load an existing score, save an existing score - momentary	
 	};		
 	
 	//whether buttons are disabled(-1), enabled but not clicked/on (0), or enabled and on/clicked(1)
 	public int[][] guiBtnSt = new int[][]{
-		//new int[]{0,0},                    					//display specific windows - multi-select/ always on if sel
+		new int[]{0,0},                    					//display specific windows - multi-select/ always on if sel
 		new int[]{0,0,0,0},                   					//debug - momentary
 		new int[]{0,0}			              					//load an existing score, save an existing score - momentary	
 	};
@@ -1240,7 +1242,7 @@ class mySideBarMenu extends myDispWindow{
 		int val = guiBtnSt[row][col];
 		guiBtnSt[row][col] = (guiBtnSt[row][col] + 1)%2;
 		switch(row){
-			//case btnShowWinIdx 		: {pa.handleShowWin(col, val);break;}
+			case btnShowWinIdx 		: {pa.handleShowWin(col, val);break;}
 			//case btnAddNewCmpIdx 	: {pa.handleAddNewCmp(col, val);break;}
 			case btnDBGSelCmpIdx  	: {pa.handleDBGSelCmp(col, val);break;}
 			//case btnInstEditIdx 	: {pa.handleInstEdit(col, val);break;}

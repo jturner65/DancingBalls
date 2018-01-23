@@ -69,7 +69,7 @@ class myMidFileProcessor implements Callable<Boolean>{
 	myAudioManager mgr;
 	ArrayList<AudioFile> midiFiles;
 	
-	public myMidiFileAnalyzer[] mfAnalyzer;
+	public myMidiFileAnalyzer[] mfAnalyzerAra;
 	//index in thread ara
 	int idx;
 	
@@ -77,8 +77,8 @@ class myMidFileProcessor implements Callable<Boolean>{
 		mgr = _mgr; idx=_idx;
 		midiFiles = _midiFiles;
 	}
-	public Long numTtlTicks;
-	public int numBeats;
+	public int numTtlTracks;
+	
 	@Override
 	public Boolean call() throws Exception {
 		//build midi analyzer array and load files
@@ -88,14 +88,13 @@ class myMidFileProcessor implements Callable<Boolean>{
 			boolean res = tmp.loadAudio();
 			if(res) {	tmpMfAnalyzer.add(tmp);   }
 		}	
-		mfAnalyzer = tmpMfAnalyzer.toArray(new myMidiFileAnalyzer[0]);
+		mfAnalyzerAra = tmpMfAnalyzer.toArray(new myMidiFileAnalyzer[0]);
 		//now analyze each file
-		numTtlTicks = 0L;
-		for (int i=0;i<mfAnalyzer.length;++i) {
-			mfAnalyzer[i].analyze();
-			numTtlTicks += mfAnalyzer[i].tickLen;
+		numTtlTracks = 0;
+		for (int i=0;i<mfAnalyzerAra.length;++i) {
+			mfAnalyzerAra[i].analyze();
+			numTtlTracks += mfAnalyzerAra[i].numTracks;
 		}
-		numBeats = (int) (numTtlTicks/256.0f);
 		
 	
 		return true;
@@ -129,63 +128,65 @@ class myMidiFileProcMapper implements Runnable{
  		//# of threads == midiFiles.length - build threads
  		for (int i=0;i<midiFiles.length;++i) {callMidiProcessors.add(new myMidFileProcessor(mgr, midiFiles[i], i));}
 		try {callMidiProcFtrs = mgr.pa.th_exec.invokeAll(callMidiProcessors);for(Future<Boolean> f: callMidiProcFtrs) { f.get(); }} catch (Exception e) { e.printStackTrace(); }
- 		for (int i=0;i<midiFiles.length;++i) {
- 			mgr.pa.outStr2Scr(""+i+" index had : " +midiFiles[i].size() + " files and loaded  : " + callMidiProcessors.get(i).mfAnalyzer.length +
- 					" files, resulting in " + (midiFiles[i].size()-callMidiProcessors.get(i).mfAnalyzer.length) +
- 					" failures | # beats : " + callMidiProcessors.get(i).numBeats); 			
+
+		for (int i=0;i<midiFiles.length;++i) {
+ 			mgr.pa.outStr2Scr(""+i+" index had : " +midiFiles[i].size() + " files and loaded  : " + callMidiProcessors.get(i).mfAnalyzerAra.length +
+ 					" files, resulting in " + (midiFiles[i].size()-callMidiProcessors.get(i).mfAnalyzerAra.length) +
+ 					" failures | # tracks : " + callMidiProcessors.get(i).numTtlTracks); 			
  		}
 		
-		mgr.clearPreProcMidi();
-		//need to set flag so that this isn't done repeatedly
+		mgr.clearPreProcMidi();//need to set flag so that this isn't done repeatedly
+		
 		mgr.pa.outStr2Scr("End analysis of midi files at : "+ mgr.pa.timeSinceStart());
-	}	
+	}//run
 	
 }//myMidiFileProcessor
 
 
 
-//TODO
-//setup thread structures to load audio data during program launch, to beat timeout from processing
-//use these structures to load appropriate audio when UI input changes (user selects new banks)
-class myAudMgrSongLoader implements Callable<Boolean> {
-	public myAudMgrSongLoader() {
-		
-		
-	}
-	
-	//load subset of audio files in directory
-	private void loadAudio() {
-		
-	}
-	
-	@Override
-	public Boolean call() throws Exception {
-		loadAudio();
-		return true;
-	}
-	
-	
-}//myAudMgrSongLoader
-
-//runnable to launch multiple threads to load audio files under specified directory
-class myAudMgrSongLoadMapper implements Runnable{
-	//runnable should call multiple callables
-	List<myAudMgrSongLoader> callSongLoaders;
-	List<Future<Boolean>> callSongLdrFtrs;	
-	myAudioManager mgr;
-	public myAudMgrSongLoadMapper(myAudioManager _mgr) {
-		mgr =_mgr;
-		callSongLoaders = new ArrayList<myAudMgrSongLoader>();
-		callSongLdrFtrs = new ArrayList<Future<Boolean>>();	
-	}
-		
-	@Override
-	public void run() {
-		//TODO verify audioFileManager is loaded
-		//load song info for all files in structure
-		try {callSongLdrFtrs = mgr.pa.th_exec.invokeAll(callSongLoaders);for(Future<Boolean> f: callSongLdrFtrs) { f.get(); }} catch (Exception e) { e.printStackTrace(); }
-
-	}
-	
-}//myAudMgrSongLoadMapper
+////TODO
+////setup thread structures to load audio data during program launch, to beat timeout from processing
+////use these structures to load appropriate audio when UI input changes (user selects new banks)
+//class myAudMgrSongLoader implements Callable<Boolean> {
+//	public myAudMgrSongLoader() {
+//		
+//		
+//	}
+//	
+//	//load subset of audio files in directory
+//	private void loadAudio() {
+//		
+//	}
+//	
+//	@Override
+//	public Boolean call() throws Exception {
+//		loadAudio();
+//		return true;
+//	}
+//	
+//	
+//}//myAudMgrSongLoader
+//
+////runnable to launch multiple threads to load audio files under specified directory
+//class myAudMgrSongLoadMapper implements Runnable{
+//	//runnable should call multiple callables
+//	List<myAudMgrSongLoader> callSongLoaders;
+//	List<Future<Boolean>> callSongLdrFtrs;	
+//	myAudioManager mgr;
+//	
+//	public myAudMgrSongLoadMapper(myAudioManager _mgr) {
+//		mgr =_mgr;
+//		callSongLoaders = new ArrayList<myAudMgrSongLoader>();
+//		callSongLdrFtrs = new ArrayList<Future<Boolean>>();	
+//	}
+//		
+//	@Override
+//	public void run() {
+//		//TODO verify audioFileManager is loaded
+//		//load song info for all files in structure
+//		try {callSongLdrFtrs = mgr.pa.th_exec.invokeAll(callSongLoaders);for(Future<Boolean> f: callSongLdrFtrs) { f.get(); }} catch (Exception e) { e.printStackTrace(); }
+//
+//	}
+//	
+//}//myAudMgrSongLoadMapper
 

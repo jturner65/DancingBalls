@@ -33,6 +33,7 @@ public class DancingBalls extends PApplet{
 	public final int glbBufrSize = 1024;// * 16;
 	
 	
+	
 //	//epsilon value for calculations
 	public final float epsValCalc = .00000001f;
 
@@ -128,7 +129,7 @@ public class DancingBalls extends PApplet{
 		focusTar = new myVector(sceneFcsVals[sceneIDX]);		 
 		initDispWins();
 		setFlags(showUIMenu, true);					//show input UI menu	
-		setFlags(show3DWin, true);
+		setFlags(showJTWin, true);
 		setCamView(); 
 		initProgram();
 	}	
@@ -177,7 +178,7 @@ public class DancingBalls extends PApplet{
 		drawUI(modAmtMillis);																	//draw UI overlay on top of rendered results			
 		if (flags[saveAnim]) {	savePic();}
 		updateConsoleStrs();
-		surface.setTitle(prjNmLong + " : " + (int)(frameRate) + " fps|cyc ");
+		surface.setTitle(prjNmLong + " : " + (int)(frameRate) + " fps|cyc curFocusWin : " + curFocusWin);
 		//outStr2Scr("took : " + (millis() - glblStartSimTime) + " millis to draw");
 	}//draw
 	
@@ -213,7 +214,7 @@ public class DancingBalls extends PApplet{
 		//for(int i =1; i<numDispWins; ++i){if ( !(dispWinFrames[i].dispFlags[myDispWindow.is3DWin])){dispWinFrames[i].draw(sceneCtrVals[sceneIDX]);}}
 		//dispWinFrames[0].draw(sceneCtrVals[sceneIDX]);
 		for(int i =1; i<numDispWins; ++i){dispWinFrames[i].drawHeader(modAmtMillis);}
-		//menu
+		//menu always idx 0
 		dispWinFrames[0].draw2D();
 		dispWinFrames[0].drawHeader(modAmtMillis);
 		drawOnScreenData();				//debug and on-screen data
@@ -246,6 +247,12 @@ public class DancingBalls extends PApplet{
 		dz = (float)cameraInitLocs[sceneIDX].z;
 		setFocus();
 	}
+	
+	private void handleNumberPress(int val) {
+		if(curFocusWin == dispJTWinIDX) {
+			((DancingBallWin) dispWinFrames[dispJTWinIDX]).saveTapBeat(val);			
+		}
+	}
 
 //////////////////////////////////////////////////////
 /// user interaction
@@ -253,12 +260,12 @@ public class DancingBalls extends PApplet{
 	
 	public void keyPressed(){
 		switch (key){
-			case '1' : {((DancingBallWin) dispWinFrames[disp3DResIDX]).saveTapBeat(0);break;}//type 1 beat - learn over 4 taps, all learned in relation to one another
-			case '2' : {((DancingBallWin) dispWinFrames[disp3DResIDX]).saveTapBeat(1);break;}//type 2 beat - learn over 4 taps
-			case '3' : {((DancingBallWin) dispWinFrames[disp3DResIDX]).saveTapBeat(2);break;}//type 3 beat - learn over 4 taps
-			case '4' : {((DancingBallWin) dispWinFrames[disp3DResIDX]).saveTapBeat(3);break;}//type 4 beat - learn over 4 taps
-			case '5' : {((DancingBallWin) dispWinFrames[disp3DResIDX]).saveTapBeat(4);break;}//type 5 beat - learn over 4 taps					
-			case '6' : {((DancingBallWin) dispWinFrames[disp3DResIDX]).saveTapBeat(5);break;}//type 6 beat - learn over 4 taps
+			case '1' : {handleNumberPress(0);break;}//type 1 beat - learn over 4 taps, all learned in relation to one another
+			case '2' : {handleNumberPress(1);break;}//type 2 beat - learn over 4 taps
+			case '3' : {handleNumberPress(2);break;}//type 3 beat - learn over 4 taps
+			case '4' : {handleNumberPress(3);break;}//type 4 beat - learn over 4 taps
+			case '5' : {handleNumberPress(4);break;}//type 5 beat - learn over 4 taps					
+			case '6' : {handleNumberPress(5);break;}//type 6 beat - learn over 4 taps
 			case '7' : {break;}
 			case '8' : {break;}
 			case '9' : {break;}
@@ -340,19 +347,19 @@ public class DancingBalls extends PApplet{
 		//c.clearMsDepth();
 	}//mouseReleased
 	
-//	//these tie using the UI buttons to modify the window in with using the boolean tags - PITA but currently necessary
-//	//public void handleShowWin(int btn, int val){handleShowWin(btn, val, true);}					//display specific windows - multi-select/ always on if sel
-//	public void handleShowWin(int btn, int val, boolean callFlags){//display specific windows - multi-select/ always on if sel
-//	if(!callFlags){//called from setflags - only sets button state in UI
-//		//((mySideBarMenu)dispWinFrames[dispMenuIDX]).guiBtnSt[mySideBarMenu.btnShowWinIdx][btn] = val;
-//	} else {//called from clicking on buttons in UI
-//		boolean bVal = (val == 1?  false : true);
-//		switch(btn){
-//			case 0 : {setFlags(show3DWin, bVal);break;}
-//			case 1 : {setFlags(show2DWin, bVal);break;}
-//			}
-//		}
-//	}//handleShowWin
+	//these tie using the UI buttons to modify the window in with using the boolean tags - PITA but currently necessary
+	public void handleShowWin(int btn, int val){handleShowWin(btn, val, true);}					//display specific windows - multi-select/ always on if sel
+	public void handleShowWin(int btn, int val, boolean callFlags){//display specific windows - multi-select/ always on if sel
+	if(!callFlags){//called from setflags - only sets button state in UI
+		((mySideBarMenu)dispWinFrames[dispMenuIDX]).guiBtnSt[mySideBarMenu.btnShowWinIdx][btn] = val;
+	} else {//called from clicking on buttons in UI
+		boolean bVal = (val == 1?  false : true);
+		switch(btn){
+			case 0 : {setFlags(showJTWin, bVal);break;}
+			case 1 : {setFlags(showYYWin, bVal);break;}
+			}
+		}
+	}//handleShowWin
 	
 	//process to delete an existing component
 	public void handleDBGSelCmp(int btn, int val){handleDBGSelCmp(btn, val, true);}					//display specific windows - multi-select/ always on if sel
@@ -411,25 +418,26 @@ public class DancingBalls extends PApplet{
 	public void initDispWins(){
 		//float popUpWinHeight = PopUpWinOpenFraction * height;		//how high is the InstEdit window when shown
 		//instanced window dimensions when open and closed - only showing 1 open at a time
-		winRectDimOpen[disp3DResIDX] =  new float[]{menuWidth, 0,width-menuWidth,height};			
-		//winRectDimOpen[disp2DResIDX] =   new float[]{menuWidth, 0,width-menuWidth,height};				
+		winRectDimOpen[dispJTWinIDX] =  new float[]{menuWidth, 0,width-menuWidth,height};			
+		winRectDimOpen[dispYYWinIDX] =   new float[]{menuWidth, 0,width-menuWidth,height};				
 		//hidden
-		winRectDimClose[disp3DResIDX] =  new float[]{menuWidth, 0, hideWinWidth, height};				
-		//winRectDimClose[disp2DResIDX] =  new float[]{menuWidth, 0, hideWinWidth, height};				
+		winRectDimClose[dispJTWinIDX] =  new float[]{menuWidth, 0, hideWinWidth, height};				
+		winRectDimClose[dispYYWinIDX] =  new float[]{menuWidth, 0, hideWinWidth, height};				
 		
-		winTrajFillClrs = new int []{gui_Black,gui_LightGray};		//set to color constants for each window
-		winTrajStrkClrs = new int []{gui_Black,gui_DarkGray};				//set to color constants for each window			
+		winTrajFillClrs = new int []{gui_Black,gui_LightGray,gui_LightGray};		//set to color constants for each window
+		winTrajStrkClrs = new int []{gui_Black,gui_DarkGray,gui_DarkGray};				//set to color constants for each window			
 		
-		String[] winTitles = new String[]{"","3D Dancing Ball","2D Dancing Ball"},
-				winDescr = new String[] {"", "Ball in 3D dancing to music","Ball in 2D dancing to music"};
+		String[] winTitles = new String[]{"","3D Dancing Ball","MCMC Music"},
+				winDescr = new String[] {"", "Ball in 3D dancing to music","Yuri's MCMC Accompaniment"};
 		//			//display window initialization	
-		int wIdx = disp3DResIDX , fIdx = show3DWin;
+		int wIdx = dispJTWinIDX , fIdx = showJTWin;
 		dispWinFrames[wIdx] = new DancingBallWin(this, winTitles[wIdx], fIdx,winFillClrs[wIdx], winStrkClrs[wIdx], winRectDimOpen[wIdx], winRectDimClose[wIdx], winDescr[wIdx],canDrawInWin[wIdx]);
-//		wIdx = disp2DResIDX; fIdx = show2DWin;
-//		dispWinFrames[wIdx] = new DancingBallWin(this, winTitles[wIdx], fIdx,winFillClrs[wIdx], winStrkClrs[wIdx], winRectDimOpen[wIdx], winRectDimClose[wIdx], winDescr[wIdx],canDrawInWin[wIdx]);
+		wIdx = dispYYWinIDX; fIdx = showYYWin;
+		dispWinFrames[wIdx] = new yuryWindow(this, winTitles[wIdx], fIdx,winFillClrs[wIdx], winStrkClrs[wIdx], winRectDimOpen[wIdx], winRectDimClose[wIdx], winDescr[wIdx],canDrawInWin[wIdx]);
 		
 		for(int i =0; i < numDispWins; ++i){
 			//dispWinFrames[i].initDrwnTrajs();		//drawn trajectories not used in this application (so far)
+			outStr2Scr("i:"+i);
 			dispWinFrames[i].setFlags(myDispWindow.is3DWin, dispWinIs3D[i]);
 			dispWinFrames[i].setTrajColors(winTrajFillClrs[i], winTrajStrkClrs[i]);
 		}				
@@ -440,8 +448,8 @@ public class DancingBalls extends PApplet{
 			//this.pr("In getUIRectVals for idx : " + idx);
 		switch(idx){
 			case dispMenuIDX 		: {return new float[0];}			//idx 0 is parent menu sidebar
-			case disp3DResIDX 	: {return dispWinFrames[dispMenuIDX].uiClkCoords;}
-			//case disp2DResIDX 	: {	return dispWinFrames[disp3DResIDX].uiClkCoords;}
+			case dispJTWinIDX 	: {return dispWinFrames[dispMenuIDX].uiClkCoords;}
+			case dispYYWinIDX 	: {	return dispWinFrames[dispMenuIDX].uiClkCoords;}
 			default :  return dispWinFrames[dispMenuIDX].uiClkCoords;
 			}
 	}	
@@ -529,10 +537,10 @@ public class DancingBalls extends PApplet{
 	public final int flipDrawnTraj  	= 10;			//whether or not to flip the direction of the drawn trajectory
 	//window control
 	public final int showUIMenu 		= 11;			//whether or not to show sidebar menu
-	public final int show3DWin			= 12;			//whether to show 3D window
-	//public final int show2DWin			= 13;			//whether to show 2D window
+	public final int showJTWin			= 12;			//whether to show JT window
+	public final int showYYWin			= 13;			//whether to show YY window
 	
-	public final int numFlags = 13;
+	public final int numFlags = 14;
 	
 	//flags to actually display in menu as clickable text labels - order does matter
 	public List<Integer> flagsToShow = Arrays.asList( 
@@ -559,33 +567,32 @@ public class DancingBalls extends PApplet{
 	public myDispWindow[] dispWinFrames;
 	//idx's in dispWinFrames for each window
 	public static final int dispMenuIDX = 0,
-							disp3DResIDX = 1;//,
-							//disp2DResIDX = 2;
+							dispJTWinIDX = 1,
+							dispYYWinIDX = 2;
 	
-	public static final int numDispWins = 2;	
+	public static final int numDispWins = 3;	
 			
 	public int curFocusWin;				//which myDispWindow currently has focus 
 	
 	//whether or not the display windows will accept a drawn trajectory
-	public boolean[] canDrawInWin = new boolean[]{false,false};//,true};		
-	public boolean[] canShow3DBox = new boolean[]{false,true};//false};		
-	public boolean[] canMoveView = new boolean[]{false,true};//false};		
-	public static final boolean[] dispWinIs3D = new boolean[]{false,true};//false};
+	public boolean[] canDrawInWin = new boolean[]{false,false,false};		
+	public boolean[] canShow3DBox = new boolean[]{false,true,true};		
+	public boolean[] canMoveView = new boolean[]{false,true,true};		
+	public static final boolean[] dispWinIs3D = new boolean[]{false,true,true};
 	
 	public static final int[][] winFillClrs = new int[][]{          
 		new int[]{255,255,255,255},                                 	// dispMenuIDX = 0,
-		new int[]{255,255,255,255},                                        	// disp3DResIDX = 1;
-		//new int[]{0,0,0,255}                                        	// disp2DResIDX = 2
+		new int[]{255,255,255,255},                                        	// dispJTWinIDX = 1;
+		new int[]{255,255,255,255}                                        	// dispYYResIDX = 2
 	};
 	public static final int[][] winStrkClrs = new int[][]{
 		new int[]{0,0,0,255},                                    		//dispMenuIDX = 0,
-		new int[]{255,255,255,255},                               		//disp3DResIDX = 1
-		//new int[]{255,255,255,255}                               		//disp2DResIDX = 2
+		new int[]{255,255,255,255},                               		//dispJTWinIDX = 1
+		new int[]{255,255,255,255}                               		//dispYYResIDX = 2
 	};
 	
-	public static int[] winTrajFillClrs = new int []{0,0};//,0};		//set to color constants for each window
-	public static int[] winTrajStrkClrs = new int []{0,0};//,0};		//set to color constants for each window
-	
+	public static int[] winTrajFillClrs = new int []{0,0,0};		//set to color constants for each window
+	public static int[] winTrajStrkClrs = new int []{0,0,0};		//set to color constants for each window	
 	
 	//unblocked window dimensions - location and dim of window if window is one\
 	public float[][] winRectDimOpen;// = new float[][]{new float[]{0,0,0,0},new float[]{0,0,0,0},new float[]{0,0,0,0},new float[]{0,0,0,0}};
@@ -723,24 +730,51 @@ public class DancingBalls extends PApplet{
 			//case flipDrawnTraj		: { dispWinFrames[dispPianoRollIDX].rebuildDrawnTraj();break;}						//whether or not to flip the drawn melody trajectory, width-wise
 			case flipDrawnTraj		: { for(int i =1; i<dispWinFrames.length;++i){dispWinFrames[i].rebuildAllDrawnTrajs();}break;}						//whether or not to flip the drawn melody trajectory, width-wise
 			case showUIMenu 	    : { dispWinFrames[dispMenuIDX].setFlags(myDispWindow.showIDX,val);    break;}											//whether or not to show the main ui window (sidebar)			
-			case show3DWin		: {
-				if (val) {
-					dispWinFrames[disp3DResIDX].setFlags(myDispWindow.showIDX,true);
-					curFocusWin = disp3DResIDX;
-					setCamView();
-				} else {
-					//
-				}
-			
-			break;}
-			//case show3DWin		: {setWinFlagsXOR(disp3DResIDX, val); break;}
-			//case show2DWin		: {setWinFlagsXOR(disp2DResIDX, val); break;}
+//			case showJTWin		: {
+//				if (val) {
+//					dispWinFrames[dispJTWinIDX].setFlags(myDispWindow.showIDX,true);
+//					curFocusWin = dispJTWinIDX;
+//					setCamView();
+//				} else {
+//					//
+//				}
+//			
+//				break;}
+			case showJTWin		: {setWinFlagsXOR(dispJTWinIDX, val); break;}
+			case showYYWin		: {setWinFlagsXOR(dispYYWinIDX, val); break;}
 			//following for popup window
-			//case showPopUpWinUI 		: {dispWinFrames[disp2DResIDX].setShow(val);handleShowWin(disp2DResIDX-1 ,(val ? 1 : 0),false); setWinsHeight(); break;}	//show InstEdit window
+			//case showPopUpWinUI 		: {dispWinFrames[dispYYWinIDX].setShow(val);handleShowWin(dispYYWinIDX-1 ,(val ? 1 : 0),false); setWinsHeight(); break;}	//show InstEdit window
 			//case useDrawnVels 		: {for(int i =1; i<dispWinFrames.length;++i){dispWinFrames[i].rebuildAllDrawnTrajs();}break;}
 			default : {break;}
 		}
 	}//setFlags  
+	
+	
+	//specify mutually exclusive flags here
+	public int[] winFlagsXOR = new int[]{showJTWin,showYYWin};//showSequence,showSphereUI};
+	//specify windows that cannot be shown simultaneously here
+	public int[] winDispIdxXOR = new int[]{dispJTWinIDX, dispYYWinIDX};//dispPianoRollIDX,dispSphereUIIDX};
+	public void setWinFlagsXOR(int idx, boolean val){
+		//outStr2Scr("SetWinFlagsXOR : idx " + idx + " val : " + val);
+		if(val){//turning one on
+			//turn off not shown, turn on shown				
+			for(int i =0;i<winDispIdxXOR.length;++i){//skip first window - ui menu - and last window - InstEdit window
+				if(winDispIdxXOR[i]!= idx){dispWinFrames[winDispIdxXOR[i]].setShow(false);handleShowWin(i ,0,false); flags[winFlagsXOR[i]] = false;}
+				else {
+					dispWinFrames[idx].setShow(true);
+					handleShowWin(i ,1,false); 
+					flags[winFlagsXOR[i]] = true;
+					curFocusWin = winDispIdxXOR[i];
+					setCamView();
+				}
+			}
+		} else {				//if turning off a window - need a default uncloseable window - for now just turn on next window : idx-1 is idx of allowable winwdows (idx 0 is sidebar menu)
+			setWinFlagsXOR((((idx-1) + 1) % winFlagsXOR.length)+1, true);
+		}			
+	}//setWinFlagsXOR
+
+	
+	
 	
 	//set flags appropriately when only 1 can be true 
 	public void setFlagsXOR(int tIdx, int[] fIdx){for(int i =0;i<fIdx.length;++i){if(tIdx != fIdx[i]){flags[fIdx[i]] =false;}}}				
@@ -1791,7 +1825,7 @@ enum ForceType {
 	F_NONE(0), S_SCALAR(1), S_VECTOR(2), ATTR(3), REPL(4), DAMPSPRING(5), DSPR_THETABAR(6);		
 	private int value; 
 	private static Map<Integer, ForceType> map = new HashMap<Integer, ForceType>(); 
-  static { for (ForceType enumV : ForceType.values()) { map.put(enumV.value, enumV);}}
+	static { for (ForceType enumV : ForceType.values()) { map.put(enumV.value, enumV);}}
 	private ForceType(int _val){value = _val;} 
 	public int getVal(){return value;} 	
 	public static ForceType getVal(int idx){return map.get(idx);}
@@ -1801,7 +1835,7 @@ enum ConstraintType {
 	C_NONE(0), C_Circular(1);
 	private int value; 
 	private static Map<Integer, ConstraintType> map = new HashMap<Integer, ConstraintType>(); 
-  static { for (ConstraintType enumV : ConstraintType.values()) { map.put(enumV.value, enumV);}}
+	static { for (ConstraintType enumV : ConstraintType.values()) { map.put(enumV.value, enumV);}}
 	private ConstraintType(int _val){value = _val;} 
 	public int getVal(){return value;} 	
 	public static ConstraintType getVal(int idx){return map.get(idx);}
@@ -1812,7 +1846,7 @@ enum CollisionType {
 	CL_NONE(0), FLAT(1), PARTICLE(2), SPHERE(3), BOX(4);
 	private int value; 
 	private static Map<Integer, CollisionType> map = new HashMap<Integer, CollisionType>(); 
-  static { for (CollisionType enumV : CollisionType.values()) { map.put(enumV.value, enumV);}}
+	static { for (CollisionType enumV : CollisionType.values()) { map.put(enumV.value, enumV);}}
 	private CollisionType(int _val){value = _val;} 
 	public int getVal(){return value;} 	
 	public static CollisionType getVal(int idx){return map.get(idx);}
@@ -1823,10 +1857,49 @@ enum SolverType {
 	GROUND(0), EXP_E(1), MIDPOINT(2), RK3(3), RK4(4), IMP_E(5), TRAP(6), VERLET(7), RK4_G(8);
 	private int value; 
 	private static Map<Integer, SolverType> map = new HashMap<Integer, SolverType>(); 
-  static { for (SolverType enumV : SolverType.values()) { map.put(enumV.value, enumV);}}
+	static { for (SolverType enumV : SolverType.values()) { map.put(enumV.value, enumV);}}
 	private SolverType(int _val){value = _val;} 
 	public int getVal(){return value;} 	
 	public static SolverType getVal(int idx){return map.get(idx);}
 	public static int getNumVals(){return map.size();}						//get # of values in enum			
+};
+
+//Midi commands
+enum MidiCommand {
+    //Channel voice messages
+    NoteOff(0x80), NoteOn(0x90), PolyKeyPress(0xA0), CntrlChange(0xB0),ProgChange(0xC0),ChanPress(0xD0), PitchBend(0xE0),
+
+    //Channel mode messages
+    ChannelMode(0xB8),//seems to not be used
+
+    //System exlcusive messages
+    SysEx(0xF0),  SysExPkt(0xF7), 
+    //SysRealTime(0xF8), SysStartCurrSeq(0xFA), SysContCurrSeq(0xFB), SysStop(0xFC),	//these are probably not present, and definitely not relevant
+
+    //MIDI file-only messages
+    FileMetaEvent(0xFF);
+	
+	private int value; 
+	private static Map<Integer, MidiCommand> map = new HashMap<Integer, MidiCommand>(); 
+	static { for (MidiCommand enumV : MidiCommand.values()) { map.put(enumV.value, enumV);}}
+	private MidiCommand(int _val){value = _val;} 
+	public int getVal(){return value;} 	
+	public static MidiCommand getVal(int idx){return map.get(idx);}
+	public static int getNumVals(){return map.size();}						//get # of values in enum			
+};
+
+//MIDI file meta-event codes
+enum MidiMeta {
+    SeqNumber(0x0), Text(0x1), Copyright(0x2), TrackTitle(0x3), TrackInstName(0x4), Lyric(0x5), Marker(0x6), CuePoint(0x7),
+    ChPrefix(0x20), Port(0x21), EndTrack(0x2F), SetTempo(0x51), SMPTEOffset(0x54), TimeSig(0x58), KeySig(0x59), SeqSpecific(0x7F);
+	
+	private int value; 
+	private static Map<Integer, MidiMeta> map = new HashMap<Integer, MidiMeta>(); 
+	static { for (MidiMeta enumV : MidiMeta.values()) { map.put(enumV.value, enumV);}}
+	private MidiMeta(int _val){value = _val;} 
+	public int getVal(){return value;} 	
+	public static MidiMeta getVal(int idx){return map.get(idx);}
+	public static int getNumVals(){return map.size();}						//get # of values in enum			
+
 };
 

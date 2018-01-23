@@ -64,12 +64,12 @@ public class DancingBallWin extends myDispWindow {
 			myAudioManager.calcFuncToUse,					//which dft calculation mechanism to use
 			0												//	curWindowIDX in audMgr	
 	};			//values of 8 ui-controlled quantities
+	public final int numGUIObjs = uiVals.length;											//# of gui objects for ui	
 	
 	public String[] dftResTypeToShow = new String[] {"Global","Per Zone","Per Thread"};
 	//0:per sample, all harms, 1 : per sample, fund only, 2:all samples, fund only
 	public String[] dftCalcTypeToUse = new String[] {"Per Smpl, All Harms","Per Smpl, Fund Only", "All Samples, Fund Only"};
 
-	public final int numGUIObjs = uiVals.length;											//# of gui objects for ui	
 	public float timeStepMult = 1.0f;													//multiplier to modify timestep to make up for lag
 	
 	//private child-class flags - window specific
@@ -102,13 +102,6 @@ public class DancingBallWin extends myDispWindow {
 			procMidiData		= 21;		//process midi data
 	public static final int numPrivFlags = 22;
 	
-	//piano display
-	public float whiteKeyWidth = 78, bkModY;				//how long, in pixels, is a white key, blk key is 2/3 as long
-	//displayed piano
-	public int gridX, gridY;						//pxls per grid box
-	
-	//offset to bottom of custom window menu 
-	private float custMenuOffset;
 	//display names of fft windows
 	public String[] fftWinNames = new String[]{"NONE","BARTLETT","BARTLETTHANN","BLACKMAN","COSINE","GAUSS","HAMMING","HANN","LANCZOS","TRIANGULAR"};
 	
@@ -118,17 +111,7 @@ public class DancingBallWin extends myDispWindow {
 		trajFillClrCnst = DancingBalls.gui_DarkCyan;		//override this in the ctor of the instancing window class
 		trajStrkClrCnst = DancingBalls.gui_Cyan;
 		super.initThisWin(_canDrawTraj, true, false);
-	}//DancingBallWin	
-	public void updateGridXandY(boolean resize){
-		gridX = (int)(rectDim[2] * gridXMult);
-		gridY = (int)(rectDim[3] * gridYMult);
-		bkModY = .3f * gridY;
-		if(resize){
-			dispPiano.updateDims(gridX, gridY, new float[]{0, topOffY, whiteKeyWidth, 52 * gridY}, rectDim);
-		}
-	}//updateGridXandY
-	public static int calcGridWidth(float winWidth){return (int)(winWidth*gridXMult);}
-	public static int calcGridHeight(float winHeight){return (int)(winHeight*gridYMult);}
+	}//DancingBallWin
 	
 	@Override
 	//initialize all private-flag based UI buttons here - called by base class
@@ -187,8 +170,8 @@ public class DancingBallWin extends myDispWindow {
 		//scale z val == 1 is sphere, <1 is ellipsoid
 		ball = new myDancingBall(pa, this, "Ball for zone : " + name,new myVectorf(0,0,0),ballRadius, 1.0f);
 		//piano to display on size of window
-		updateGridXandY(false);
-		dispPiano = new myPianoObj(pa, this,  gridX, gridY, new float[]{0, topOffY, whiteKeyWidth, 52 * gridY}, fillClr, rectDim);		//start with 52 white keys (full keyboard)
+		dispPiano = new myPianoObj(pa, fillClr, rectDim);		//start with 52 white keys (full keyboard)
+		//dispPiano.updateGridXandY(false, rectDim);
 		//called once
 		initPrivFlags(numPrivFlags);
 		//this window is runnable
@@ -525,11 +508,11 @@ public class DancingBallWin extends myDispWindow {
 	@Override
 	public void initDrwnTrajIndiv(){}
 	
-	public void setLights(){
-		pa.ambientLight(102, 102, 102);
-		pa.lightSpecular(204, 204, 204);
-		pa.directionalLight(180, 180, 180, 0, 1, -1);	
-	}	
+//	public void setLights(){
+//		pa.ambientLight(102, 102, 102);
+//		pa.lightSpecular(204, 204, 204);
+//		pa.directionalLight(180, 180, 180, 0, 1, -1);	
+//	}	
 	//overrides function in base class mseClkDisp
 	@Override
 	public void drawTraj3D(float animTimeMod,myPoint trans){}//drawTraj3D	
@@ -558,8 +541,10 @@ public class DancingBallWin extends myDispWindow {
 //		curMseLookVec = pa.c.getMse2DtoMse3DinWorld(pa.sceneCtrVals[pa.sceneIDX]);			//need to be here
 //		curMseLoc3D = pa.c.getMseLoc(pa.sceneCtrVals[pa.sceneIDX]);
 		//int stVal = pa.millis(); //takes 0 millis to process audio data
-		boolean updateBall = audMgr.processAudioData(animTimeMod);//get next set of audio data to process
-		if(updateBall) {		ball.setFreqVals(audMgr.bandRes);	}
+		//if(getPrivFlags(playMP3Vis)) {
+			boolean updateBall = audMgr.processAudioData(animTimeMod);//get next set of audio data to process
+			if(updateBall) {		ball.setFreqVals(audMgr.bandRes);	}
+		//}
 		
 		//pa.outStr2Scr("took : " + (pa.millis() - stVal) + " millis to processAudioData()");
 		//int stVal = pa.millis();//takes around 90 millis to draw ball
@@ -644,7 +629,7 @@ public class DancingBallWin extends myDispWindow {
 	protected void delTrajToScrIndiv(int subScrKey, String newTrajKey) {}
 	//resize drawn all trajectories
 	@Override
-	protected void resizeMe(float scale) {		updateGridXandY(true);		}
+	protected void resizeMe(float scale) {		dispPiano.updateGridXandY(true, rectDim);		}
 	@Override
 	protected void closeMe() {}
 	@Override

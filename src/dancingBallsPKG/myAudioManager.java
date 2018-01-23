@@ -815,7 +815,7 @@ public class myAudioManager {
 		if (showAllBandRes) {//if showing all bands, displace by piano keys' width
 			if(showPianoNotes) {//if showing piano notes, displace by piano keys' width
 				pa.pushMatrix();pa.pushStyle();
-				pa.translate(win.whiteKeyWidth,0,0);		
+				pa.translate(dispPiano.whiteKeyWidth,0,0);		
 			}
 			drawFreqBands(allBandsRes, allBandFreqs, 1.0f, pa.gui_TransRed, showBeats,showFreqlbls);
 		}
