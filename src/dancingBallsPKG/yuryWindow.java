@@ -35,8 +35,9 @@ public class yuryWindow extends myDispWindow {
 	//use getPrivFlags(idx) and setPrivFlags(idx,val) to consume
 	//put idx-specific code in case statement in setPrivFlags
 	public static final int 
-			debugAnimIDX 		= 0;					//debug
-	public static final int numPrivFlags = 1;
+			debugAnimIDX 		= 0,					//debug
+			showPianoNotes 		= 1;					//show piano
+	public static final int numPrivFlags = 2;
 
 	public yuryWindow(DancingBalls _p, String _n, int _flagIdx, int[] fc, int[] sc, float[] rd, float[] rdClosed,
 			String _winTxt, boolean _canDrawTraj) {
@@ -57,7 +58,10 @@ public class yuryWindow extends myDispWindow {
 		setFlags(isRunnable, true);
 		//this window uses a customizable camera
 		setFlags(useCustCam, true);
-		custMenuOffset = uiClkCoords[3];	//495
+		//initial local flags
+		setPrivFlags(showPianoNotes,true);
+		//set offset to use for custom menu objects
+		custMenuOffset = uiClkCoords[3];	
 
 		
 		//put other initialization stuff here
@@ -68,13 +72,13 @@ public class yuryWindow extends myDispWindow {
 	public void initAllPrivBtns() {
 		//give true labels, false labels and specify the indexes of the booleans that should be tied to UI buttons
 		truePrivFlagNames = new String[]{			//needs to be in order of privModFlgIdxs
-				"Debugging"
+				"Debugging","Hide Piano"
 		};
 		falsePrivFlagNames = new String[]{			//needs to be in order of flags
-				"Enable Debug"
+				"Enable Debug","Show Piano"
 		};
 		privModFlgIdxs = new int[]{					//idxs of buttons that are able to be interacted with
-				debugAnimIDX
+				debugAnimIDX,showPianoNotes
 		};
 		numClickBools = privModFlgIdxs.length;	
 		initPrivBtnRects(0,numClickBools);
@@ -89,6 +93,8 @@ public class yuryWindow extends myDispWindow {
 		privFlags[flIDX] = (val ?  privFlags[flIDX] | mask : privFlags[flIDX] & ~mask);
 		switch(idx){
 			case debugAnimIDX 			: {
+				break;}
+			case showPianoNotes			: {
 				break;}
 		}
 	}
@@ -171,6 +177,9 @@ public class yuryWindow extends myDispWindow {
 		//move to side of menu
 		pa.translate(rectDim[0],0,0);
 		//draw all 2d screen data here, super-imposed over background
+		if (getPrivFlags(showPianoNotes)){
+			dispPiano.drawMe();
+		}
 		
 		///
 		pa.popStyle();pa.popMatrix();				

@@ -532,6 +532,9 @@ public class DancingBallWin extends myDispWindow {
 		//move to side of menu
 		pa.translate(rectDim[0],0,0);
 		//draw all 2d screen audio
+		if (getPrivFlags(showPianoNotes)){
+			dispPiano.drawMe();
+		}
 		audMgr.drawScreenData(modAmtMillis);	
 		pa.popStyle();pa.popMatrix();				
 	}//drawOnScreenStuff

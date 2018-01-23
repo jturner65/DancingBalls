@@ -766,7 +766,6 @@ public class myAudioManager {
 			boolean showDFTRes = win.getPrivFlags(DancingBallWin.calcSingleFreq),
 					showMelodyTrail = win.getPrivFlags(DancingBallWin.showMelodyTrail);
 
-			dispPiano.drawMe();
 			if(getFlags(audioLoadedIDX)) {
 				int barWidth = 400; //width of bar to draw
 				
