@@ -79,14 +79,14 @@ public class myMidiFileAnalyzer {
 		//if type == 0 then only 1 track
 		Track[] tracks = sequence.getTracks();
 		numTracks = tracks.length;
-		if((fileListing.dispName.equals("hyme")) ||
-				(fileListing.dispName.equals("Symphony n40 K550 1mov")))	{
+//		if((fileListing.dispName.equals("hyme")) ||
+//				(fileListing.dispName.equals("Symphony n40 K550 1mov")))	{
 			System.out.println("Composer : " +composer + "\tSong Name : " + fileListing.dispName +"\tFormat info : byte len : " + byteLength+" | midi type : " + type + " | # of tracks  : "+ numTracks);
 			for(int i=0;i<tracks.length;++i) {
 				trackData tmpTrk = new trackData(this, tracks[i], i);
 			}
 			System.out.println("");
-		}
+		//}
 		//read midi message data in for each track
 		
 		//may be short message (all but sys-ex and meta data like key)
@@ -194,31 +194,61 @@ class trackData{
 			
 		}		
 	}//procEvents
-		
+
+
+	//need to process bytes 2+ to find the length of the message
+	private int getTrackLen(byte[] msgBytes) {		
+	
+		int idx = 2;
+		int len =  (int)(msgBytes[idx++] & 0xFF);		
+		int ch;
+		//if len value is greater than 127
+		if (len >= 0x80) {//if greater than half-byte-max
+			len &=0x7F;
+			do {
+				ch = (int)(msgBytes[idx++] & 0xFF);		
+				len = (len << 7) | (ch & 0x7F);
+				//trklen--;
+			} while (ch >= 0x80);
+		}
+		return len;
+	}//getTrackLen
+	
+	
+			
 	//idx 0 will be FF, idx 1 will be type of meta event, idx 2+ will be relevant data
 	public void procMetaEvents(byte[] msgBytes, int command, long stTime, String msgStr) {
 		//used for string data encoded in midi msg
-		String btsAsChar = fan.buildStrFromByteAra(msgBytes, 3);
 		int typeByte = (int)(msgBytes[1] & 0xFF);
 		MidiMeta type = MidiMeta.getVal(typeByte);
+		
+		//TODO need to calculate message length using bytes in array starting at idx 2 : need to find the 
+		//appropriate length of message, using the bytes set in msgBytes idx 2+ since
+		//msg lengths longer than 16 bytes will require multiple bytes to denote their length.  
+		int msgLength = getTrackLen(msgBytes);//msgBytes.length-3;//
 		//idx 2 is message length
 		//work back from msgEnd
-		int msgEndIDX = msgBytes.length-1;
-		
+		int msgEndIDX = msgBytes.length-1, msgSt = msgEndIDX - msgLength;
+		String btsAsChar = fan.buildStrFromByteAra(msgBytes, msgSt);
 		
 		switch(type) {
 			case SeqNumber 		:{
 				btsAsChar = "";
 				break;} 
 			case Text 			:{
+				btsAsChar = "Text : " + btsAsChar;
 				break;} 
 			case Copyright 		:{
+				btsAsChar = "Copyright : " + btsAsChar;
 				break;} 
 			case TrackTitle 	:{
+				btsAsChar = "Track Title : " + btsAsChar;
 				break;} 
 			case TrackInstName 	:{
+				btsAsChar = "Instrument name : " + btsAsChar;
 				break;} 
 			case Lyric 			:{
+				btsAsChar = "Lyric : " + btsAsChar;
 				break;} 
 			case Marker 		:{
 				break;} 
@@ -227,9 +257,17 @@ class trackData{
 			case ChPrefix 		:{
 				break;} 
 			case Port 			:{
+				//This meta-event specifies that subsequent events in the Track should be sent to MIDI port (bus) 
+				//Number, between 0 and 255. This meta-event usually appears at the start of a track with Time zero, 
+				//but may appear within a track should the need arise to change the port while the track is being played. 
+				
 				break;} 
 			case EndTrack 		:{
+				//An End_track marks the end of events for the specified Track. The Time field gives the 
+				//total duration of the track, which will be identical to the Time in the last event before the End_track. 
+				
 				break;} 
+			
 			case SetTempo 		:{
 				//The tempo is specified as the Number of microseconds per quarter note, between 1 and 16777215. A value of
 				//corresponds to 120 bpm. To convert beats per minute to a Tempo value, divide 60,000,000 by the beats per minute. 
@@ -241,10 +279,24 @@ class trackData{
 				//specifies the SMPTE time code at which it should start playing. The FracFrame field gives the fractional frame time (0 to 99). 
 				btsAsChar = "SMPTE Offset Hr:" + (int)(msgBytes[msgEndIDX-4] & 0xFF)+"|Min:"+ (int)(msgBytes[msgEndIDX-3] & 0xFF)+"|Sec:"+ (int)(msgBytes[msgEndIDX-2] & 0xFF)+"|Fr:"+ (int)(msgBytes[msgEndIDX-1] & 0xFF)+":"+ (int)(msgBytes[msgEndIDX] & 0xFF);
 				break;} 
-			case TimeSig 		:{
+			case TimeSig 		:{//Num, Denom, Click, NotesQ
+//				The time signature, metronome click rate, and number of 32nd notes per MIDI quarter note (24 MIDI clock times) 
+//				are given by the numeric arguments. Num gives the numerator of the time signature as specified on sheet music. 
+//				Denom specifies the denominator as a negative power of two, for example 2 for a quarter note, 3 for an eighth note, etc. 
+//				Click gives the number of MIDI clocks per metronome click, and NotesQ the number of 32nd notes in the nominal MIDI quarter 
+//				note time of 24 clocks (8 for the default MIDI quarter note definition).
+				int num = (int)(msgBytes[msgEndIDX-3] & 0xFF);
+				nDurType denom = nDurType.getVal((int)(msgBytes[msgEndIDX-2] & 0xFF));
+				int click = (int)(msgBytes[msgEndIDX-1] & 0xFF);
+				int noteQ = (int)(msgBytes[msgEndIDX] & 0xFF);
+				btsAsChar = "Time Sig :  " + num + " beats per measure, " + denom + " gets the beat. Click : " + click + " midi clocks per click; and " + noteQ + " 32nd notes per MIDI qtr note time (24 clocks)";
 				
 				break;} 
 			case KeySig 		:{
+//				The key signature is specified by the numeric Key value, which is 0 for the key of C, a positive value for each sharp above C, 
+//				or a negative value for each flat below C, thus in the inclusive range -7 to 7. The Major/Minor field is a quoted string which 
+//				will be major for a major key and minor for a minor key. 
+				
 				break;} 
 			case SeqSpecific 	:{
 				//The Sequencer_specific meta-event is used to store vendor-proprietary data in a MIDI file. 
@@ -254,8 +306,12 @@ class trackData{
 			default  :{	}						
 		}				
 		
-		System.out.println("\tTrack "+trIDX+"| time : " +stTime + " | status : "+ String.format("0x%02X",command) + 
-				" command : "+ MidiCommand.FileMetaEvent+" | type : " +String.format("0x%02X",typeByte) + " | type : " +type + " | bytes : [ "+msgStr + " ] | msg as text/data : "+ btsAsChar);
+		if (msgLength >= 16) {System.out.println("\tTrack "+trIDX+"| time : " +stTime + " | status : "+ String.format("0x%02X",command) + 
+				" command : "+ MidiCommand.FileMetaEvent+" | type : " +String.format("0x%02X",typeByte) + " | type : " +type + " | msg Length : " + msgLength + " | msg as text/data : "+ btsAsChar);
+		} 
+//		else {System.out.println("\tTrack "+trIDX+"| time : " +stTime + " | status : "+ String.format("0x%02X",command) + 
+//				" command : "+ MidiCommand.FileMetaEvent+" | type : " +String.format("0x%02X",typeByte) + " | type : " +type + " | bytes : [ "+msgStr + " ] | msg Length : " + msgLength + " | msg as text/data : "+ btsAsChar);
+//		}
 	}//procMetaEvents
 	
 	public String getStringRep() {
@@ -265,6 +321,8 @@ class trackData{
 	
 	
 }//class trackData
+
+
 
 //deciphered musical events (note) orderable by start time - 
 //might be result of multiple midi events (note on, note off, pitch bend, etc)

@@ -1882,6 +1882,18 @@ enum nValType {
 	public static int getNumVals(){return map.size();}						//get # of values in enum
 };	
 
+//note duration types
+enum nDurType {
+	//given in midi time-sig values == 2^v
+	Whole(0),Half(1),Quarter(2),Eighth(3),Sixteenth(4),Thirtisecond(5); 
+	private int value; 
+	private static Map<Integer, nDurType> map = new HashMap<Integer, nDurType>(); 
+	static { for (nDurType enumV : nDurType.values()) { map.put(enumV.value, enumV);}}
+	private nDurType(int _val){value = _val;} 
+	public int getVal(){return value;}
+	public static nDurType getVal(int idx){return map.get(idx);}
+	public static int getNumVals(){return map.size();}						//get # of values in enum
+};	
 //key signatures - given by #
 enum keySigVals {
 	CMaj(0),GMaj(1),DMaj(2),Amaj(3),EMaj(4),BMaj(5),CbMag(-7),FsMaj(6),GfMaj(-6), CsMaj(7), DbMaj(-5), AbMaj(-4),EbMaj(-3),BbMaj(-2),Fmaj(-1); 
