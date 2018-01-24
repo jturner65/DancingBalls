@@ -225,10 +225,10 @@ public abstract class myDispWindow {
 			case showIDX 			: {	
 				setClosedBox();
 				if(!val){//not showing window
-					closeMe();//specific instancing window implementation stuff
-				} else {
-					showMe();
-				}
+						closeMe();//specific instancing window implementation stuff to do when hidden/transitioning to another window (i.e. suspend stuff running outside draw loop, or release memory of unnecessary stuff)
+					} else {
+						showMe();//specific instance window functionality to do when window is shown
+					}
 				break;}	
 			case is3DWin 			: {	break;}	
 			case closeable 			: {	break;}	
@@ -761,9 +761,9 @@ public abstract class myDispWindow {
 		setFlags(showIDX,val);
 		setClosedBox();
 		if(!getFlags(showIDX)){//not showing window
-			closeMe();//specific instancing window implementation stuff
+			closeMe();//specific instancing window implementation stuff to do when hidden
 		} else {
-			showMe();
+			showMe();//specific instance window functionality to do when window is shown
 		}
 	}
 	
@@ -1032,6 +1032,8 @@ public abstract class myDispWindow {
 	protected abstract void processTrajIndiv(myDrawnSmplTraj drawnTraj);
 	
 	public abstract void clickDebug(int btnNum);
+	//auxiliary functionality
+	public abstract void clickFunction(int btnNum);
 	//file io used from selectOutput/selectInput - 
 	//take loaded params and process
 	protected abstract void hndlFileLoadIndiv(String[] vals, int[] stIdx);
@@ -1111,29 +1113,41 @@ class mySideBarMenu extends myDispWindow{
 	//GUI Buttons
 	public float minBtnClkY;			//where buttons should start on side menu
 
-	public static final String[] guiBtnRowNames = new String[]{ "Window",
+	public static final String[] guiBtnRowNames = new String[]{ 
+			"Window","Win-specific Functions",
 			"DEBUG","File"};
 
 	public static final int 
 			btnShowWinIdx = 0, 				//which window to show
-			btnDBGSelCmpIdx = 1,			//debug
-			btnFileCmdIdx = 2;				//load/save files
+			btnAuxFuncIdx = 1,			//aux functionality
+			btnDBGSelCmpIdx = 2,			//debug
+			btnFileCmdIdx = 3;				//load/save files
 	//names for each row of buttons - idx 1 is name of row
 	public final String[][] guiBtnNames = new String[][]{
 		new String[]{"John's Window", "Yury's Window"},							//display specific windows - multi-select/ always on if sel
-		new String[]{"Data 1","Data 2","Data 3","Data 4"},			//DEBUG - momentary
-		new String[]{"Load","Save"}							//load an existing score, save an existing score - momentary		
+		new String[]{"Func 1","Func 2","Func 3","Func 4","Func 5"},			//per-window user functions - momentary
+		new String[]{"Dbg 1","Dbg 2","Dbg 3","Dbg 4"},						//DEBUG - momentary
+		new String[]{"Load Txt File","Save Txt File"}							//load an existing score, save an existing score - momentary		
+	};
+	//default names, to return to if not specified by user
+	public final String[][] defaultUIBtnNames = new String[][]{
+		new String[]{"John's Window", "Yury's Window"},							//display specific windows - multi-select/ always on if sel
+		new String[]{"Func 1","Func 2","Func 3","Func 4","Func 5"},			//per-window user functions - momentary
+		new String[]{"Dbg 1","Dbg 2","Dbg 3","Dbg 4"},						//DEBUG - momentary
+		new String[]{"Load Txt File","Save Txt File"}							//load an existing score, save an existing score - momentary		
 	};
 	//whether buttons are momentary or not (on only while being clicked)
 	public boolean[][] guiBtnInst = new boolean[][]{
-		new boolean[]{false,false},         					//display specific windows - multi-select/ always on if sel
-		new boolean[]{true,true,true,true},                   		//delete - momentary
-		new boolean[]{true,true},			              					//load an existing score, save an existing score - momentary	
+		new boolean[]{false,false},         						//display specific windows - multi-select/ always on if sel
+		new boolean[]{true,true,true,true,true},                   		//functionality - momentary
+		new boolean[]{true,true,true,true},                   		//debug - momentary
+		new boolean[]{true,true},			              			//load an existing score, save an existing score - momentary	
 	};		
 	
 	//whether buttons are disabled(-1), enabled but not clicked/on (0), or enabled and on/clicked(1)
 	public int[][] guiBtnSt = new int[][]{
 		new int[]{0,0},                    					//display specific windows - multi-select/ always on if sel
+		new int[]{0,0,0,0,0},                   					//debug - momentary
 		new int[]{0,0,0,0},                   					//debug - momentary
 		new int[]{0,0}			              					//load an existing score, save an existing score - momentary	
 	};
@@ -1170,6 +1184,12 @@ class mySideBarMenu extends myDispWindow{
 	}
 	@Override
 	protected void snapMouseLocs(int oldMouseX, int oldMouseY, int[] newMouseLoc){}//not a snap-to window
+		
+	//call this from each new window to set function names, if specified, when window gets focus
+	public void setBtnNames(int rowIdx, String[] btnNames) {
+		String[] replAra = ((null==btnNames) || (btnNames.length != guiBtnNames[rowIdx].length)) ? defaultUIBtnNames[rowIdx] : btnNames;
+		for(int i=0;i<guiBtnNames[rowIdx].length;++i) {guiBtnNames[rowIdx][i]=replAra[i];}
+	}//setFunctionButtonNames
 	
 	
 	@Override
@@ -1243,6 +1263,7 @@ class mySideBarMenu extends myDispWindow{
 		guiBtnSt[row][col] = (guiBtnSt[row][col] + 1)%2;
 		switch(row){
 			case btnShowWinIdx 		: {pa.handleShowWin(col, val);break;}
+			case btnAuxFuncIdx 		: {pa.handleFuncSelCmp(col, val);break;}
 			//case btnAddNewCmpIdx 	: {pa.handleAddNewCmp(col, val);break;}
 			case btnDBGSelCmpIdx  	: {pa.handleDBGSelCmp(col, val);break;}
 			//case btnInstEditIdx 	: {pa.handleInstEdit(col, val);break;}
@@ -1397,6 +1418,8 @@ class mySideBarMenu extends myDispWindow{
 	@Override
 	public void drawClickableBooleans() {	}//this is only for non-sidebar menu windows, to display their own personal buttons
 	@Override
+	public void clickFunction(int btnNum) {}		//only for display windows
+	@Override
 	public void clickDebug(int btnNum){}	
 	@Override
 	protected myPoint getMouseLoc3D(int mouseX, int mouseY){return pa.P(mouseX,mouseY,0);}
@@ -1437,6 +1460,8 @@ class mySideBarMenu extends myDispWindow{
 		return res;
 	}
 }//mySideBarMenu
+
+
 //class holds trajctory and 4 macro cntl points, and handling for them
 class myDrawnSmplTraj {
 	public DancingBalls pa;

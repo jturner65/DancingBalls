@@ -362,6 +362,16 @@ public class DancingBalls extends PApplet{
 	}//handleShowWin
 	
 	//process to delete an existing component
+	public void handleFuncSelCmp(int btn, int val){handleFuncSelCmp(btn, val, true);}					//display specific windows - multi-select/ always on if sel
+	public void handleFuncSelCmp(int btn, int val, boolean callFlags){
+		if(!callFlags){
+			((mySideBarMenu)dispWinFrames[dispMenuIDX]).guiBtnSt[mySideBarMenu.btnAuxFuncIdx][btn] = val;
+		} else {
+			dispWinFrames[curFocusWin].clickFunction(btn) ;
+		}
+	}//handleAddDelSelCmp	
+	
+	//process to delete an existing component
 	public void handleDBGSelCmp(int btn, int val){handleDBGSelCmp(btn, val, true);}					//display specific windows - multi-select/ always on if sel
 	public void handleDBGSelCmp(int btn, int val, boolean callFlags){
 		if(!callFlags){
@@ -378,12 +388,20 @@ public class DancingBalls extends PApplet{
 			((mySideBarMenu)dispWinFrames[dispMenuIDX]).guiBtnSt[mySideBarMenu.btnFileCmdIdx][btn] = val;
 		} else {
 			switch(btn){
-				case 0 : {selectInput("Select a file to load parameters from : ", "loadFromFile");break;}
-				case 1 : {selectOutput("Select a file to save parameters to : ", "saveToFile");break;}
+				case 0 : {selectInput("Select a txt file to load parameters from : ", "loadFromFile");break;}
+				case 1 : {selectOutput("Select a txt file to save parameters to : ", "saveToFile");break;}
 			}
 			((mySideBarMenu)dispWinFrames[dispMenuIDX]).hndlMouseRelIndiv();
 		}
 	}//handleFileCmd
+	
+	//call menu from instance of dispwindow to update primary button names with window-relevant entries
+	public void setMenuDbgBtnNames(String[] btnNames) {
+		((mySideBarMenu)dispWinFrames[dispMenuIDX]).setBtnNames(((mySideBarMenu)dispWinFrames[dispMenuIDX]).btnDBGSelCmpIdx,btnNames);
+	}
+	public void setMenuFuncBtnNames(String[] btnNames) {
+		((mySideBarMenu)dispWinFrames[dispMenuIDX]).setBtnNames(((mySideBarMenu)dispWinFrames[dispMenuIDX]).btnAuxFuncIdx,btnNames);
+	}
 	
 	//load strings of data from a text File named file
 	public void loadFromFile(File file){
@@ -452,7 +470,7 @@ public class DancingBalls extends PApplet{
 			case dispYYWinIDX 	: {	return dispWinFrames[dispMenuIDX].uiClkCoords;}
 			default :  return dispWinFrames[dispMenuIDX].uiClkCoords;
 			}
-	}	
+	}//getUIRectVals
 	
 	//find mouse "force" exerted upon a particular location - distance from mouse to passed location
 	public myVectorf mouseForceAtLoc(myPointf _loc, boolean attractMode){
@@ -1809,18 +1827,6 @@ public class DancingBalls extends PApplet{
 
 //ENUMS
 
-//note and key value
-enum nValType {
-	C(0),Cs(1),D(2),Ds(3),E(4),F(5),Fs(6),G(7),Gs(8),A(9),As(10),B(11),rest(12); 
-	private int value; 
-	private static Map<Integer, nValType> map = new HashMap<Integer, nValType>(); 
-    static { for (nValType enumV : nValType.values()) { map.put(enumV.value, enumV);}}
-	private nValType(int _val){value = _val;} 
-	public int getVal(){return value;}
-	public static nValType getVal(int idx){return map.get(idx);}
-	public static int getNumVals(){return map.size();}						//get # of values in enum
-};	
-
 enum ForceType {
 	F_NONE(0), S_SCALAR(1), S_VECTOR(2), ATTR(3), REPL(4), DAMPSPRING(5), DSPR_THETABAR(6);		
 	private int value; 
@@ -1863,6 +1869,30 @@ enum SolverType {
 	public static SolverType getVal(int idx){return map.get(idx);}
 	public static int getNumVals(){return map.size();}						//get # of values in enum			
 };
+
+//note and key value
+enum nValType {
+	C(0),Cs(1),D(2),Ds(3),E(4),F(5),Fs(6),G(7),Gs(8),A(9),As(10),B(11),rest(12); 
+	private int value; 
+	private static Map<Integer, nValType> map = new HashMap<Integer, nValType>(); 
+    static { for (nValType enumV : nValType.values()) { map.put(enumV.value, enumV);}}
+	private nValType(int _val){value = _val;} 
+	public int getVal(){return value;}
+	public static nValType getVal(int idx){return map.get(idx);}
+	public static int getNumVals(){return map.size();}						//get # of values in enum
+};	
+
+//key signatures - given by #
+enum keySigVals {
+	CMaj(0),GMaj(1),DMaj(2),Amaj(3),EMaj(4),BMaj(5),CbMag(-7),FsMaj(6),GfMaj(-6), CsMaj(7), DbMaj(-5), AbMaj(-4),EbMaj(-3),BbMaj(-2),Fmaj(-1); 
+	private int value; 
+	private static Map<Integer, keySigVals> map = new HashMap<Integer, keySigVals>(); 
+	static { for (keySigVals enumV : keySigVals.values()) { map.put(enumV.value, enumV);}}
+	private keySigVals(int _val){value = _val;} 
+	public int getVal(){return value;} 	
+	public static keySigVals getVal(int idx){return map.get(idx);}
+	public static int getNumVals(){return map.size();}						//get # of values in enum
+};	
 
 //Midi commands
 enum MidiCommand {

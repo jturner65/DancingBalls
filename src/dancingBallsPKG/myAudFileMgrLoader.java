@@ -123,7 +123,7 @@ class myMidiFileProcMapper implements Runnable{
 		mgr.pa.outStr2Scr("Start analysis of midi files at : "+ mgr.pa.timeSinceStart());
 		//only run when audioFileIO is loaded - check before call
  		myAudioFileManager audioFileIO = mgr.audioFileIO;
-		//get ref to audio file array, to build individual threads
+		//get ref to audio file array, to build individual threads -  audioFileIO.midiFiles has 1 array per thread (should be around 10?)
  		ArrayList<AudioFile>[] midiFiles = audioFileIO.midiFiles;
  		//# of threads == midiFiles.length - build threads
  		for (int i=0;i<midiFiles.length;++i) {callMidiProcessors.add(new myMidFileProcessor(mgr, midiFiles[i], i));}
@@ -134,9 +134,7 @@ class myMidiFileProcMapper implements Runnable{
  					" files, resulting in " + (midiFiles[i].size()-callMidiProcessors.get(i).mfAnalyzerAra.length) +
  					" failures | # tracks : " + callMidiProcessors.get(i).numTtlTracks); 			
  		}
-		
-		mgr.clearPreProcMidi();//need to set flag so that this isn't done repeatedly
-		
+				
 		mgr.pa.outStr2Scr("End analysis of midi files at : "+ mgr.pa.timeSinceStart());
 	}//run
 	

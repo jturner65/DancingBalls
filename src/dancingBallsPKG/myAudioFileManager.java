@@ -21,7 +21,7 @@ public class myAudioFileManager {
 	public Minim minim;	
 	//root directory containing all audio files
 	private AudioDir root;	
-	//list of all non-dir AudioFiles
+	//list of refs to all midi files regardless of directory
 	public ArrayList<AudioFile>[] midiFiles;
 	//current count of each arraylist membership
 	private int[] midiFileAraCount;

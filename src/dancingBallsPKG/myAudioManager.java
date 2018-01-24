@@ -1,11 +1,8 @@
 package dancingBallsPKG;
 
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.*;
 
-import ddf.minim.Minim;
 import ddf.minim.analysis.*;
 import processing.core.PConstants;
 
@@ -83,7 +80,7 @@ public class myAudioManager {
 	//per bank arrays of buffer size, song handlers, song file names
 	//current song index and songBank (bank corresponds to songs or piano samples)
 	//list of song banks - use to pick either songs or piano notes or midi files
-	public static int songType = 0, songBank = 0, songIDX = 1;
+	public static int songType = 1, songBank = 2, songIDX = 1;
 	
 	//handler to manage structure of audio files under "data" dir
 	public myAudioFileManager audioFileIO;
@@ -150,12 +147,11 @@ public class myAudioManager {
 		dispPiano.initPianoFreqs();
 		//initialize tap beat structures
 		initTapBeatStructs();
-		//load audio IO manager to maintain internal hierarchy of song structures
-		pa.outStr2Scr("Start building audio File IO @ Millis since start of program : " + (pa.timeSinceStart()));
-		//structure holding tree of info regarding audio data on disk
-		//instead being loaded in individual runnable
-		//audioFileIO = new myAudioFileManager(this, pa.minim,Paths.get(pa.sketchPath(),"Data"));
-		pa.th_exec.execute(new myAudFileMgrLoader(this));			
+//		//load audio IO manager to maintain internal hierarchy of song structures
+//		pa.outStr2Scr("Start building audio File IO @ Millis since start of program : " + (pa.timeSinceStart()));
+//		//structure holding tree of info regarding audio data on disk
+//		//instead being loaded in individual runnable
+//		pa.th_exec.execute(new myAudFileMgrLoader(this));			
 		//load all songs, add sample rate  		
 		songs = new mySongHandler[songDirList.length][][];
 		songTypes = new int[songDirList.length][][];
@@ -168,6 +164,15 @@ public class myAudioManager {
 		initDFTAnalysisThrds(10);	
 		//changeCurrentSong(songType, songBank, songIDX);
 	}//initMe
+	
+	public void buildAudioFileIO() {
+		if((getFlags(audFMgrLoadedIDX)) && (null != audioFileIO)) {pa.outStr2Scr("Audio File IO built already");return;}
+		//load audio IO manager to maintain internal hierarchy of song structures
+		pa.outStr2Scr("Start building audio File IO @ Millis since start of program : " + (pa.timeSinceStart()));
+		//structure holding tree of info regarding audio data on disk
+		//instead being loaded in individual runnable
+		pa.th_exec.execute(new myAudFileMgrLoader(this));			
+	}//buildAudioFileIO
 	
 	private void initFlags() {flags = new int[1 + numFlags/32]; for(int i = 0; i<numFlags; ++i){setFlags(i,false);}}
 	public boolean getFlags(int idx){int bitLoc = 1<<(idx%32);return (flags[idx/32] & bitLoc) == bitLoc;}		
@@ -193,21 +198,12 @@ public class myAudioManager {
 		
 	}//setFlags
 
-	
-	
-	//clear pre-preprocessing flag - call from thread executing processing
-	public void clearPreProcMidi() {
-		//when finished clear flag : 
-		win.setPrivFlags(win.procMidiData, false);		
-	}
-	
 	//launch preprocessing of midi data
 	public void preprocMidiData() {
-		if (!getFlags(audFMgrLoadedIDX)) {clearPreProcMidi();return;}//if audiofilemanager is not loaded, then just ignore this request
-		//fire and forget midi processing
-		
+		if (!getFlags(audFMgrLoadedIDX)) {	pa.outStr2Scr("Audio File IO Manager must be loaded before Midi Data can be processed");return;}//if audiofilemanager is not loaded, then just ignore this request
+		//fire and forget midi processing		
 		pa.th_exec.execute(new myMidiFileProcMapper(this));
-	}
+	}//preprocMidiData
 
 	//initialize array of mybeat to hold results of tapped beat data
 	protected void initTapBeatStructs() {
@@ -230,49 +226,6 @@ public class myAudioManager {
 			}
 		}
 	}//setFFTVals
-	
-//	//TODO replace with myAudioFileManager - need to manage bigger structure of songs than what can be loaded into memory
-//	protected void loadSongs() {
-//		songs = new mySongHandler[songDirList.length][][];
-//		songTypes = new int[songDirList.length][][];
-//		sampleRates = new ConcurrentSkipListMap<Float, Integer>();//hold only sample rates that we have seen
-//		
-//		pa.th_exec.execute(new mySongLoadMapper(this));
-//		AudioFile tmpFile;
-//		for(int t=0;t<songDirList.length;++t) {
-//			String[][] songFileNamesForType = songFilenames[t],
-//					songListForType = songList[t];
-//			String[] songBanksForType = songBanks[t];
-//			mySongHandler[][] tmpSongsPerType = new mySongHandler[songBanksForType.length][];
-//			//in case different file type gets improperly mapped - probably ignorable TODO verify
-//			int [][] songTypePerType = new int[songBanksForType.length][];
-//			for(int b=0;b<songBanksForType.length;++b) {
-//				mySongHandler[] tmpSongs = new mySongHandler[songFileNamesForType[b].length];
-//				songTypePerType[b] = new int[songFileNamesForType[b].length];
-//				for(int i=0;i<songFileNamesForType[b].length;++i){
-//					String songName =songFileNamesForType[b][i];
-//					if(songName.toLowerCase().contains(".mid")) {
-//						songTypePerType[b][i]=win.midiSong;
-//						tmpFile = new AudioFile(Paths.get(pa.sketchPath(),"Data",songName), songListForType[b][i], songTypePerType[b][i], null);
-//						tmpSongs[i]= new myMidiSongHandler(pa,pa.minim, tmpFile, songBufSize[b]);
-//						pa.outStr2Scr("Make Midi song "+ songName);
-//					} else {
-//						songTypePerType[b][i]=win.mp3Song;
-//						tmpFile = new AudioFile(Paths.get(pa.sketchPath(),"Data",songName), songListForType[b][i], songTypePerType[b][i], null);
-//						tmpSongs[i]= new myMP3SongHandler(pa,pa.minim, tmpFile, songBufSize[b]);						
-//					}
-//					tmpSongs[i].setForwardVals(windowList[curWindowIDX], fftMinBandwidth, numZones);
-//					sampleRates.put(tmpSongs[i].sampleRate, 1);}		
-//				tmpSongsPerType[b] = tmpSongs;
-//			}
-//			songs[t]= tmpSongsPerType;
-//			songTypes[t] = songTypePerType;
-//		}
-//	
-//		setFlags(audioLoadedIDX,true);
-//		setFlags(songHndlrLoadedIDX, true);		
-//		setFFTVals();
-//	}//loadSongList() 
 	
 	public boolean changeCurrentSong(int newSongType, int newSongBank, int newSongIDX){
 		//audio not loaded, so reset values to previous values

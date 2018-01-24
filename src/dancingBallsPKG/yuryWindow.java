@@ -26,6 +26,10 @@ public class yuryWindow extends myDispWindow {
 	};			//values of 8 ui-controlled quantities
 	public final int numGUIObjs = uiVals.length;	
 	public String[] songTypeList = new String[] {"Classical","Dance","Jazz"};
+	/////////
+	//ui button names -empty will do nothing, otherwise add custom labels for debug and custom functionality names
+	public String[] menuDbgBtnNames = new String[] {};
+	public String[] menuFuncBtnNames = new String[] {};
 
 	//////////////
 	// local/ui interactable boolean buttons
@@ -62,11 +66,10 @@ public class yuryWindow extends myDispWindow {
 		setPrivFlags(showPianoNotes,true);
 		//set offset to use for custom menu objects
 		custMenuOffset = uiClkCoords[3];	
-
 		
 		//put other initialization stuff here
 		
-	}
+	}//
 	//initialize all UI buttons here
 	@Override
 	public void initAllPrivBtns() {
@@ -204,7 +207,39 @@ public class yuryWindow extends myDispWindow {
 		// TODO Auto-generated method stub
 
 	}
-
+	
+	@Override
+	protected void closeMe() {
+		//things to do when swapping this window out for another window - release objects that take up a lot of memory, for example.
+	}
+	
+	
+	@Override
+	protected void showMe() {
+		//things to do when swapping into this window - reinstance released objects, for example.
+		pa.setMenuDbgBtnNames(menuDbgBtnNames);
+		pa.setMenuFuncBtnNames(menuFuncBtnNames);		
+		
+	}
+	
+	//custom functions launched by UI input
+	public void custFunc0(){		}	
+	public void custFunc1(){		}	
+	public void custFunc2(){		}	
+	public void custFunc3(){		}	
+	public void custFunc4(){		}	
+	@Override
+	public void clickFunction(int btnNum) {
+		pa.outStr2Scr("click cust function in "+name+" : btn : " + btnNum);
+		switch(btnNum){
+			case 0 : {	custFunc0();	break;}
+			case 1 : {	custFunc1();	break;}
+			case 2 : {	custFunc2();	break;}
+			case 3 : {	custFunc3();	break;}
+			case 4 : {	custFunc4();	break;}
+			default : {break;}
+		}	
+	}		//only for display windows
 	
 	//debug functions
 	public void dbgFunc0(){		}	
@@ -270,10 +305,6 @@ public class yuryWindow extends myDispWindow {
 	//resize drawn all trajectories
 	@Override
 	protected void resizeMe(float scale) {		dispPiano.updateGridXandY(true, rectDim);		}
-	@Override
-	protected void closeMe() {}
-	@Override
-	protected void showMe() {}
 
 	@Override
 	protected void initDrwnTrajIndiv() {}

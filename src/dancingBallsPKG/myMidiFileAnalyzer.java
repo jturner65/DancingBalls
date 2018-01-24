@@ -162,7 +162,7 @@ class trackData{
 			int dat1,dat2,command,chan;
 			String str1 = "Note",
 					str2 = "Vel";
-			if(status < 0xF0) {//channel event - channel mode doesn't seem to be used.
+			if(status < 0xF0) {//channel event - ignoring channel mode 
 				//most sig byte is command, least sig byte is chan
 				dat1 = (int)(msgBytes[1] & 0xFF);
 				if(msgBytes.length > 2) {
@@ -194,13 +194,17 @@ class trackData{
 			
 		}		
 	}//procEvents
-	
+		
 	//idx 0 will be FF, idx 1 will be type of meta event, idx 2+ will be relevant data
 	public void procMetaEvents(byte[] msgBytes, int command, long stTime, String msgStr) {
 		//used for string data encoded in midi msg
 		String btsAsChar = fan.buildStrFromByteAra(msgBytes, 3);
 		int typeByte = (int)(msgBytes[1] & 0xFF);
-		MidiMeta type = MidiMeta.getVal(typeByte);					
+		MidiMeta type = MidiMeta.getVal(typeByte);
+		//idx 2 is message length
+		//work back from msgEnd
+		int msgEndIDX = msgBytes.length-1;
+		
 		
 		switch(type) {
 			case SeqNumber 		:{
@@ -229,16 +233,23 @@ class trackData{
 			case SetTempo 		:{
 				//The tempo is specified as the Number of microseconds per quarter note, between 1 and 16777215. A value of
 				//corresponds to 120 bpm. To convert beats per minute to a Tempo value, divide 60,000,000 by the beats per minute. 
-				int val = ((int)(msgBytes[2] & 0xFF) << 16) | ((int)(msgBytes[3] & 0xFF) << 8) | (int)(msgBytes[4] & 0xFF);
+				int val = ((int)((msgBytes[msgEndIDX--] & 0xFF) | ((int)(msgBytes[msgEndIDX--] & 0xFF) << 8) | ((int)(msgBytes[msgEndIDX--] & 0xFF) << 16)));
 				btsAsChar = "# of micros : " + val + " == " + (60000000.0f/val) + " BPM";
 				break;} 
 			case SMPTEOffset 	:{
+				//This meta-event, which must occur with a zero Time at the start of a track, 
+				//specifies the SMPTE time code at which it should start playing. The FracFrame field gives the fractional frame time (0 to 99). 
+				btsAsChar = "SMPTE Offset Hr:" + (int)(msgBytes[msgEndIDX-4] & 0xFF)+"|Min:"+ (int)(msgBytes[msgEndIDX-3] & 0xFF)+"|Sec:"+ (int)(msgBytes[msgEndIDX-2] & 0xFF)+"|Fr:"+ (int)(msgBytes[msgEndIDX-1] & 0xFF)+":"+ (int)(msgBytes[msgEndIDX] & 0xFF);
 				break;} 
 			case TimeSig 		:{
+				
 				break;} 
 			case KeySig 		:{
 				break;} 
 			case SeqSpecific 	:{
+				//The Sequencer_specific meta-event is used to store vendor-proprietary data in a MIDI file. 
+				//The Length can be any value between 0 and 2^28 - 1, specifying the number of Data bytes (between 0 and 255) which follow. 
+				//Sequencer_specific records may be very long; programs which process MIDI CSV files should be careful to protect against buffer overflows and truncation of these records. 
 				break;} 
 			default  :{	}						
 		}				
@@ -255,7 +266,23 @@ class trackData{
 	
 }//class trackData
 
+//deciphered musical events (note) orderable by start time - 
+//might be result of multiple midi events (note on, note off, pitch bend, etc)
+class musicalEvent implements Comparable<musicalEvent>{
+	//start of event - this value is the ordering value for this event
+	public int stTime, duration;
+	public nValType note;
+	public int octave;
+	
+	public musicalEvent() {}
 
+	@Override
+	public int compareTo(musicalEvent othrEv) {
+		if(stTime == othrEv.stTime) {return 0;}		
+		return (stTime > othrEv.stTime ? 1 : -1);
+	}
+	
+}//class midiEvent
 
 
 

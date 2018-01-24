@@ -66,6 +66,12 @@ public class DancingBallWin extends myDispWindow {
 	};			//values of 8 ui-controlled quantities
 	public final int numGUIObjs = uiVals.length;											//# of gui objects for ui	
 	
+	/////////
+	//ui button names -empty will do nothing
+	public String[] menuDbgBtnNames = new String[] {};
+	public String[] menuFuncBtnNames = new String[] {"Init AudIO","Proc Midi", "Func 2", "Func 3", "Func 4"};
+	
+	
 	public String[] dftResTypeToShow = new String[] {"Global","Per Zone","Per Thread"};
 	//0:per sample, all harms, 1 : per sample, fund only, 2:all samples, fund only
 	public String[] dftCalcTypeToUse = new String[] {"Per Smpl, All Harms","Per Smpl, Fund Only", "All Samples, Fund Only"};
@@ -97,10 +103,10 @@ public class DancingBallWin extends myDispWindow {
 			showMelodyTrail		= 17,		//display "piano roll" trail of melody, otherwise show levels of signal for each piano key
 			calcSingleFreq		= 18,		//analyze signal with single frequencies
 			useSumLvl			= 19,		//use sum of each key's audio levels over the past n samples
-			usePianoTune		= 20,		//use piano tuning or equal-tempered tuning
+			usePianoTune		= 20;		//use piano tuning or equal-tempered tuning
 			
-			procMidiData		= 21;		//process midi data
-	public static final int numPrivFlags = 22;
+			//procMidiData		= 21;		//process midi data
+	public static final int numPrivFlags = 21;
 	
 	//display names of fft windows
 	public String[] fftWinNames = new String[]{"NONE","BARTLETT","BARTLETTHANN","BLACKMAN","COSINE","GAUSS","HAMMING","HANN","LANCZOS","TRIANGULAR"};
@@ -121,21 +127,21 @@ public class DancingBallWin extends myDispWindow {
 				"Stim Zone and Mate", "Playing MP3","Mass-Spring Ball", "Dancing", 
 				"Stim Ball W/Beats","Showing Beats","Use Human Tap Beats", 
 				"Showing Ctr Freq Vals","Showing Zone EQ", "Showing All Band Eq","Showing Piano","Showing Melody Trail",//"Showing Per-Thd Notes",
-				"Lvls via Indiv Freq","Use past N lvls sum","Use Piano Tuning","Processing midi data"
+				"Lvls via Indiv Freq","Use past N lvls sum","Use Piano Tuning"
 		};
 		falsePrivFlagNames = new String[]{			//needs to be in order of flags
 				"Enable Debug","Fixed DelT","Uniform Ball Verts","Hiding Vert Norms", "Hiding Zones",
 				"Stim Only Zones","Stopped MP3","Kinematics Ball","Not Dancing", 
 				"Stim Ball W/Audio","Hiding Beats","Use Detected Beats",  
 				"Hiding Ctr Freq Vals", "Hiding Zone EQ", "Hiding All Band Eq", "Hiding Piano","Showing Key lvls",//"Showing Glbl Max Note", 
-				"Lvls via FFT","Use current lvl","Use Eq Tmpred Tuning","Pre-process midi data"
+				"Lvls via FFT","Use current lvl","Use Eq Tmpred Tuning"
 		};
 		privModFlgIdxs = new int[]{
 				debugAnimIDX, modDelT,randVertsForSphere,showVertNorms,showZones,
 				stimZoneMates,playMP3Vis, useForcesForBall, sendAudioToBall,  
 				stimWithTapBeats, showTapBeats, useHumanTapBeats, 
 				showFreqLbls, showZoneBandRes, showAllBandRes, showPianoNotes, showMelodyTrail, //showEachOctave, 
-				calcSingleFreq,useSumLvl,usePianoTune,procMidiData
+				calcSingleFreq,useSumLvl,usePianoTune
 		};
 		numClickBools = privModFlgIdxs.length;	
 		initPrivBtnRects(0,numClickBools);
@@ -243,15 +249,6 @@ public class DancingBallWin extends myDispWindow {
 			//case showEachOctave : {				if(val) {setPrivFlags(calcSingleFreq, true);}break;}
 			case showMelodyTrail :{//show trail of melody, else show key levels, when showing piano and not showing all freq response
 				break;}
-			
-			//launch pre-proc of midi data - consume audio file manager and preprocess all midi data for use in ML algs.  save results to file
-			case procMidiData : {
-				if(val) {audMgr.preprocMidiData();}
-				else {
-					//stuff to do if setting false - probably nothing
-				}
-				break;
-			}
 		}		
 	}//setPrivFlags	
 //	
@@ -577,8 +574,46 @@ public class DancingBallWin extends myDispWindow {
 		//pa.outStr2Scr("took : " + (pa.millis() - stVal) + " millis to ball simulate");
 	}//simMe
 	
+	
 	@Override
+	protected void closeMe() {
+		//things to do when swapping this window out for another window - release objects that take up a lot of memory, for example.
+
+	}
+	
+	
+	@Override
+	protected void showMe() {
+		//things to do when swapping into this window - reinstance released objects, for example.
+		pa.setMenuDbgBtnNames(menuDbgBtnNames);
+		pa.setMenuFuncBtnNames(menuFuncBtnNames);
+	}
+
+	
+	@Override
+	//stopping simulation
 	protected void stopMe() {System.out.println("Stop");	resetDancerDisplacement();}
+	
+	//custom functions launched by UI input
+	public void custFunc0(){audMgr.buildAudioFileIO();		}	
+	public void custFunc1(){audMgr.preprocMidiData();		}	
+	public void custFunc2(){		}	
+	public void custFunc3(){		}	
+	public void custFunc4(){		}	
+	@Override
+	public void clickFunction(int btnNum) {
+		pa.outStr2Scr("click cust function in "+name+" : btn : " + btnNum);
+		switch(btnNum){
+			case 0 : {	custFunc0();	break;}
+			case 1 : {	custFunc1();	break;}
+			case 2 : {	custFunc2();	break;}
+			case 3 : {	custFunc3();	break;}
+			case 4 : {	custFunc4();	break;}
+			default : {break;}
+		}	
+	}		//only for display windows
+	
+	
 	//debug function
 	public void dbgFunc0(){		ball.debug0();}//display ball's zone's x,y,z for each zone type's zones	
 	public void dbgFunc1(){		}	
@@ -633,9 +668,5 @@ public class DancingBallWin extends myDispWindow {
 	//resize drawn all trajectories
 	@Override
 	protected void resizeMe(float scale) {		dispPiano.updateGridXandY(true, rectDim);		}
-	@Override
-	protected void closeMe() {}
-	@Override
-	protected void showMe() {}
 }//DancingBallWin
 
