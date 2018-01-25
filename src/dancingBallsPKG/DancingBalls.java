@@ -32,8 +32,6 @@ public class DancingBalls extends PApplet{
 	//global values for minim/audio stuff
 	public final int glbBufrSize = 1024;// * 16;
 	
-	
-	
 //	//epsilon value for calculations
 	public final float epsValCalc = .00000001f;
 
@@ -347,12 +345,21 @@ public class DancingBalls extends PApplet{
 		//c.clearMsDepth();
 	}//mouseReleased
 	
+	private void setMenuBtnState(int row, int col, int val) {
+		((mySideBarMenu)dispWinFrames[dispMenuIDX]).guiBtnSt[row][col] = val;	
+		if (val == 1) {
+			outStr2Scr("turning on button row : " + row + "  col " + col);
+			((mySideBarMenu)dispWinFrames[dispMenuIDX]).setWaitForProc(row,col);}//if programmatically (not through UI) setting button on, then set wait for proc value true 
+	}//setMenuBtnState
+	
 	//these tie using the UI buttons to modify the window in with using the boolean tags - PITA but currently necessary
 	public void handleShowWin(int btn, int val){handleShowWin(btn, val, true);}					//display specific windows - multi-select/ always on if sel
 	public void handleShowWin(int btn, int val, boolean callFlags){//display specific windows - multi-select/ always on if sel
-	if(!callFlags){//called from setflags - only sets button state in UI
-		((mySideBarMenu)dispWinFrames[dispMenuIDX]).guiBtnSt[mySideBarMenu.btnShowWinIdx][btn] = val;
+	if(!callFlags){//called from setflags - only sets button state in UI to avoid infinite loop
+		setMenuBtnState(mySideBarMenu.btnShowWinIdx,btn, val);
+		//((mySideBarMenu)dispWinFrames[dispMenuIDX]).guiBtnSt[mySideBarMenu.btnShowWinIdx][btn] = val;
 	} else {//called from clicking on buttons in UI
+		//val is btn state before transition 
 		boolean bVal = (val == 1?  false : true);
 		switch(btn){
 			case 0 : {setFlags(showJTWin, bVal);break;}
@@ -361,21 +368,44 @@ public class DancingBalls extends PApplet{
 		}
 	}//handleShowWin
 	
+	//call menu from instance of dispwindow to update primary custom function button names with window-relevant entries
+	public void setMenuFuncBtnNames(String[] btnNames) {
+		((mySideBarMenu)dispWinFrames[dispMenuIDX]).setBtnNames(((mySideBarMenu)dispWinFrames[dispMenuIDX]).btnAuxFuncIdx,btnNames);
+	}
+	
+	//isSlowProc means original calling process lasted longer than mouse click release and so button state should be forced to be off
+	private void clearBtnState(int row, int col, boolean isSlowProc) {
+		((mySideBarMenu)dispWinFrames[dispMenuIDX]).guiBtnWaitForProc[row][col] = false;
+		if(isSlowProc) {((mySideBarMenu)dispWinFrames[dispMenuIDX]).guiBtnSt[row][col] = 0;}		
+	}
+	
+	//turn off specific function button that might have been kept on during processing - btn must be in range of size of guiBtnSt[mySideBarMenu.btnAuxFuncIdx]
+	//isSlowProc means function this was waiting on is a slow process and escaped the click release in the window (i.e. if isSlowProc then we must force button to be off)
+	public void clearFuncBtnSt(int btn, boolean isSlowProc) {clearBtnState(mySideBarMenu.btnAuxFuncIdx,btn, isSlowProc);}
 	//process to delete an existing component
 	public void handleFuncSelCmp(int btn, int val){handleFuncSelCmp(btn, val, true);}					//display specific windows - multi-select/ always on if sel
 	public void handleFuncSelCmp(int btn, int val, boolean callFlags){
 		if(!callFlags){
-			((mySideBarMenu)dispWinFrames[dispMenuIDX]).guiBtnSt[mySideBarMenu.btnAuxFuncIdx][btn] = val;
+			setMenuBtnState(mySideBarMenu.btnAuxFuncIdx,btn, val);
+			//((mySideBarMenu)dispWinFrames[dispMenuIDX]).guiBtnSt[mySideBarMenu.btnAuxFuncIdx][btn] = val;
 		} else {
 			dispWinFrames[curFocusWin].clickFunction(btn) ;
 		}
 	}//handleAddDelSelCmp	
 	
+	//call menu from instance of dispwindow to update primary debug button names with window-relevant entries
+	public void setMenuDbgBtnNames(String[] btnNames) {
+		((mySideBarMenu)dispWinFrames[dispMenuIDX]).setBtnNames(((mySideBarMenu)dispWinFrames[dispMenuIDX]).btnDBGSelCmpIdx,btnNames);
+	}
+	//turn off specific debug button that might have been kept on during processing - btn must be in range of size of guiBtnSt[mySideBarMenu.btnDBGSelCmpIdx]
+	//isSlowProc means function this was waiting on is a slow process and escaped the click release in the window (i.e. if isSlowProc then we must force button to be off)
+	public void clearDBGBtnSt(int btn, boolean isSlowProc)  {clearBtnState(mySideBarMenu.btnDBGSelCmpIdx,btn, isSlowProc);}
 	//process to delete an existing component
 	public void handleDBGSelCmp(int btn, int val){handleDBGSelCmp(btn, val, true);}					//display specific windows - multi-select/ always on if sel
 	public void handleDBGSelCmp(int btn, int val, boolean callFlags){
 		if(!callFlags){
-			((mySideBarMenu)dispWinFrames[dispMenuIDX]).guiBtnSt[mySideBarMenu.btnDBGSelCmpIdx][btn] = val;
+			setMenuBtnState(mySideBarMenu.btnDBGSelCmpIdx,btn, val);
+			//((mySideBarMenu)dispWinFrames[dispMenuIDX]).guiBtnSt[mySideBarMenu.btnDBGSelCmpIdx][btn] = val;
 		} else {
 			dispWinFrames[curFocusWin].clickDebug(btn) ;
 		}
@@ -385,7 +415,8 @@ public class DancingBalls extends PApplet{
 	public void handleFileCmd(int btn, int val){handleFileCmd(btn, val, true);}					//display specific windows - multi-select/ always on if sel
 	public void handleFileCmd(int btn, int val, boolean callFlags){//{"Load","Save"},							//load an existing score, save an existing score - momentary	
 		if(!callFlags){
-			((mySideBarMenu)dispWinFrames[dispMenuIDX]).guiBtnSt[mySideBarMenu.btnFileCmdIdx][btn] = val;
+			setMenuBtnState(mySideBarMenu.btnFileCmdIdx,btn, val);
+			//((mySideBarMenu)dispWinFrames[dispMenuIDX]).guiBtnSt[mySideBarMenu.btnFileCmdIdx][btn] = val;
 		} else {
 			switch(btn){
 				case 0 : {selectInput("Select a txt file to load parameters from : ", "loadFromFile");break;}
@@ -394,14 +425,6 @@ public class DancingBalls extends PApplet{
 			((mySideBarMenu)dispWinFrames[dispMenuIDX]).hndlMouseRelIndiv();
 		}
 	}//handleFileCmd
-	
-	//call menu from instance of dispwindow to update primary button names with window-relevant entries
-	public void setMenuDbgBtnNames(String[] btnNames) {
-		((mySideBarMenu)dispWinFrames[dispMenuIDX]).setBtnNames(((mySideBarMenu)dispWinFrames[dispMenuIDX]).btnDBGSelCmpIdx,btnNames);
-	}
-	public void setMenuFuncBtnNames(String[] btnNames) {
-		((mySideBarMenu)dispWinFrames[dispMenuIDX]).setBtnNames(((mySideBarMenu)dispWinFrames[dispMenuIDX]).btnAuxFuncIdx,btnNames);
-	}
 	
 	//load strings of data from a text File named file
 	public void loadFromFile(File file){
@@ -458,7 +481,7 @@ public class DancingBalls extends PApplet{
 			outStr2Scr("i:"+i);
 			dispWinFrames[i].setFlags(myDispWindow.is3DWin, dispWinIs3D[i]);
 			dispWinFrames[i].setTrajColors(winTrajFillClrs[i], winTrajStrkClrs[i]);
-		}				
+		}	
 	}//initDispWins
 	
 	//get the ui rect values of the "master" ui region (another window) -> this is so ui objects of one window can be made, clicked, and shown displaced from those of the parent windwo
@@ -765,8 +788,7 @@ public class DancingBalls extends PApplet{
 			//case useDrawnVels 		: {for(int i =1; i<dispWinFrames.length;++i){dispWinFrames[i].rebuildAllDrawnTrajs();}break;}
 			default : {break;}
 		}
-	}//setFlags  
-	
+	}//setFlags  	
 	
 	//specify mutually exclusive flags here
 	public int[] winFlagsXOR = new int[]{showJTWin,showYYWin};//showSequence,showSphereUI};
@@ -776,7 +798,7 @@ public class DancingBalls extends PApplet{
 		//outStr2Scr("SetWinFlagsXOR : idx " + idx + " val : " + val);
 		if(val){//turning one on
 			//turn off not shown, turn on shown				
-			for(int i =0;i<winDispIdxXOR.length;++i){//skip first window - ui menu - and last window - InstEdit window
+			for(int i =0;i<winDispIdxXOR.length;++i){//check windows that should be mutually exclusive during display
 				if(winDispIdxXOR[i]!= idx){dispWinFrames[winDispIdxXOR[i]].setShow(false);handleShowWin(i ,0,false); flags[winFlagsXOR[i]] = false;}
 				else {
 					dispWinFrames[idx].setShow(true);
@@ -786,13 +808,13 @@ public class DancingBalls extends PApplet{
 					setCamView();
 				}
 			}
-		} else {				//if turning off a window - need a default uncloseable window - for now just turn on next window : idx-1 is idx of allowable winwdows (idx 0 is sidebar menu)
-			setWinFlagsXOR((((idx-1) + 1) % winFlagsXOR.length)+1, true);
+		} else {//if turning off a window - need a default uncloseable window - for now just turn on next window
+			//idx is dispXXXIDX idx of allowable windows (1+ since idx 0 is sidebar menu), so use idx-1 for mod function
+			//add 1 to (idx-1) to get next window index, modulo for range adherence, and then add 1 to move back to 1+ from 0+ result from mod		
+			//setWinFlagsXOR((((idx-1) + 1) % winFlagsXOR.length)+1, true);
+			setWinFlagsXOR((idx % winFlagsXOR.length)+1, true);
 		}			
 	}//setWinFlagsXOR
-
-	
-	
 	
 	//set flags appropriately when only 1 can be true 
 	public void setFlagsXOR(int tIdx, int[] fIdx){for(int i =0;i<fIdx.length;++i){if(tIdx != fIdx[i]){flags[fIdx[i]] =false;}}}				

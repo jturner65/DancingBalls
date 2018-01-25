@@ -1107,15 +1107,17 @@ class mySideBarMenu extends myDispWindow{
 		gIDX_TimeStep 			= 0;//, 
 	public final int numGUIObjs = 0;							//# of gui objects for ui
 	
+	//private child-class flags - window specific
+	public static final int 
+			mseClickedInBtnsIDX 		= 0;					//the mouse was clicked in the button region of the menu and a click event was processed
 	//private flag based buttons - ui menu won't have these
-	public static final int numPrivFlags = 0;
+	public static final int numPrivFlags = 1;
 	
 	//GUI Buttons
 	public float minBtnClkY;			//where buttons should start on side menu
 
 	public static final String[] guiBtnRowNames = new String[]{ 
-			"Window","Win-specific Functions",
-			"DEBUG","File"};
+			"Window","Win-specific Functions","DEBUG","File"};
 
 	public static final int 
 			btnShowWinIdx = 0, 				//which window to show
@@ -1139,10 +1141,18 @@ class mySideBarMenu extends myDispWindow{
 	//whether buttons are momentary or not (on only while being clicked)
 	public boolean[][] guiBtnInst = new boolean[][]{
 		new boolean[]{false,false},         						//display specific windows - multi-select/ always on if sel
-		new boolean[]{true,true,true,true,true},                   		//functionality - momentary
-		new boolean[]{true,true,true,true},                   		//debug - momentary
+		new boolean[]{false,false,false,false,false},                   //functionality - momentary
+		new boolean[]{false,false,false,false},                   		//debug - momentary
 		new boolean[]{true,true},			              			//load an existing score, save an existing score - momentary	
 	};		
+	//whether buttons are waiting for processing to complete (for non-momentary buttons)
+	public boolean[][] guiBtnWaitForProc = new boolean[][]{
+		new boolean[]{false,false},         						//display specific windows - multi-select/ always on if sel
+		new boolean[]{false,false,false,false,false},                   //functionality - momentary
+		new boolean[]{false,false,false,false},                   		//debug - momentary
+		new boolean[]{false,false},			              			//load an existing score, save an existing score - momentary	
+	};		
+	
 	
 	//whether buttons are disabled(-1), enabled but not clicked/on (0), or enabled and on/clicked(1)
 	public int[][] guiBtnSt = new int[][]{
@@ -1201,7 +1211,7 @@ class mySideBarMenu extends myDispWindow{
 		};
 		privModFlgIdxs = new int[]{};
 		numClickBools = privModFlgIdxs.length;	
-	}
+	}//
 	
 	@Override
 	protected void initMe() {//init/reinit this window
@@ -1215,7 +1225,9 @@ class mySideBarMenu extends myDispWindow{
 		int flIDX = idx/32, mask = 1<<(idx%32);
 		privFlags[flIDX] = (val ?  privFlags[flIDX] | mask : privFlags[flIDX] & ~mask);
 		switch (idx) {//special actions for each flag
-		//switch(idx){}
+			case mseClickedInBtnsIDX : {
+				
+			}
 		}
 	}
 
@@ -1256,17 +1268,33 @@ class mySideBarMenu extends myDispWindow{
 		}
 		return false;
 	}//handleButtonClick	
-	public void clearAllBtnStates(){for(int row=0; row<guiBtnRowNames.length;++row){for(int col =0; col<guiBtnNames[row].length;++col){if((guiBtnInst[row][col]) && (guiBtnSt[row][col] ==1)){	guiBtnSt[row][col] = 0;}}}}
+	//public void clearAllBtnStates(){for(int row=0; row<guiBtnRowNames.length;++row){for(int col =0; col<guiBtnNames[row].length;++col){if((guiBtnInst[row][col]) && (guiBtnSt[row][col] ==1)){	guiBtnSt[row][col] = 0;}}}}
 	
+	//turn off buttons that may be on and should be turned off - called at release of mouse - check for mouse loc before calling (in button region)?
+	public void clearAllBtnStates(){
+		if(this.getPrivFlags(mseClickedInBtnsIDX)) {
+			//guiBtnWaitForProc should only be set for non-momentary buttons when they are pushed and cleared when whatever they are do is complete
+			for(int row=0; row<guiBtnRowNames.length;++row){for(int col =0; col<guiBtnNames[row].length;++col){				
+				if((guiBtnSt[row][col]==1) && (guiBtnInst[row][col]  || !guiBtnWaitForProc[row][col])){	guiBtnSt[row][col] = 0;}//btn is on, and either is momentary or it is not waiting for processing
+			}}
+			this.setPrivFlags(mseClickedInBtnsIDX, false);
+		}
+	}//clearAllBtnStates
+	
+	//set non-momentary buttons to be waiting for processing complete comand
+	public void setWaitForProc(int row, int col) {
+		if(!guiBtnInst[row][col]) {	guiBtnWaitForProc[row][col] = true;}		
+	}
+	//handle click on button region of menubar
 	public void handleButtonClick(int row, int col){
-		int val = guiBtnSt[row][col];
-		guiBtnSt[row][col] = (guiBtnSt[row][col] + 1)%2;
+		int val = guiBtnSt[row][col];//initial state, before being changed
+		guiBtnSt[row][col] = (guiBtnSt[row][col] + 1)%2;//change state
+		//if not momentary buttons, set wait for proc to true
+		setWaitForProc(row,col);
 		switch(row){
 			case btnShowWinIdx 		: {pa.handleShowWin(col, val);break;}
 			case btnAuxFuncIdx 		: {pa.handleFuncSelCmp(col, val);break;}
-			//case btnAddNewCmpIdx 	: {pa.handleAddNewCmp(col, val);break;}
 			case btnDBGSelCmpIdx  	: {pa.handleDBGSelCmp(col, val);break;}
-			//case btnInstEditIdx 	: {pa.handleInstEdit(col, val);break;}
 			case btnFileCmdIdx 		: {pa.handleFileCmd(col, val);break;}
 		}				
 	}	
@@ -1312,7 +1340,11 @@ class mySideBarMenu extends myDispWindow{
 		int i = (int)((mouseY-(yOff + yOff + clkFlgsStY))/(yOff));					//TODO Awful - needs to be recalced, dependent on menu being on left
 		if((i>=0) && (i<pa.numFlagsToShow)){
 			pa.setFlags(pa.flagsToShow.get(i),!pa.flags[pa.flagsToShow.get(i)]);return true;	}
-		else if(pa.ptInRange(mouseX, mouseY, 0, minBtnClkY, uiClkCoords[2], uiClkCoords[1])){return checkButtons(mouseX, mouseY);}//in region where clickable buttons are - uiClkCoords[1] is bottom of buttons
+		else if(pa.ptInRange(mouseX, mouseY, 0, minBtnClkY, uiClkCoords[2], uiClkCoords[1])){
+			boolean clkInBtnRegion = checkButtons(mouseX, mouseY);
+			if(clkInBtnRegion) { this.setPrivFlags(mseClickedInBtnsIDX, true);}
+			return clkInBtnRegion;
+		}//in region where clickable buttons are - uiClkCoords[1] is bottom of buttons
 		return false;
 	}
 	@Override
@@ -1320,7 +1352,7 @@ class mySideBarMenu extends myDispWindow{
 		boolean res = pa.dispWinFrames[pa.curFocusWin].hndlMouseDragIndiv(mouseX, mouseY,pmouseX, pmouseY, mouseClickIn3D, mseDragInWorld, mseBtn);
 		return res;	}
 	@Override
-	protected void hndlMouseRelIndiv() {	clearAllBtnStates();	}
+	protected void hndlMouseRelIndiv() {	clearAllBtnStates();}
 
 	private void drawSideBarBooleans(){
 		//draw booleans and their state
@@ -1388,7 +1420,7 @@ class mySideBarMenu extends myDispWindow{
 		pa.popStyle();	pa.popMatrix();			
 		pa.pushMatrix();pa.pushStyle();
 			drawWindowGuiObjs();		
-		pa.popStyle();	pa.popMatrix();			
+		pa.popStyle();	pa.popMatrix();	
 	}
 	@Override
 	public void drawCustMenuObjs(){}

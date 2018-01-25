@@ -79,14 +79,14 @@ public class myMidiFileAnalyzer {
 		//if type == 0 then only 1 track
 		Track[] tracks = sequence.getTracks();
 		numTracks = tracks.length;
-//		if((fileListing.dispName.equals("hyme")) ||
-//				(fileListing.dispName.equals("Symphony n40 K550 1mov")))	{
+		if((fileListing.dispName.equals("hyme")) ||
+				(fileListing.dispName.equals("Symphony n40 K550 1mov")))	{
 			System.out.println("Composer : " +composer + "\tSong Name : " + fileListing.dispName +"\tFormat info : byte len : " + byteLength+" | midi type : " + type + " | # of tracks  : "+ numTracks);
 			for(int i=0;i<tracks.length;++i) {
 				trackData tmpTrk = new trackData(this, tracks[i], i);
 			}
 			System.out.println("");
-		//}
+		}
 		//read midi message data in for each track
 		
 		//may be short message (all but sys-ex and meta data like key)
@@ -195,7 +195,6 @@ class trackData{
 		}		
 	}//procEvents
 
-
 	//need to process bytes 2+ to find the length of the message
 	private int getTrackLen(byte[] msgBytes) {		
 	
@@ -214,18 +213,14 @@ class trackData{
 		return len;
 	}//getTrackLen
 	
-	
 			
 	//idx 0 will be FF, idx 1 will be type of meta event, idx 2+ will be relevant data
 	public void procMetaEvents(byte[] msgBytes, int command, long stTime, String msgStr) {
 		//used for string data encoded in midi msg
 		int typeByte = (int)(msgBytes[1] & 0xFF);
 		MidiMeta type = MidiMeta.getVal(typeByte);
-		
-		//TODO need to calculate message length using bytes in array starting at idx 2 : need to find the 
-		//appropriate length of message, using the bytes set in msgBytes idx 2+ since
-		//msg lengths longer than 16 bytes will require multiple bytes to denote their length.  
-		int msgLength = getTrackLen(msgBytes);//msgBytes.length-3;//
+		//message length is encoded in bytes 2+ - some messages can be very long, so may require more than 1 byte to encode
+		int msgLength = getTrackLen(msgBytes);
 		//idx 2 is message length
 		//work back from msgEnd
 		int msgEndIDX = msgBytes.length-1, msgSt = msgEndIDX - msgLength;
@@ -233,18 +228,34 @@ class trackData{
 		
 		switch(type) {
 			case SeqNumber 		:{
+				//This meta-event specifies a sequence Number between 0 and 65535, used to arrange multiple 
+				//tracks in a type 2 MIDI file, or to identify the sequence in which a collection of type 0 
+				//or 1 MIDI files should be played. The Sequence_number meta-event should occur at Time zero, 
+				//at the start of the track. 
 				btsAsChar = "";
 				break;} 
 			case Text 			:{
+				//The Text specifies the title of the track or sequence. The first Title meta-event in a 
+				//type 0 MIDI file, or in the first track of a type 1 file gives the name of the work. 
+				//Subsequent Title meta-events in other tracks give the names of those tracks. 
 				btsAsChar = "Text : " + btsAsChar;
 				break;} 
 			case Copyright 		:{
 				btsAsChar = "Copyright : " + btsAsChar;
 				break;} 
 			case TrackTitle 	:{
+				//The Text specifies the title of the track or sequence. The first Title meta-event in a 
+				//type 0 MIDI file, or in the first track of a type 1 file gives the name of the work. 
+				//Subsequent Title meta-events in other tracks give the names of those tracks. 
 				btsAsChar = "Track Title : " + btsAsChar;
 				break;} 
 			case TrackInstName 	:{
+				//The Text names the instrument intended to play the contents of this track, This is 
+				//usually placed at time 0 of the track. Note that this meta-event is simply a description; 
+				//MIDI synthesisers are not required (and rarely if ever) respond to it. This meta-event is 
+				//particularly useful in sequences prepared for synthesisers which do not conform to the General 
+				//MIDI patch set, as it documents the intended instrument for the track when the sequence is 
+				//used on a synthesiser with a different patch set. 
 				btsAsChar = "Instrument name : " + btsAsChar;
 				break;} 
 			case Lyric 			:{
@@ -309,9 +320,9 @@ class trackData{
 		if (msgLength >= 16) {System.out.println("\tTrack "+trIDX+"| time : " +stTime + " | status : "+ String.format("0x%02X",command) + 
 				" command : "+ MidiCommand.FileMetaEvent+" | type : " +String.format("0x%02X",typeByte) + " | type : " +type + " | msg Length : " + msgLength + " | msg as text/data : "+ btsAsChar);
 		} 
-//		else {System.out.println("\tTrack "+trIDX+"| time : " +stTime + " | status : "+ String.format("0x%02X",command) + 
-//				" command : "+ MidiCommand.FileMetaEvent+" | type : " +String.format("0x%02X",typeByte) + " | type : " +type + " | bytes : [ "+msgStr + " ] | msg Length : " + msgLength + " | msg as text/data : "+ btsAsChar);
-//		}
+		else {System.out.println("\tTrack "+trIDX+"| time : " +stTime + " | status : "+ String.format("0x%02X",command) + 
+				" command : "+ MidiCommand.FileMetaEvent+" | type : " +String.format("0x%02X",typeByte) + " | type : " +type + " | bytes : [ "+msgStr + " ] | msg Length : " + msgLength + " | msg as text/data : "+ btsAsChar);
+		}
 	}//procMetaEvents
 	
 	public String getStringRep() {
@@ -328,7 +339,7 @@ class trackData{
 //might be result of multiple midi events (note on, note off, pitch bend, etc)
 class musicalEvent implements Comparable<musicalEvent>{
 	//start of event - this value is the ordering value for this event
-	public int stTime, duration;
+	public int stTime, duration, endTime;
 	public nValType note;
 	public int octave;
 	
@@ -336,7 +347,7 @@ class musicalEvent implements Comparable<musicalEvent>{
 
 	@Override
 	public int compareTo(musicalEvent othrEv) {
-		if(stTime == othrEv.stTime) {return 0;}		
+		if(stTime == othrEv.stTime) {return 0;}	//TODO change to 2nd tier of ordering	
 		return (stTime > othrEv.stTime ? 1 : -1);
 	}
 	

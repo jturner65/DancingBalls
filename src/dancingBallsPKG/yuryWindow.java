@@ -223,11 +223,27 @@ public class yuryWindow extends myDispWindow {
 	}
 	
 	//custom functions launched by UI input
-	public void custFunc0(){		}	
-	public void custFunc1(){		}	
-	public void custFunc2(){		}	
-	public void custFunc3(){		}	
-	public void custFunc4(){		}	
+	//if launching threads for custom functions, need to remove clearFuncBtnState call in function below and call clearFuncBtnState when thread ends
+	private void custFunc0(){	
+		//custom function code here
+		clearFuncBtnState(0,false);
+	}		
+	private void custFunc1(){	
+		//custom function code here
+		clearFuncBtnState(1,false);
+	}		
+	private void custFunc2(){	
+		//custom function code here
+		clearFuncBtnState(2,false);
+	}			
+	private void custFunc3(){	
+		//custom function code here
+		clearFuncBtnState(3,false);
+	}			
+	private void custFunc4(){	
+		//custom function code here
+		clearFuncBtnState(4,false);
+	}		
 	@Override
 	public void clickFunction(int btnNum) {
 		pa.outStr2Scr("click cust function in "+name+" : btn : " + btnNum);
@@ -240,12 +256,27 @@ public class yuryWindow extends myDispWindow {
 			default : {break;}
 		}	
 	}		//only for display windows
+	private void clearFuncBtnState(int btnNum, boolean isSlow) {pa.clearFuncBtnSt(btnNum,isSlow);}
 	
 	//debug functions
-	public void dbgFunc0(){		}	
-	public void dbgFunc1(){		}	
-	public void dbgFunc2(){		}	
-	public void dbgFunc3(){		}	
+	//if launching threads for debugging, need to remove clearDBGState call in function below and call clearDBGState when thread ends
+	private void dbgFunc0(){	
+		//dbg code here
+		clearDBGBtnState(0,false);
+	}	
+	private void dbgFunc1(){		
+		//dbg code here
+		clearDBGBtnState(1,false);
+	}	
+	private void dbgFunc2(){		
+		//dbg code here
+		clearDBGBtnState(2,false);
+	}	
+	private void dbgFunc3(){		
+		//dbg code here
+		clearDBGBtnState(3,false);
+	}	
+
 	@Override
 	public void clickDebug(int btnNum){
 		pa.outStr2Scr("click debug in "+name+" : btn : " + btnNum);
@@ -257,6 +288,7 @@ public class yuryWindow extends myDispWindow {
 			default : {break;}
 		}		
 	}//clickDebug
+	private void clearDBGBtnState(int btnNum, boolean isSlow){pa.clearDBGBtnSt(btnNum,isSlow);}
 
 	@Override
 	protected void setCameraIndiv(float[] camVals, float rx, float ry, float dz) {

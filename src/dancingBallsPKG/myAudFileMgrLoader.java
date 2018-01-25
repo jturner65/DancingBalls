@@ -136,6 +136,7 @@ class myMidiFileProcMapper implements Runnable{
  		}
 				
 		mgr.pa.outStr2Scr("End analysis of midi files at : "+ mgr.pa.timeSinceStart());
+		mgr.win.clearFuncBtnSt_ProcMidiData();
 	}//run
 	
 }//myMidiFileProcessor

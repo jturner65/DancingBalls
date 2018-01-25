@@ -166,7 +166,10 @@ public class myAudioManager {
 	}//initMe
 	
 	public void buildAudioFileIO() {
-		if((getFlags(audFMgrLoadedIDX)) && (null != audioFileIO)) {pa.outStr2Scr("Audio File IO built already");return;}
+		if((getFlags(audFMgrLoadedIDX)) && (null != audioFileIO)) {
+			pa.outStr2Scr("Audio File IO built already");
+			win.clearFuncBtnSt_BuildAudioFileIO();
+		return;}
 		//load audio IO manager to maintain internal hierarchy of song structures
 		pa.outStr2Scr("Start building audio File IO @ Millis since start of program : " + (pa.timeSinceStart()));
 		//structure holding tree of info regarding audio data on disk
@@ -192,6 +195,7 @@ public class myAudioManager {
 				if(val) {
 					curTypeList = audioFileIO.getTypeSubdirNames();
 					pa.outStr2Scr("End building audio File IO @ Millis since start of program : "+ (pa.timeSinceStart()));
+					win.clearFuncBtnSt_BuildAudioFileIO();
 				}
 				break;}
 		}
