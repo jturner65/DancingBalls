@@ -602,6 +602,7 @@ public class DancingBallWin extends myDispWindow {
 	public void clearFuncBtnSt_ProcMidiData() {
 		clearFuncBtnState(1,true);
 	}
+	
 	//custom functions launched by UI input
 	//if launching threads for custom functions, need to remove clearFuncBtnState call in function below and call clearFuncBtnState when thread ends
 	private void custFunc0(){
