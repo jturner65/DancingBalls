@@ -79,14 +79,14 @@ public class myMidiFileAnalyzer {
 		//if type == 0 then only 1 track
 		Track[] tracks = sequence.getTracks();
 		numTracks = tracks.length;
-		if((fileListing.dispName.equals("hyme")) ||
-				(fileListing.dispName.equals("Symphony n40 K550 1mov")))	{
+//		if((fileListing.dispName.equals("hyme")) ||
+//				(fileListing.dispName.equals("Symphony n40 K550 1mov")))	{
 			System.out.println("Composer : " +composer + "\tSong Name : " + fileListing.dispName +"\tFormat info : byte len : " + byteLength+" | midi type : " + type + " | # of tracks  : "+ numTracks);
 			for(int i=0;i<tracks.length;++i) {
 				trackData tmpTrk = new trackData(this, tracks[i], i);
 			}
 			System.out.println("");
-		}
+//		}
 		//read midi message data in for each track
 		
 		//may be short message (all but sys-ex and meta data like key)
@@ -182,8 +182,8 @@ class trackData{
 				//chan = status & 0xF;
 				nValType note = nValType.getVal((dat1 % 12));
 				int octave = dat1 / 12 -1;
-				System.out.println("\tTrack "+trIDX+"| time : " +stTime + " | status : "+ String.format("0x%02X",status) + 
-						" channel : " + chan + " command : "+ cmd+" | " + str1 + " : " + dat1+" | note : " + note  + " octave : " + octave + " | " + str2 + " : " +dat2+ " | bytes : [ "+msgStr + " ]");
+//				System.out.println("\tTrack "+trIDX+"| time : " +stTime + " | status : "+ String.format("0x%02X",status) + 
+//						" channel : " + chan + " command : "+ cmd+" | " + str1 + " : " + dat1+" | note : " + note  + " octave : " + octave + " | " + str2 + " : " +dat2+ " | bytes : [ "+msgStr + " ]");
 				
 			} else {		//sysex or file meta event
 				command = status;	
@@ -191,7 +191,7 @@ class trackData{
 				if(cmd == MidiCommand.FileMetaEvent) {
 					procMetaEvents(msgBytes, command, stTime, msgStr);
 				} else {//sysex
-					System.out.println("\tTrack "+trIDX+"| time : " +stTime + " | SysEX status : "+ String.format("0x%02X",status) + " Command : "+ cmd + " | bytes : [ "+msgStr + " ]");
+					//System.out.println("\tTrack "+trIDX+"| time : " +stTime + " | SysEX status : "+ String.format("0x%02X",status) + " Command : "+ cmd + " | bytes : [ "+msgStr + " ]");
 				}				
 			}
 			
@@ -219,6 +219,7 @@ class trackData{
 	
 			
 	//idx 0 will be FF, idx 1 will be type of meta event, idx 2+ will be relevant data
+	//these will always span all channels
 	public void procMetaEvents(byte[] msgBytes, int command, long stTime, String msgStr) {
 		//used for string data encoded in midi msg
 		int typeByte = (int)(msgBytes[1] & 0xFF);
@@ -325,12 +326,22 @@ class trackData{
 			default  :{	}						
 		}				
 		
-		if ((msgLength >= 16) && (type == MidiMeta.Text) && (trIDX==0)) {System.out.println("\tTrack "+trIDX+"| time : " +stTime + " | status : "+ String.format("0x%02X",command) + 
-				" command : "+ MidiCommand.FileMetaEvent+" | type : " +String.format("0x%02X",typeByte) + " | type : " +type + " | msg Length : " + msgLength + " | msg as text/data : "+ btsAsChar);
-		} 
-		else {System.out.println("\tTrack "+trIDX+"| time : " +stTime + " | status : "+ String.format("0x%02X",command) + 
+		if (trIDX!=0) {
+			if (msgLength >= 16) {
+				System.out.println("\tTrack "+trIDX+"| time : " +stTime + " | status : "+ String.format("0x%02X",command) + 
+					" command : "+ MidiCommand.FileMetaEvent+" | type : " +String.format("0x%02X",typeByte) + " | type : " +type + " | msg Length : " + msgLength + " | msg as text/data : "+ btsAsChar);
+			} else {
+				System.out.println("\tTrack "+trIDX+"| time : " +stTime + " | status : "+ String.format("0x%02X",command) + 
 				" command : "+ MidiCommand.FileMetaEvent+" | type : " +String.format("0x%02X",typeByte) + " | type : " +type + " | bytes : [ "+msgStr + " ] | msg Length : " + msgLength + " | msg as text/data : "+ btsAsChar);
-		}
+				
+			}
+		} 
+//		if ((msgLength >= 16) && (type == MidiMeta.Text) && (trIDX!=0)) {System.out.println("\tTrack "+trIDX+"| time : " +stTime + " | status : "+ String.format("0x%02X",command) + 
+//				" command : "+ MidiCommand.FileMetaEvent+" | type : " +String.format("0x%02X",typeByte) + " | type : " +type + " | msg Length : " + msgLength + " | msg as text/data : "+ btsAsChar);
+//		} 
+//		else {System.out.println("\tTrack "+trIDX+"| time : " +stTime + " | status : "+ String.format("0x%02X",command) + 
+//				" command : "+ MidiCommand.FileMetaEvent+" | type : " +String.format("0x%02X",typeByte) + " | type : " +type + " | bytes : [ "+msgStr + " ] | msg Length : " + msgLength + " | msg as text/data : "+ btsAsChar);
+//		}
 	}//procMetaEvents
 	
 	public String getStringRep() {
