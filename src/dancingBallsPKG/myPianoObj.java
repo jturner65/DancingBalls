@@ -17,7 +17,7 @@ public class myPianoObj{
 	public int[] winFillClr;
 	//descending scale from C, to build piano roll piano
 	public final nValType[] wKeyVals = new nValType[] {nValType.C, nValType.B, nValType.A, nValType.G, nValType.F,nValType.E,nValType.D},
-								   bKeyVals = new nValType[] {nValType.As, nValType.Gs, nValType.Fs, nValType.Ds, nValType.Cs};
+						bKeyVals = new nValType[] {nValType.As, nValType.Gs, nValType.Fs, nValType.Ds, nValType.Cs};
 
 	//array of naturals drecreased by a sharp in y on grid
 	public nValType[] hasSharps = new nValType[]{nValType.C, nValType.D, nValType.F,nValType.G,nValType.A};
@@ -38,8 +38,6 @@ public class myPianoObj{
 	//holds on-screen y locations of centers of each key at edge of piano
 	public float[] pianoKeyCtrYLocs;
 	
-	//offset value in x for text to print on key
-	public final float wkOff_X = .77f;	
 	//location and dimension of piano keyboard in parent display window
 	public float[] pianoDim;		
 	public float keyY;													//y resolution of grid/keys, mod amount for black key
@@ -293,24 +291,41 @@ public class myPianoObj{
 			}			
 		}		
 	}//drawPlayedNote
+	
+	public void drawNoteNames() {
+		pa.pushMatrix();pa.pushStyle();
+		pa.strokeWeight(1.0f);		
+		//white keys		
+		float txtStX = .77f * pianoWKeyDims[0][2], txtStYOff = pianoWKeyDims[0][3] * .85f;
+		pa.setColorValFill(DancingBalls.gui_Gray);			
+		for(int i =0; i<pianoWKeyDims.length;++i){
+			pa.text(""+pianoWNotes[i].nameOct, txtStX, pianoWKeyDims[i][1]+txtStYOff);
+		}
+		//black keys
+		txtStX = .5f * pianoBKeyDims[0][2];
+		txtStYOff = pianoBKeyDims[0][3] * .85f;
+		pa.setColorValFill(DancingBalls.gui_Cyan);			
+		for(int i =0; i<pianoBKeyDims.length;++i){
+			pa.text(""+pianoBNotes[i].nameOct, txtStX, pianoBKeyDims[i][1]+txtStYOff);
+		}
+		//pa.outStr2Scr("NumKeysDrawn : "+ keyCnt , true);
+		pa.popStyle();pa.popMatrix();				
+	}//drawNoteNames
 
-	public void drawMe(){
+	public void drawMe(boolean drawNotes){
 		//needs to be in 2D
 		pa.pushMatrix();pa.pushStyle();
 		pa.setColorValFill(DancingBalls.gui_Red);	pa.setColorValStroke(DancingBalls.gui_Black);
 		pa.strokeWeight(1.0f);		
 		pa.rect(pianoDim);		//piano box
 		//white keys		
-		float txtStX = wkOff_X * whiteKeyWidth, txtStYOff = pianoWKeyDims[0][3] * .85f;
 		for(int i =0; i<pianoWKeyDims.length;++i){
 			pa.pushMatrix();pa.pushStyle();
 			pa.setColorValFill(DancingBalls.gui_OffWhite);
 			pa.noStroke();
 			pa.rect(pianoWKeyDims[i]);
-			pa.setColorValFill(DancingBalls.gui_Gray);			
-			pa.text(""+pianoWNotes[i].nameOct, txtStX, pianoWKeyDims[i][1]+txtStYOff);
 			float stXVal = 0;
-			if(chkHasSharps(pianoWNotes[i].name)){
+			if((chkHasSharps(pianoWNotes[i].name)) && (i > 0)){
 				stXVal=pianoBKeyDims[0][2];//x start at beginning of black key
 			}
 			pa.setColorValStroke(DancingBalls.gui_Black);
@@ -325,8 +340,8 @@ public class myPianoObj{
 			pa.rect(pianoBKeyDims[i]);
 			pa.popStyle();pa.popMatrix();		
 		}
-		//pa.outStr2Scr("NumKeysDrawn : "+ keyCnt , true);
-		pa.popStyle();pa.popMatrix();		
+		pa.popStyle();pa.popMatrix();	
+		if(drawNotes) {drawNoteNames();	}
 	}//draw graphical rep of piano
 	
 	//str is what order note is = 0 is strongest, 1 is next strongest, etc.

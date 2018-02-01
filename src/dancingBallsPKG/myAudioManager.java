@@ -717,7 +717,7 @@ public class myAudioManager {
 		pa.hint(PConstants.DISABLE_DEPTH_TEST);
 		float bandResHeight = 10.0f;
 		boolean showBeats = win.getPrivFlags(DancingBallWin.showTapBeats),
-				showPianoNotes = win.getPrivFlags(DancingBallWin.showPianoNotes),
+				showPianoNotes = win.getPrivFlags(DancingBallWin.showPianoKbd),
 				showFreqlbls = win.getPrivFlags(DancingBallWin.showFreqLbls),
 				showAllBandRes = win.getPrivFlags(DancingBallWin.showAllBandRes);
 		if(showPianoNotes) {
@@ -777,10 +777,8 @@ public class myAudioManager {
 			drawFreqBands(allBandsRes, allBandFreqs, 1.0f, pa.gui_TransRed, showBeats,showFreqlbls);
 		}
 		else if(win.getPrivFlags(DancingBallWin.showZoneBandRes)) {drawFreqBands(bandRes, bandFreqs, bandResHeight, pa.gui_Blue, showBeats, showFreqlbls);}
-		if(showBeats) {
-			drawDetectedBeats(beatDetRes, lastBeatDetRes, getBeats(),  bandResHeight);
-		}
-		if(showAllBandRes && showPianoNotes) {	pa.popStyle();pa.popMatrix();	}		//undo piano translation		
+		if(showAllBandRes && showPianoNotes) {	pa.popStyle();pa.popMatrix();	}							//undo piano translation		
+		if(showBeats) {	drawDetectedBeats(beatDetRes, lastBeatDetRes, getBeats(),  bandResHeight);}			//show beats if detecting them
 		pa.hint(PConstants.ENABLE_DEPTH_TEST);		
 	}//drawScreenData
 	

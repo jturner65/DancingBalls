@@ -40,7 +40,7 @@ public class altWindow extends myDispWindow {
 	//put idx-specific code in case statement in setPrivFlags
 	public static final int 
 			debugAnimIDX 		= 0,					//debug
-			showPianoNotes 		= 1;					//show piano
+			showPianoKbd 		= 1;					//show piano
 	public static final int numPrivFlags = 2;
 
 	public altWindow(DancingBalls _p, String _n, int _flagIdx, int[] fc, int[] sc, float[] rd, float[] rdClosed,
@@ -63,7 +63,7 @@ public class altWindow extends myDispWindow {
 		//this window uses a customizable camera
 		setFlags(useCustCam, true);
 		//initial local flags
-		setPrivFlags(showPianoNotes,true);
+		setPrivFlags(showPianoKbd,true);
 		//set offset to use for custom menu objects
 		custMenuOffset = uiClkCoords[3];	
 		
@@ -81,7 +81,7 @@ public class altWindow extends myDispWindow {
 				"Enable Debug","Show Piano"
 		};
 		privModFlgIdxs = new int[]{					//idxs of buttons that are able to be interacted with
-				debugAnimIDX,showPianoNotes
+				debugAnimIDX,showPianoKbd
 		};
 		numClickBools = privModFlgIdxs.length;	
 		initPrivBtnRects(0,numClickBools);
@@ -97,7 +97,7 @@ public class altWindow extends myDispWindow {
 		switch(idx){
 			case debugAnimIDX 			: {
 				break;}
-			case showPianoNotes			: {
+			case showPianoKbd			: {
 				break;}
 		}
 	}
@@ -180,8 +180,8 @@ public class altWindow extends myDispWindow {
 		//move to side of menu
 		pa.translate(rectDim[0],0,0);
 		//draw all 2d screen data here, super-imposed over background
-		if (getPrivFlags(showPianoNotes)){
-			dispPiano.drawMe();
+		if (getPrivFlags(showPianoKbd)){
+			dispPiano.drawMe(true);//change to local boolean flag if want to control whether notes are shown
 		}
 		
 		///

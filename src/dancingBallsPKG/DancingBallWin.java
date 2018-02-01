@@ -99,14 +99,14 @@ public class DancingBallWin extends myDispWindow {
 			stimWithTapBeats	= 14,		//stimulate ball with tap beats, otherwise stimulate with audio
 			
 			showFreqLbls		= 15,		//overlay frequency labels on display of energy bars
-			showPianoNotes		= 16,		//display piano notes being played
-			showMelodyTrail		= 17,		//display "piano roll" trail of melody, otherwise show levels of signal for each piano key
-			calcSingleFreq		= 18,		//analyze signal with single frequencies
-			useSumLvl			= 19,		//use sum of each key's audio levels over the past n samples
-			usePianoTune		= 20;		//use piano tuning or equal-tempered tuning
-			
-			//procMidiData		= 21;		//process midi data
-	public static final int numPrivFlags = 21;
+			showPianoKbd		= 16,		//display piano notes being played
+			showPianoNoteNames  = 17,		//whether or not to show piano note names
+			showMelodyTrail		= 18,		//display "piano roll" trail of melody, otherwise show levels of signal for each piano key
+			calcSingleFreq		= 19,		//analyze signal with single frequencies
+			useSumLvl			= 20,		//use sum of each key's audio levels over the past n samples
+			usePianoTune		= 21;		//use piano tuning or equal-tempered tuning
+
+	public static final int numPrivFlags = 22;
 	
 	//display names of fft windows
 	public String[] fftWinNames = new String[]{"NONE","BARTLETT","BARTLETTHANN","BLACKMAN","COSINE","GAUSS","HAMMING","HANN","LANCZOS","TRIANGULAR"};
@@ -124,24 +124,24 @@ public class DancingBallWin extends myDispWindow {
 	public void initAllPrivBtns(){
 		truePrivFlagNames = new String[]{								//needs to be in order of privModFlgIdxs
 				"Debugging","Mod DelT By FRate","Random Ball Verts","Showing Vert Norms","Showing Zones", 
-				"Stim Zone and Mate", "Playing MP3","Mass-Spring Ball", "Dancing", 
-				"Stim Ball W/Beats","Showing Beats","Use Human Tap Beats", 
-				"Showing Ctr Freq Vals","Showing Zone EQ", "Showing All Band Eq","Showing Piano","Showing Melody Trail",//"Showing Per-Thd Notes",
-				"Lvls via Indiv Freq","Use past N lvls sum","Use Piano Tuning"
+				"Stim Zone and Mate","Mass-Spring Ball", "Dancing", 
+				"Stim Ball W/Beats","Use Human Tap Beats", "Showing Beats",
+				"Showing Ctr Freq Vals","Showing Zone EQ", "Showing All Band Eq","Showing Piano","Showing P-Key Names","Showing Melody Trail",//"Showing Per-Thd Notes",
+				"Lvls via Indiv Freq","Use past N lvls sum","Use Piano Tuning", "Playing MP3"
 		};
 		falsePrivFlagNames = new String[]{			//needs to be in order of flags
 				"Enable Debug","Fixed DelT","Uniform Ball Verts","Hiding Vert Norms", "Hiding Zones",
-				"Stim Only Zones","Stopped MP3","Kinematics Ball","Not Dancing", 
-				"Stim Ball W/Audio","Hiding Beats","Use Detected Beats",  
-				"Hiding Ctr Freq Vals", "Hiding Zone EQ", "Hiding All Band Eq", "Hiding Piano","Showing Key lvls",//"Showing Glbl Max Note", 
-				"Lvls via FFT","Use current lvl","Use Eq Tmpred Tuning"
+				"Stim Only Zones","Kinematics Ball","Not Dancing", 
+				"Stim Ball W/Audio","Use Detected Beats","Hiding Beats",  
+				"Hiding Ctr Freq Vals", "Hiding Zone EQ", "Hiding All Band Eq", "Hiding Piano", "Hiding P-Key Names","Showing Key lvls",//"Showing Glbl Max Note", 
+				"Lvls via FFT","Use current lvl","Use Eq Tmpred Tuning","Stopped MP3"
 		};
 		privModFlgIdxs = new int[]{
 				debugAnimIDX, modDelT,randVertsForSphere,showVertNorms,showZones,
-				stimZoneMates,playMP3Vis, useForcesForBall, sendAudioToBall,  
-				stimWithTapBeats, showTapBeats, useHumanTapBeats, 
-				showFreqLbls, showZoneBandRes, showAllBandRes, showPianoNotes, showMelodyTrail, //showEachOctave, 
-				calcSingleFreq,useSumLvl,usePianoTune
+				stimZoneMates, useForcesForBall, sendAudioToBall,  
+				stimWithTapBeats,  useHumanTapBeats, showTapBeats,
+				showFreqLbls, showZoneBandRes, showAllBandRes, showPianoKbd,showPianoNoteNames, showMelodyTrail, //showEachOctave, 
+				calcSingleFreq,useSumLvl,usePianoTune,playMP3Vis
 		};
 		numClickBools = privModFlgIdxs.length;	
 		initPrivBtnRects(0,numClickBools);
@@ -185,7 +185,7 @@ public class DancingBallWin extends myDispWindow {
 		//this window uses a customizable camera
 		setFlags(useCustCam, true);
 		//initially start with the following priv flags set
-		setAllPrivFlags(new int[] {useForcesForBall,sendAudioToBall,calcSingleFreq, showPianoNotes,showMelodyTrail }, true);
+		setAllPrivFlags(new int[] {useForcesForBall,sendAudioToBall,calcSingleFreq, showPianoKbd,showMelodyTrail }, true);
 		
 		custMenuOffset = uiClkCoords[3];	//495
 		rebuildDancer();		
@@ -246,6 +246,12 @@ public class DancingBallWin extends myDispWindow {
 			case showAllBandRes			: {	if(val) {setPrivFlags(showZoneBandRes, false);}break;}
 			case calcSingleFreq 		: {	break;}
 			case useSumLvl 				: {	break;}
+			case showPianoKbd			: {//show piano kbd
+				//if(!val) {	setPrivFlags(showPianoNoteNames, false);}
+				break;}
+			case showPianoNoteNames 	: {//show names of notes on displayed piano
+				
+				break;}
 			//case showEachOctave : {				if(val) {setPrivFlags(calcSingleFreq, true);}break;}
 			case showMelodyTrail :{//show trail of melody, else show key levels, when showing piano and not showing all freq response
 				break;}
@@ -529,8 +535,8 @@ public class DancingBallWin extends myDispWindow {
 		//move to side of menu
 		pa.translate(rectDim[0],0,0);
 		//draw all 2d screen audio
-		if (getPrivFlags(showPianoNotes)){
-			dispPiano.drawMe();
+		if (getPrivFlags(showPianoKbd)){
+			dispPiano.drawMe(getPrivFlags(showPianoNoteNames));
 		}
 		audMgr.drawScreenData(modAmtMillis);	
 		pa.popStyle();pa.popMatrix();				
