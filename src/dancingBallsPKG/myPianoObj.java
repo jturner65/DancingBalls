@@ -6,7 +6,8 @@ import java.util.concurrent.ConcurrentSkipListMap;
 
 public class myPianoObj{
 	public static DancingBalls pa;
-
+	//starting offset for piano upper left corner(relative to upper left corner of owning window)
+	public static final int[] pianoStPxl = new int[] {0,40};
 	//dimensions of piano keys, for display and mouse-checking
 	public float[][] pianoWKeyDims, pianoBKeyDims;	
 	//array of note data for each piano key - played if directly clicked on
@@ -30,65 +31,40 @@ public class myPianoObj{
 	public float[][] pianoFreqsHarmonics, pianoMinFreqsHarmonics;
 	//equal temperment harmonic series
 	public float[][] eqTempFreqsHarms, eqTempMinFreqsHarms;
-	//key cutoffs for "bass" zone, "midrange/melody" zone and "treble/cymbal" zone
-//	public int bassLastKey = 36, //thr
-//				midFirstKey = 31,
-//				midLastKey = 64,
-//				trebleFirstKey = 60;
-	
-	
+
 	//number of harmonics to track
 	public int numHarms = 8;
-	//Array of mappings from key-1 to note name
-	//public String[] pianoNoteNames;
-	//holds frequency halfway between note and next highest note
-	//public ConcurrentSkipListMap<Float, String> maxFreqsForNotes;
+
 	//holds on-screen y locations of centers of each key at edge of piano
 	public float[] pianoKeyCtrYLocs;
 	
-	
-	public final float wkOff_X = .72f;	
-	//location and dimension of piano keyboard in parent display window, location and size of display window
-	public float[] pianoDim, winDim;		
-	public float keyX, keyY;										//x, y resolution of grid/keys, mod amount for black key
-	public int numWhiteKeys;										//# of white keys on piano - should be 52, maybe resize if smaller?
-	public static final int numKeys = 88;
-	public int numNotesWide;										//# of notes to show as grid squares	
+	//offset value in x for text to print on key
+	public final float wkOff_X = .77f;	
+	//location and dimension of piano keyboard in parent display window
+	public float[] pianoDim;		
+	public float keyY;													//y resolution of grid/keys, mod amount for black key
+	public static final int numWhiteKeys = 52, numKeys = 88;			//# of white keys on piano - should be 52, maybe resize if smaller?
+	//public int numNotesWide;										//# of notes to show as grid squares	
 	//piano display
-	public float whiteKeyWidth = 78, bkModY;				//how long, in pixels, is a white key, blk key is 2/3 as long
-	//displayed piano
-	public int gridX, gridY;						//pxls per grid box
+	public float whiteKeyWidth, bkModY;				//how long, in pixels, is a white key, blk key is 2/3 as long
 	//window size modifiers
 	public static final float gridYMult = 1.0f/67.0f, gridXMult = .5625f * gridYMult;
-	public static final int topOffY = 40;			//offset values to render boolean menu on side of screen - offset at top before drawing
-
 	
 	public myPianoObj(DancingBalls _p, int[] _winFillClr, float[] _winDim){
 		pa = _p;
-		pianoDim = new float[]{0, topOffY, whiteKeyWidth, 52 * gridY};
 		winFillClr = new int[_winFillClr.length]; for(int i=0;i<_winFillClr.length;++i){winFillClr[i]=_winFillClr[i];}
-		winDim = new float[_winDim.length];updateWinDim(_winDim);
-		updateGridXandY(true,winDim);
+		updateGridXandY(_winDim);
 	}
-	//if the window or piano dimensions change, update them here
-	public void updateDims(float kx, float ky, float[] _pianoDim, float[] _winDim){
-		keyX = kx; keyY = ky; updatePianoDim(_pianoDim);
-		numWhiteKeys = 52;//PApplet.min(52,(int)(_winDim[3]/keyY));		//height of containing window will constrain keys in future maybe.
-		numNotesWide = (int)((winDim[2] - pianoDim[2])/keyX);
+	
+	//if the window or piano dimensions change, update them here	
+	public void updateGridXandY(float[] winDim){
+		keyY = (int)(winDim[3] * gridYMult);
+		pianoDim =  new float[]{pianoStPxl[0], pianoStPxl[1], whiteKeyWidth, 52 * keyY};
+		//numNotesWide = (int)((winDim[2] - pianoDim[2])/(int)(winDim[2] * gridXMult));
+		bkModY = .3f * keyY;
+		whiteKeyWidth = winDim[2]/20.0f;
 		buildKeyDims();
-	}
-	
-	public void updateGridXandY(boolean resize, float[] rectDim){
-		gridX = (int)(rectDim[2] * gridXMult);
-		gridY = (int)(rectDim[3] * gridYMult);
-		bkModY = .3f * gridY;
-		if(resize){
-			updateDims(gridX, gridY, new float[]{0, topOffY, whiteKeyWidth, 52 * gridY}, rectDim);
-		}
 	}//updateGridXandY
-	public static int calcGridWidth(float winWidth){return (int)(winWidth*gridXMult);}
-	public static int calcGridHeight(float winHeight){return (int)(winHeight*gridYMult);}
-	
 	
 	//build key dimensions array for checking and displaying
 	private void buildKeyDims(){
@@ -100,13 +76,13 @@ public class myPianoObj{
 		int allNoteIDX = numKeys-1;
 		pianoBKeyDims = new float[numBlackKeys][];		//88 x 5, last idx is 0 if white, 1 if black
 		pianoBNotes = new NoteData[numBlackKeys];
-		float wHigh = keyY, bHigh = 2.0f * bkModY, wWide = whiteKeyWidth, bWide = .6f*whiteKeyWidth;	
+		float bHigh = 2.0f * bkModY, bWide = .6f*whiteKeyWidth;	
 		int blkKeyCnt = 0, octave = 8;
 		float stY = pianoDim[1];
 		int keyIdx = numKeys-1;
-		float halfWHi = wHigh * .5f, halfBHi = bHigh * .5f;
+		float halfWHi = keyY * .5f, halfBHi = bHigh * .5f;
 		for(int i =0; i < numWhiteKeys; ++i){
-			pianoWKeyDims[i] = new float[]{0,stY,wWide,wHigh};	
+			pianoWKeyDims[i] = new float[]{0,stY,whiteKeyWidth,keyY};	
 			int iMod = i % 7;
 			pianoWNotes[i] = new NoteData(pa,wKeyVals[iMod], octave, pianoWKeyDims[i]);
 			if(wKeyVals[iMod] == nValType.C){	octave--;}
@@ -143,8 +119,7 @@ public class myPianoObj{
 		eqTempFreqsHarms = new float[88][]; 
 		eqTempMinFreqsHarms = new float[89][];
 		ConcurrentSkipListMap<Float, Integer> pianoRes = initAllFreqs(pianoFreqsHarmonics, pianoMinFreqsHarmonics, true);
-		ConcurrentSkipListMap<Float, Integer> eqTempRes = initAllFreqs(eqTempFreqsHarms, eqTempMinFreqsHarms, false);
-	
+		ConcurrentSkipListMap<Float, Integer> eqTempRes = initAllFreqs(eqTempFreqsHarms, eqTempMinFreqsHarms, false);	
 		return pianoRes;
 	}
 	
@@ -250,11 +225,12 @@ public class myPianoObj{
 	public void drawNumFramesOn(int[] numFramesOn) {
 		pa.pushMatrix();pa.pushStyle();
 		pa.translate(pianoWKeyDims[0][2],0,0);
+		float txtY = pianoWKeyDims[0][3]*.25f;
 		for(int i=0;i<numFramesOn.length;++i) {
 			pa.pushMatrix();pa.pushStyle();
 			pa.translate(0,pianoKeyCtrYLocs[i],0);
 			pa.setColorValFill(numFramesOn[i]==1 ? DancingBalls.gui_Cyan:DancingBalls.gui_Gray);			
-			pa.text(""+numFramesOn[i], 0, .25f*keyY);			
+			pa.text(""+numFramesOn[i], 0, txtY);			
 			pa.popStyle();pa.popMatrix();
 		}
 		pa.popStyle();pa.popMatrix();		
@@ -264,11 +240,12 @@ public class myPianoObj{
 	public void drawKeyLvlVals(ConcurrentSkipListMap<Float, Integer> lvlsPerPKey) {
 		pa.pushMatrix();pa.pushStyle();
 		pa.translate(pianoWKeyDims[0][2],0,0);
+		float txtY = pianoWKeyDims[0][3]*.25f;
 		for(Float lvl:lvlsPerPKey.keySet()) {
 			pa.pushMatrix();pa.pushStyle();
 			pa.translate(0,pianoKeyCtrYLocs[lvlsPerPKey.get(lvl)],0);
 			pa.setColorValFill(DancingBalls.gui_Cyan);//(keyLvls[i]==1 ? DancingBalls.gui_Cyan:DancingBalls.gui_Gray);			
-			pa.text(""+String.format("%.4f",lvl), 0, .25f*keyY);			
+			pa.text(""+String.format("%.4f",lvl), 0, txtY);			
 			pa.popStyle();pa.popMatrix();
 		}
 		pa.popStyle();pa.popMatrix();		
@@ -324,13 +301,14 @@ public class myPianoObj{
 		pa.strokeWeight(1.0f);		
 		pa.rect(pianoDim);		//piano box
 		//white keys		
+		float txtStX = wkOff_X * whiteKeyWidth, txtStYOff = pianoWKeyDims[0][3] * .85f;
 		for(int i =0; i<pianoWKeyDims.length;++i){
 			pa.pushMatrix();pa.pushStyle();
 			pa.setColorValFill(DancingBalls.gui_OffWhite);
 			pa.noStroke();
 			pa.rect(pianoWKeyDims[i]);
 			pa.setColorValFill(DancingBalls.gui_Gray);			
-			pa.text(""+pianoWNotes[i].nameOct, (wkOff_X+.05f)*whiteKeyWidth, pianoWKeyDims[i][1]+.85f*keyY);
+			pa.text(""+pianoWNotes[i].nameOct, txtStX, pianoWKeyDims[i][1]+txtStYOff);
 			float stXVal = 0;
 			if(chkHasSharps(pianoWNotes[i].name)){
 				stXVal=pianoBKeyDims[0][2];//x start at beginning of black key
@@ -371,8 +349,8 @@ public class myPianoObj{
 		pa.popStyle();pa.popMatrix();		
 	}
 	
-	private void updateWinDim(float[] _winDim){	for(int i =0; i<_winDim.length; ++i){	winDim[i] = _winDim[i];}}
-	private void updatePianoDim(float[] _pianoDim){	for(int i =0; i<_pianoDim.length; ++i){	pianoDim[i] = _pianoDim[i];}}	
+//	private void updateWinDim(float[] _winDim){	for(int i =0; i<_winDim.length; ++i){	winDim[i] = _winDim[i];}}
+//	private void updatePianoDim(float[] _pianoDim){	for(int i =0; i<_pianoDim.length; ++i){	pianoDim[i] = _pianoDim[i];}}	
 	
 }//myPianoObj class
 

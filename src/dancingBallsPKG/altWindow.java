@@ -3,7 +3,7 @@ package dancingBallsPKG;
 import java.util.ArrayList;
 import java.util.List;
 
-public class yuryWindow extends myDispWindow {
+public class altWindow extends myDispWindow {
 
 	//piano visualization object
 	public myPianoObj dispPiano;	
@@ -43,7 +43,7 @@ public class yuryWindow extends myDispWindow {
 			showPianoNotes 		= 1;					//show piano
 	public static final int numPrivFlags = 2;
 
-	public yuryWindow(DancingBalls _p, String _n, int _flagIdx, int[] fc, int[] sc, float[] rd, float[] rdClosed,
+	public altWindow(DancingBalls _p, String _n, int _flagIdx, int[] fc, int[] sc, float[] rd, float[] rdClosed,
 			String _winTxt, boolean _canDrawTraj) {
 		super(_p, _n, _flagIdx, fc, sc, rd, rdClosed, _winTxt, _canDrawTraj);
 		float stY = rectDim[1]+rectDim[3]-4*yOff,stYFlags = stY + 2*yOff;
@@ -256,7 +256,6 @@ public class yuryWindow extends myDispWindow {
 			default : {break;}
 		}	
 	}		//only for display windows
-	private void clearFuncBtnState(int btnNum, boolean isSlow) {pa.clearFuncBtnSt(btnNum,isSlow);}
 	
 	//debug functions
 	//if launching threads for debugging, need to remove clearDBGState call in function below and call clearDBGState when thread ends
@@ -288,7 +287,6 @@ public class yuryWindow extends myDispWindow {
 			default : {break;}
 		}		
 	}//clickDebug
-	private void clearDBGBtnState(int btnNum, boolean isSlow){pa.clearDBGBtnSt(btnNum,isSlow);}
 
 	@Override
 	protected void setCameraIndiv(float[] camVals, float rx, float ry, float dz) {
@@ -336,7 +334,7 @@ public class yuryWindow extends myDispWindow {
 	protected void delTrajToScrIndiv(int subScrKey, String newTrajKey) {}
 	//resize drawn all trajectories
 	@Override
-	protected void resizeMe(float scale) {		dispPiano.updateGridXandY(true, rectDim);		}
+	protected void resizeMe(float scale) {		dispPiano.updateGridXandY( rectDim);		}
 
 	@Override
 	protected void initDrwnTrajIndiv() {}

@@ -5,7 +5,7 @@ import java.util.*;
 import java.util.concurrent.*;
 
 import processing.core.*;
-import processing.event.MouseEvent;
+import processing.event.*;
 import processing.opengl.*;
 
 import ddf.minim.*;
@@ -127,7 +127,7 @@ public class DancingBalls extends PApplet{
 		focusTar = new myVector(sceneFcsVals[sceneIDX]);		 
 		initDispWins();
 		setFlags(showUIMenu, true);					//show input UI menu	
-		setFlags(showJTWin, true);
+		setFlags(showJTWin, true);					//show first window
 		setCamView(); 
 		initProgram();
 	}	
@@ -363,7 +363,7 @@ public class DancingBalls extends PApplet{
 		boolean bVal = (val == 1?  false : true);
 		switch(btn){
 			case 0 : {setFlags(showJTWin, bVal);break;}
-			case 1 : {setFlags(showYYWin, bVal);break;}
+			case 1 : {setFlags(show2ndWinIDX, bVal);break;}
 			}
 		}
 	}//handleShowWin
@@ -455,26 +455,24 @@ public class DancingBalls extends PApplet{
 		}//accumulate array of params to save
 		saveStrings(file.getAbsolutePath(), res.toArray(new String[0]));  
 	}//saveToFile
-	
+
 	public void initDispWins(){
 		//float popUpWinHeight = PopUpWinOpenFraction * height;		//how high is the InstEdit window when shown
 		//instanced window dimensions when open and closed - only showing 1 open at a time
 		winRectDimOpen[dispJTWinIDX] =  new float[]{menuWidth, 0,width-menuWidth,height};			
-		winRectDimOpen[dispYYWinIDX] =   new float[]{menuWidth, 0,width-menuWidth,height};				
+		winRectDimOpen[disp2ndWinIDX] =   new float[]{menuWidth, 0,width-menuWidth,height};				
 		//hidden
 		winRectDimClose[dispJTWinIDX] =  new float[]{menuWidth, 0, hideWinWidth, height};				
-		winRectDimClose[dispYYWinIDX] =  new float[]{menuWidth, 0, hideWinWidth, height};				
+		winRectDimClose[disp2ndWinIDX] =  new float[]{menuWidth, 0, hideWinWidth, height};				
 		
 		winTrajFillClrs = new int []{gui_Black,gui_LightGray,gui_LightGray};		//set to color constants for each window
 		winTrajStrkClrs = new int []{gui_Black,gui_DarkGray,gui_DarkGray};				//set to color constants for each window			
 		
-		String[] winTitles = new String[]{"","3D Dancing Ball","MCMC Music"},
-				winDescr = new String[] {"", "Ball in 3D dancing to music","Yuri's MCMC Accompaniment"};
 		//			//display window initialization	
 		int wIdx = dispJTWinIDX , fIdx = showJTWin;
 		dispWinFrames[wIdx] = new DancingBallWin(this, winTitles[wIdx], fIdx,winFillClrs[wIdx], winStrkClrs[wIdx], winRectDimOpen[wIdx], winRectDimClose[wIdx], winDescr[wIdx],canDrawInWin[wIdx]);
-		wIdx = dispYYWinIDX; fIdx = showYYWin;
-		dispWinFrames[wIdx] = new yuryWindow(this, winTitles[wIdx], fIdx,winFillClrs[wIdx], winStrkClrs[wIdx], winRectDimOpen[wIdx], winRectDimClose[wIdx], winDescr[wIdx],canDrawInWin[wIdx]);
+		wIdx = disp2ndWinIDX; fIdx = show2ndWinIDX;
+		dispWinFrames[wIdx] = new altWindow(this, winTitles[wIdx], fIdx,winFillClrs[wIdx], winStrkClrs[wIdx], winRectDimOpen[wIdx], winRectDimClose[wIdx], winDescr[wIdx],canDrawInWin[wIdx]);
 		
 		for(int i =0; i < numDispWins; ++i){
 			//dispWinFrames[i].initDrwnTrajs();		//drawn trajectories not used in this application (so far)
@@ -490,7 +488,7 @@ public class DancingBalls extends PApplet{
 		switch(idx){
 			case dispMenuIDX 		: {return new float[0];}			//idx 0 is parent menu sidebar
 			case dispJTWinIDX 	: {return dispWinFrames[dispMenuIDX].uiClkCoords;}
-			case dispYYWinIDX 	: {	return dispWinFrames[dispMenuIDX].uiClkCoords;}
+			case disp2ndWinIDX 	: {	return dispWinFrames[dispMenuIDX].uiClkCoords;}
 			default :  return dispWinFrames[dispMenuIDX].uiClkCoords;
 			}
 	}//getUIRectVals
@@ -579,7 +577,7 @@ public class DancingBalls extends PApplet{
 	//window control
 	public final int showUIMenu 		= 11;			//whether or not to show sidebar menu
 	public final int showJTWin			= 12;			//whether to show JT window
-	public final int showYYWin			= 13;			//whether to show YY window
+	public final int show2ndWinIDX			= 13;			//whether to show YY window
 	
 	public final int numFlags = 14;
 	
@@ -603,13 +601,16 @@ public class DancingBalls extends PApplet{
 			);
 	public final int numStFlagsToShow = stateFlagsToShow.size();	
 	
-	
+	///////////////////////////////////
+	// window related variables	
+	public String[] winTitles = new String[]{"","3D Dancing Ball","Alternate Window"},
+			winDescr = new String[] {"", "Ball in 3D dancing to music","Alternate Window"};
 	//individual display/HUD windows for gui/user interaction
 	public myDispWindow[] dispWinFrames;
 	//idx's in dispWinFrames for each window
 	public static final int dispMenuIDX = 0,
 							dispJTWinIDX = 1,
-							dispYYWinIDX = 2;
+							disp2ndWinIDX = 2;
 	
 	public static final int numDispWins = 3;	
 			
@@ -782,7 +783,7 @@ public class DancingBalls extends PApplet{
 //			
 //				break;}
 			case showJTWin		: {setWinFlagsXOR(dispJTWinIDX, val); break;}
-			case showYYWin		: {setWinFlagsXOR(dispYYWinIDX, val); break;}
+			case show2ndWinIDX		: {setWinFlagsXOR(disp2ndWinIDX, val); break;}
 			//following for popup window
 			//case showPopUpWinUI 		: {dispWinFrames[dispYYWinIDX].setShow(val);handleShowWin(dispYYWinIDX-1 ,(val ? 1 : 0),false); setWinsHeight(); break;}	//show InstEdit window
 			//case useDrawnVels 		: {for(int i =1; i<dispWinFrames.length;++i){dispWinFrames[i].rebuildAllDrawnTrajs();}break;}
@@ -791,9 +792,9 @@ public class DancingBalls extends PApplet{
 	}//setFlags  	
 	
 	//specify mutually exclusive flags here
-	public int[] winFlagsXOR = new int[]{showJTWin,showYYWin};//showSequence,showSphereUI};
+	public int[] winFlagsXOR = new int[]{showJTWin,show2ndWinIDX};//showSequence,showSphereUI};
 	//specify windows that cannot be shown simultaneously here
-	public int[] winDispIdxXOR = new int[]{dispJTWinIDX, dispYYWinIDX};//dispPianoRollIDX,dispSphereUIIDX};
+	public int[] winDispIdxXOR = new int[]{dispJTWinIDX, disp2ndWinIDX};//dispPianoRollIDX,dispSphereUIIDX};
 	public void setWinFlagsXOR(int idx, boolean val){
 		//outStr2Scr("SetWinFlagsXOR : idx " + idx + " val : " + val);
 		if(val){//turning one on

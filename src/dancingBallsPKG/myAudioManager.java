@@ -30,7 +30,7 @@ public class myAudioManager {
 		fftResIDX = 1;
 	
 	//idx 0 is result from analyzing 1st 8 frequencies of harmonic series for each piano note
-	//idx 1 holds results from analysis - magnitude key, value is index of note with max level within min/max note bounds;
+	//idx 1 holds results from fft analysis - magnitude key, value is index of note with max level within min/max note bounds;
 	public ConcurrentSkipListMap<Float, Integer>[] lvlsPerPKey;
 	//result from analyzing frequencies, keyed by key, value == levels for dft (0) and fft(1)
 	//array of values is the past n values, plus one level for sum over past n values, and last index is current level
@@ -161,7 +161,8 @@ public class myAudioManager {
 		//launch thread to precalculate all trig stuff : not needed with multi-threading dft calc - math is fast enough without this
 		//pa.th_exec.execute(new myTrigPrecalc(this, allFreqsUsed) );
 		//build DFT threads and precalc local cos/sin values
-		initDFTAnalysisThrds(10);	
+		//pa.outStr2Scr("Num threads in myAudioManager : " +pa.numThreadsAvail );
+		initDFTAnalysisThrds(pa.numThreadsAvail-2);	
 		//changeCurrentSong(songType, songBank, songIDX);
 	}//initMe
 	
@@ -321,12 +322,12 @@ public class myAudioManager {
 		return chkStr;
 	}
 	
-	//convenience function to build descending-sorted maps
+	//convenience function to build descending key-sorted maps
 	public ConcurrentSkipListMap<Float, Integer> buildDescMap(){return new ConcurrentSkipListMap<Float, Integer>(new Comparator<Float>() { @Override public int compare(Float o1, Float o2) {   return o2.compareTo(o1);}});}
 	
 	//init values used by dft
 	public void initDFTAnalysisThrds(int numThreads) {
-		//threads 0-3 are bass range
+		//threads first numThreads/3 are bass range (0-3 when numThreads == 10)
 		//4-6 are mid range
 		//7-9 are treble range.  perhaps use these to calculate zone behavior?
 		callDFTNoteMapper = new ArrayList<myDFTNoteMapper>();

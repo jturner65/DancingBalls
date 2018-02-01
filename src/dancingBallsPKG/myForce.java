@@ -1,5 +1,7 @@
 package dancingBallsPKG;
 
+import org.jblas.DoubleMatrix;
+
 public abstract class myForce {
 	protected static DancingBalls pa;
 	public static int ID_gen = 0;
@@ -120,4 +122,24 @@ class mySpringToRest extends myForce{
 	public String toString(){return super.toString() + "\tSpring Constant :  " + String.format("%.2f",constVal1) + " \tDamping Constant : "+String.format("%.2f",constVal2) ;}	
 }//mySpringToRest
 
+class mySpring{//spring between a particle and a fixed location (the particle's rest position
+	public myParticle a;
+	public double restLen,  ks, kd;	
+	public DoubleMatrix fixedPos, Jp, Jv;//jacobians for position and velocity
 
+	public mySpring(myParticle _a, double _ks, double _kd) {
+		a=_a;
+		fixedPos=new DoubleMatrix( a.initPos.asDblArray());
+		restLen=0;ks=_ks;kd=_kd;
+		initJacobians();
+	}
+	
+	public void initJacobians() {
+		Jp = DoubleMatrix.eye(3);//overwritten when 
+		Jv = DoubleMatrix.eye(3);
+		Jv.muli(kd);
+	}
+	
+	
+
+}//class mySpring

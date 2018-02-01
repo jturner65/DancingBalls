@@ -1004,6 +1004,14 @@ public abstract class myDispWindow {
 	
 	//updates values in UI with programatic changes 
 	protected boolean setWinToUIVals(int UIidx, double val){return val == guiObjs[UIidx].setVal(val);}
+
+	//UI controlled debug functionality
+	public abstract void clickDebug(int btnNum);
+	protected void clearDBGBtnState(int btnNum, boolean isSlow){pa.clearDBGBtnSt(btnNum,isSlow);}
+	//UI controlled auxiliary functionality
+	public abstract void clickFunction(int btnNum);
+	protected void clearFuncBtnState(int btnNum, boolean isSlow) {pa.clearFuncBtnSt(btnNum,isSlow);}	
+	
 	
 	protected abstract void initDrwnTrajIndiv();
 	protected abstract void addSScrToWinIndiv(int newWinKey);
@@ -1031,9 +1039,6 @@ public abstract class myDispWindow {
 	protected abstract String getUIListValStr(int UIidx, int validx);
 	protected abstract void processTrajIndiv(myDrawnSmplTraj drawnTraj);
 	
-	public abstract void clickDebug(int btnNum);
-	//auxiliary functionality
-	public abstract void clickFunction(int btnNum);
 	//file io used from selectOutput/selectInput - 
 	//take loaded params and process
 	protected abstract void hndlFileLoadIndiv(String[] vals, int[] stIdx);
@@ -1126,7 +1131,7 @@ class mySideBarMenu extends myDispWindow{
 			btnFileCmdIdx = 3;				//load/save files
 	//names for each row of buttons - idx 1 is name of row
 	public final String[][] guiBtnNames = new String[][]{
-		new String[]{"John's Window", "Yury's Window"},							//display specific windows - multi-select/ always on if sel
+		new String[]{pa.winTitles[1], pa.winTitles[2]},							//display specific windows - multi-select/ always on if sel
 		new String[]{"Func 1","Func 2","Func 3","Func 4","Func 5"},			//per-window user functions - momentary
 		new String[]{"Dbg 1","Dbg 2","Dbg 3","Dbg 4"},						//DEBUG - momentary
 		new String[]{"Load Txt File","Save Txt File"}							//load an existing score, save an existing score - momentary		

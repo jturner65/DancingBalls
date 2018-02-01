@@ -638,7 +638,6 @@ public class DancingBallWin extends myDispWindow {
 			default : {break;}
 		}	
 	}		//only for display windows
-	private void clearFuncBtnState(int btnNum, boolean isSlow) {pa.clearFuncBtnSt(btnNum,isSlow);}	
 	
 	//debug function
 	//if launching threads for debugging, need to remove clearDBGState call in function below and call clearDBGState when thread ends
@@ -671,7 +670,6 @@ public class DancingBallWin extends myDispWindow {
 			default : {break;}
 		}		
 	}//clickDebug
-	private void clearDBGBtnState(int btnNum, boolean isSlow){pa.clearDBGBtnSt(btnNum,isSlow);}
 	
 	@Override
 	public void hndlFileLoadIndiv(String[] vals, int[] stIdx) {}
@@ -709,6 +707,6 @@ public class DancingBallWin extends myDispWindow {
 	protected void delTrajToScrIndiv(int subScrKey, String newTrajKey) {}
 	//resize drawn all trajectories
 	@Override
-	protected void resizeMe(float scale) {		dispPiano.updateGridXandY(true, rectDim);		}
+	protected void resizeMe(float scale) {		dispPiano.updateGridXandY( rectDim);		}
 }//DancingBallWin
 
