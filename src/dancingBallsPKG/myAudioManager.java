@@ -725,14 +725,11 @@ public class myAudioManager {
 					showMelodyTrail = win.getPrivFlags(DancingBallWin.showMelodyTrail);
 
 			if(getFlags(audioLoadedIDX)) {
-				int barWidth = 400; //width of bar to draw
-				
-				int ftIDX = (showDFTRes ? 0 : 1);
+				int barWidth = 400,ftIDX = (showDFTRes ? 0 : 1);
 				//draw band Res
 				mySongHandler song = getCurrentClip();
 				//need scale factor for bars so they don't go off screen, should be max level seen so far in song
-				float scaleFactor = song.barDispMaxLvl[ftIDX];
-				float maxLvl = lvlsPerPKey[ftIDX].size() == 0 ? 0 : lvlsPerPKey[ftIDX].firstKey();
+				float scaleFactor = song.barDispMaxLvl[ftIDX], maxLvl = lvlsPerPKey[ftIDX].size() == 0 ? 0 : lvlsPerPKey[ftIDX].firstKey();
 				//TODO need to find appropriate way to consume this - when loud sections of song kick in, overpowers higher frequency parts
 				//float minAudThres = audThreshold * maxLvl;
 				//TODO : set to display or not, also set offset 
