@@ -68,8 +68,8 @@ public class DancingBallWin extends myDispWindow {
 	
 	/////////
 	//ui button names -empty will do nothing
-	public String[] menuDbgBtnNames = new String[] {};
-	public String[] menuFuncBtnNames = new String[] {"Init AudIO","Proc Midi", "Func 2", "Func 3", "Func 4"};
+	public String[] menuDbgBtnNames = new String[] {};//must have literals for every button or ignored
+	public String[] menuFuncBtnNames = new String[] {"Init AudIO","Proc Midi", "Func 2", "Func 3", "Func 4"};//must have literals for every button or ignored
 	
 	
 	public String[] dftResTypeToShow = new String[] {"Global","Per Zone","Per Thread"};
@@ -292,9 +292,9 @@ public class DancingBallWin extends myDispWindow {
 			{0.0, myAudioManager.songList[(int)uiVals[gIDX_curSongDir]][(int)uiVals[gIDX_curSongBank]].length-1, 0.1},	//song/clip selected - start with initial bank
 			{1,10,1},							//Top # of notes to show per lvl mapping result
 			{0,100.0f,1.0f},					//% of max volume to use as cutuff, below which notes will not display
-			{0,2,1},							//type of results to display 
+			{0,dftResTypeToShow.length-1,1},							//type of results to display 
 			{0.0,5.0,0.1},						//absolute noise gate/noise floor
-			{0,2,1},
+			{0,dftCalcTypeToUse.length-1,1},
 			{0.0, fftWinNames.length-1, 1.0},	//window function selected
 		};		//min max mod values for each modifiable UI comp	
 
@@ -506,7 +506,11 @@ public class DancingBallWin extends myDispWindow {
 	//when this is called, key was pressed to signify the location of a beat of type key.
 	//this will happen multiple times, and the average of the taps will represent the timing of the beat for type key
 	public void saveTapBeat(int key) {
-		audMgr.saveTapBeat(key);	
+		if (getPrivFlags(useHumanTapBeats)) {audMgr.saveTapBeat(key);}	
+//		else {//if not enabled (not shown) then reset tapBeats struct (?)
+//			audMgr.initTapBeatStructs();
+//		}		
+
 	}//saveTapBeat
 	@Override
 	public void initDrwnTrajIndiv(){}

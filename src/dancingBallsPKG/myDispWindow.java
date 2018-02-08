@@ -40,14 +40,17 @@ public abstract class myDispWindow {
 				uiObjMod			= 14,			//a ui object in this window has been modified
 				useRndBtnClrs		= 15,	
 				useCustCam			= 16,			//whether or not to use a custom camera for this window
-				drawMseEdge			= 17;			//whether or not to draw the mouse location/edge from eye/projection onto box
-				
-	public static final int numDispFlags = 18;
+				drawMseEdge			= 17,			//whether or not to draw the mouse location/edge from eye/projection onto box
+				clearPrivBtns		= 18;
+	public static final int numDispFlags = 19;
 	
 	//private window-specific flags and UI components (buttons)
 	public int[] privFlags;
 	public String[] truePrivFlagNames; //needs to be in order of flags	
 	public String[] falsePrivFlagNames;//needs to be in order of flags
+	//array of priv buttons to be cleared next frame - should always be empty except when buttons need to be cleared
+	protected ArrayList<Integer> privBtnsToClear;
+
 	
 		//for boolean buttons based on child-class window specific values
 	public int[][] privFlagColors;
@@ -246,6 +249,7 @@ public abstract class myDispWindow {
 			case useRndBtnClrs		: { break;}
 			case useCustCam			: { break;}
 			case drawMseEdge		: { break;}
+			case clearPrivBtns		: { break;}
 		}				
 	}//setFlags
 	//get baseclass flag
@@ -272,8 +276,9 @@ public abstract class myDispWindow {
 			initUIBox();				//set up ui click region to be in sidebar menu below menu's entries - do not do here for sidebar
 		}
 		curTrajAraIDX = 0;		
-		setupGUIObjsAras();
-		//record final y value for UI Objects
+		setupGUIObjsAras();//record final y value for UI Objects
+		
+		privBtnsToClear = new ArrayList<Integer>();
 		initAllPrivBtns();
 		initMe();
 		setClosedBox();
@@ -617,6 +622,9 @@ public abstract class myDispWindow {
 		pa.lights();	
 		pa.hint(PConstants.ENABLE_DEPTH_TEST);
 		pa.popStyle();pa.popMatrix();	
+		//last thing per draw - clear btns that have been set to clear after 1 frame of display
+		if (getFlags(clearPrivBtns)) {clearAllPrivBtns();setFlags(clearPrivBtns,false);}
+		if (privBtnsToClear.size() > 0){setFlags(clearPrivBtns, true);	}		
 	}
 	
 	public void simulate(float modAmtMillis){
@@ -724,6 +732,18 @@ public abstract class myDispWindow {
 		}
 		if(doneDrawing){setFlags(showTrajEditCrc, false);}
 		pa.popStyle();pa.popMatrix();		
+	}
+	
+	//call after single draw - will clear window-based priv buttons that are momentary
+	protected void clearAllPrivBtns() {
+		if(privBtnsToClear.size() == 0) {return;}
+		for (Integer idx : privBtnsToClear) {this.setPrivFlags(idx, false);}
+		privBtnsToClear.clear();
+	}//clearPrivBtns()
+	
+	//add a button to clear after next draw
+	protected void addPrivBtnToClear(int idx) {
+		privBtnsToClear.add(idx);
 	}
 	
 	protected boolean handleTrajClick(boolean keysToDrawClicked, myPoint mse){

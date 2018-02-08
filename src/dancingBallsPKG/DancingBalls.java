@@ -246,46 +246,57 @@ public class DancingBalls extends PApplet{
 		setFocus();
 	}
 	
-	private void handleNumberPress(int val) {
-		if(curFocusWin == dispJTWinIDX) {
-			((DancingBallWin) dispWinFrames[dispJTWinIDX]).saveTapBeat(val);			
+	//keyVal is actual value of key (screen character as int)
+	//keyPressed is actual key pressed (shift-1 gives keyVal 33 ('!') but keyPressed 49 ('1')) 
+	//need to subtract 48 to get actual number
+	private void handleNumberKeyPress(int keyVal, int keyPressed) {
+		int num = keyPressed - 48;
+		//this.outStr2Scr("key: -'"+key+"'- int key : "+(int)keyVal+" keycode : "+ keyPressed + " number : " + num);
+		if (key == '0') {
+			setFlags(showUIMenu,true);
+		} else if((curFocusWin == dispJTWinIDX) && (keyVal == keyPressed)) {//only pass if shift/alt/cntl all not pressed			
+			((DancingBallWin) dispWinFrames[dispJTWinIDX]).saveTapBeat(num - 1);			
 		}
-	}
+		
+	}//handleNumberKeyPress
 
 //////////////////////////////////////////////////////
 /// user interaction
 //////////////////////////////////////////////////////	
-	
+	//key is key pressed
+	//keycode is actual physical key pressed == key if shift/alt/cntl not pressed.,so shift-1 gives key 33 ('!') but keycode 49 ('1')
 	public void keyPressed(){
-		switch (key){
-			case '1' : {handleNumberPress(0);break;}//type 1 beat - learn over 4 taps, all learned in relation to one another
-			case '2' : {handleNumberPress(1);break;}//type 2 beat - learn over 4 taps
-			case '3' : {handleNumberPress(2);break;}//type 3 beat - learn over 4 taps
-			case '4' : {handleNumberPress(3);break;}//type 4 beat - learn over 4 taps
-			case '5' : {handleNumberPress(4);break;}//type 5 beat - learn over 4 taps					
-			case '6' : {handleNumberPress(5);break;}//type 6 beat - learn over 4 taps
-			case '7' : {break;}
-			case '8' : {break;}
-			case '9' : {break;}
-			case '0' : {setFlags(showUIMenu,true); break;}							//to force show UI menu
-			case ' ' : {setFlags(runSim,!flags[runSim]); break;}							//run sim
-			case 'f' : {setCamView();break;}//reset camera
-			case 'a' :
-			case 'A' : {setFlags(saveAnim,!flags[saveAnim]);break;}						//start/stop saving every frame for making into animation
-			case 's' :
-			case 'S' : {save(sketchPath() +File.separatorChar+prjNmShrt+"_"+dateStr+File.separatorChar+prjNmShrt+"_img"+timeStr + ".jpg");break;}//save picture of current image			
-			default : {	}
-		}//switch	
-		
-		if((!flags[shiftKeyPressed])&&(key==CODED)){setFlags(shiftKeyPressed,(keyCode  == 16));} //16 == KeyEvent.VK_SHIFT
-		if((!flags[altKeyPressed])&&(key==CODED)){setFlags(altKeyPressed,(keyCode  == 18));}//18 == KeyEvent.VK_ALT
-		if((!flags[cntlKeyPressed])&&(key==CODED)){setFlags(cntlKeyPressed,(keyCode  == 17));}//17 == KeyEvent.VK_CONTROL
-	}
+		if(key==CODED) {
+			if(!flags[shiftKeyPressed]){setFlags(shiftKeyPressed,(keyCode  == 16));} //16 == KeyEvent.VK_SHIFT
+			if(!flags[cntlKeyPressed]){setFlags(cntlKeyPressed,(keyCode  == 17));}//17 == KeyEvent.VK_CONTROL			
+			if(!flags[altKeyPressed]){setFlags(altKeyPressed,(keyCode  == 18));}//18 == KeyEvent.VK_ALT
+		} else {	
+			//handle pressing keys 0-9 (with or without shift,alt, cntl)
+			if ((keyCode>=48) && (keyCode <=57)) { handleNumberKeyPress(((int)key),keyCode);}
+			else {
+				//handle all other keys
+				switch (key){
+					case ' ' : {setFlags(runSim,!flags[runSim]); break;}							//run sim
+					case 'f' : {setCamView();break;}//reset camera
+					case 'a' :
+					case 'A' : {setFlags(saveAnim,!flags[saveAnim]);break;}						//start/stop saving every frame for making into animation
+					case 's' :
+					case 'S' : {save(sketchPath() +File.separatorChar+prjNmShrt+"_"+dateStr+File.separatorChar+prjNmShrt+"_img"+timeStr + ".jpg");break;}//save picture of current image			
+					default : {	}
+				}//switch	
+			}
+		}
+	}//keyPressed
+	
 	public void keyReleased(){
-		if((flags[shiftKeyPressed])&&(key==CODED)){ if(keyCode == 16){endShiftKey();}}
-		if((flags[altKeyPressed])&&(key==CODED)){ if(keyCode == 18){endAltKey();}}
-		if((flags[cntlKeyPressed])&&(key==CODED)){ if(keyCode == 17){endCntlKey();}}
-	}		
+		if(key==CODED) {
+			if((flags[shiftKeyPressed]) && (keyCode == 16)){endShiftKey();}
+			if((flags[cntlKeyPressed]) && (keyCode == 17)){endCntlKey();}
+			if((flags[altKeyPressed]) && (keyCode == 18)){endAltKey();}
+		}
+	}//keyReleased()
+
+	
 	public void endShiftKey(){
 		clearFlags(new int []{shiftKeyPressed, modView});
 		for(int i =0; i<numDispWins; ++i){dispWinFrames[i].endShiftKey();}
@@ -1072,7 +1083,6 @@ public class DancingBalls extends PApplet{
 	
 	/**
 	 * builds a list of N regularly placed vertices for a sphere of radius rad centered at ctr
-	 * See How to generate equidistributed points on the surface of a sphere by Markus Deserno
 	 */	
 	public myVectorf[][] getRegularSphereList(float rad, int N, float scaleZ) {
 		ArrayList<myVectorf[]> res = new ArrayList<myVectorf[]>();
