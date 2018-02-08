@@ -627,10 +627,7 @@ public class myAudioManager {
 	//when this is called, key was pressed to signify the location of a beat of type key.
 	//this will happen multiple times, and the average of the taps will represent the timing of the beat for type key
 	public void saveTapBeat(int key) {
-		if (win.getPrivFlags(DancingBallWin.useHumanTapBeats)) {tapBeats[key].addTap(pa.millis());} 
-//		else {//if not enabled (not shown) then reset tapBeats struct
-//			initTapBeatStructs();
-//		}		
+		tapBeats[key].addTap(pa.millis()); 
 	}//saveTapBeat
 	//draw bar representing level at a certain band
 	private void drawFreqBands(float[] bandRes, float[] bandFreqs, float height, int clr, boolean drawBeats, boolean showFreqs) {
