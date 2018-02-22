@@ -102,11 +102,12 @@ public class DancingBallWin extends myDispWindow {
 			showPianoKbd		= 16,		//display piano notes being played
 			showPianoNoteNames  = 17,		//whether or not to show piano note names
 			showMelodyTrail		= 18,		//display "piano roll" trail of melody, otherwise show levels of signal for each piano key
-			calcSingleFreq		= 19,		//analyze signal with single frequencies
-			useSumLvl			= 20,		//use sum of each key's audio levels over the past n samples
-			usePianoTune		= 21;		//use piano tuning or equal-tempered tuning
+			showIntrvls			= 19,		//display graphical representation of intervals
+			calcSingleFreq		= 20,		//analyze signal with single frequencies
+			useSumLvl			= 21,		//use sum of each key's audio levels over the past n samples
+			usePianoTune		= 22;		//use piano tuning or equal-tempered tuning
 
-	public static final int numPrivFlags = 22;
+	public static final int numPrivFlags = 23;
 	
 	//display names of fft windows
 	public String[] fftWinNames = new String[]{"NONE","BARTLETT","BARTLETTHANN","BLACKMAN","COSINE","GAUSS","HAMMING","HANN","LANCZOS","TRIANGULAR"};
@@ -126,21 +127,21 @@ public class DancingBallWin extends myDispWindow {
 				"Debugging","Mod DelT By FRate","Random Ball Verts","Showing Vert Norms","Showing Zones", 
 				"Stim Zone and Mate","Mass-Spring Ball", "Dancing", 
 				"Stim Ball W/Beats","Use Human Tap Beats", "Showing Beats",
-				"Showing Ctr Freq Vals","Showing Zone EQ", "Showing All Band Eq","Showing Piano","Showing P-Key Names","Showing Melody Trail",//"Showing Per-Thd Notes",
+				"Showing Ctr Freq Vals","Showing Zone EQ", "Showing All Band Eq","Showing Piano","Showing P-Key Names","Showing Melody Trail","Showing Intevals",//"Showing Per-Thd Notes",
 				"Lvls via Indiv Freq","Use past N lvls sum","Use Piano Tuning", "Playing MP3"
 		};
 		falsePrivFlagNames = new String[]{			//needs to be in order of flags
 				"Enable Debug","Fixed DelT","Uniform Ball Verts","Hiding Vert Norms", "Hiding Zones",
 				"Stim Only Zones","Kinematics Ball","Not Dancing", 
 				"Stim Ball W/Audio","Use Detected Beats","Hiding Beats",  
-				"Hiding Ctr Freq Vals", "Hiding Zone EQ", "Hiding All Band Eq", "Hiding Piano", "Hiding P-Key Names","Showing Key lvls",//"Showing Glbl Max Note", 
+				"Hiding Ctr Freq Vals", "Hiding Zone EQ", "Hiding All Band Eq", "Hiding Piano", "Hiding P-Key Names","Showing Key lvls","Hiding Intervals",//"Showing Glbl Max Note", 
 				"Lvls via FFT","Use current lvl","Use Eq Tmpred Tuning","Stopped MP3"
 		};
 		privModFlgIdxs = new int[]{
 				debugAnimIDX, modDelT,randVertsForSphere,showVertNorms,showZones,
 				stimZoneMates, useForcesForBall, sendAudioToBall,  
 				stimWithTapBeats,  useHumanTapBeats, showTapBeats,
-				showFreqLbls, showZoneBandRes, showAllBandRes, showPianoKbd,showPianoNoteNames, showMelodyTrail, //showEachOctave, 
+				showFreqLbls, showZoneBandRes, showAllBandRes, showPianoKbd, showPianoNoteNames, showMelodyTrail, showIntrvls, //showEachOctave, 
 				calcSingleFreq,useSumLvl,usePianoTune,playMP3Vis
 		};
 		numClickBools = privModFlgIdxs.length;	
@@ -242,8 +243,10 @@ public class DancingBallWin extends myDispWindow {
 				sendStimTypeToBall(val ? 1 : 0);
 				break;}
 			case usePianoTune 			: {break;} 
-			case showZoneBandRes		: {	if(val) {setPrivFlags(showAllBandRes, false);}break;}
-			case showAllBandRes			: {	if(val) {setPrivFlags(showZoneBandRes, false);}break;}
+			//these three are mutually exclusive
+			case showZoneBandRes		: {	if(val) {setPrivFlags(showAllBandRes, false);setPrivFlags(showIntrvls, false);}break;}
+			case showAllBandRes			: {	if(val) {setPrivFlags(showZoneBandRes, false);setPrivFlags(showIntrvls, false);}break;}
+			case showIntrvls			: { if(val) {setPrivFlags(showAllBandRes, false);}setPrivFlags(showZoneBandRes, false);break;}
 			case calcSingleFreq 		: {	break;}
 			case useSumLvl 				: {	break;}
 			case showPianoKbd			: {//show piano kbd
@@ -719,4 +722,136 @@ public class DancingBallWin extends myDispWindow {
 	@Override
 	protected void resizeMe(float scale) {		dispPiano.updateGridXandY( rectDim);		}
 }//DancingBallWin
+//ENUMS
+
+enum ForceType {
+	F_NONE(0), S_SCALAR(1), S_VECTOR(2), ATTR(3), REPL(4), DAMPSPRING(5), DSPR_THETABAR(6);		
+	private int value; 
+	private static Map<Integer, ForceType> map = new HashMap<Integer, ForceType>(); 
+	static { for (ForceType enumV : ForceType.values()) { map.put(enumV.value, enumV);}}
+	private ForceType(int _val){value = _val;} 
+	public int getVal(){return value;} 	
+	public static ForceType getVal(int idx){return map.get(idx);}
+	public static int getNumVals(){return map.size();}						//get # of values in enum	
+};
+enum ConstraintType {
+	C_NONE(0), C_Circular(1);
+	private int value; 
+	private static Map<Integer, ConstraintType> map = new HashMap<Integer, ConstraintType>(); 
+	static { for (ConstraintType enumV : ConstraintType.values()) { map.put(enumV.value, enumV);}}
+	private ConstraintType(int _val){value = _val;} 
+	public int getVal(){return value;} 	
+	public static ConstraintType getVal(int idx){return map.get(idx);}
+	public static int getNumVals(){return map.size();}
+};
+
+enum CollisionType {
+	CL_NONE(0), FLAT(1), PARTICLE(2), SPHERE(3), BOX(4);
+	private int value; 
+	private static Map<Integer, CollisionType> map = new HashMap<Integer, CollisionType>(); 
+	static { for (CollisionType enumV : CollisionType.values()) { map.put(enumV.value, enumV);}}
+	private CollisionType(int _val){value = _val;} 
+	public int getVal(){return value;} 	
+	public static CollisionType getVal(int idx){return map.get(idx);}
+	public static int getNumVals(){return map.size();}						//get # of values in enum	
+};
+
+enum SolverType {
+	GROUND(0), EXP_E(1), MIDPOINT(2), RK3(3), RK4(4), IMP_E(5), TRAP(6), VERLET(7), RK4_G(8);
+	private int value; 
+	private static Map<Integer, SolverType> map = new HashMap<Integer, SolverType>(); 
+	static { for (SolverType enumV : SolverType.values()) { map.put(enumV.value, enumV);}}
+	private SolverType(int _val){value = _val;} 
+	public int getVal(){return value;} 	
+	public static SolverType getVal(int idx){return map.get(idx);}
+	public static int getNumVals(){return map.size();}						//get # of values in enum			
+};
+
+//note and key value
+enum nValType {
+	C(0),Cs(1),D(2),Ds(3),E(4),F(5),Fs(6),G(7),Gs(8),A(9),As(10),B(11);//,rest(12); 
+	private int value; 
+	private static Map<Integer, nValType> map = new HashMap<Integer, nValType>(); 
+  static { for (nValType enumV : nValType.values()) { map.put(enumV.value, enumV);}}
+	private nValType(int _val){value = _val;} 
+	public int getVal(){return value;}
+	public static nValType getVal(int idx){return map.get(idx);}
+	public static int getNumVals(){return map.size();}						//get # of values in enum
+};	
+
+//note duration types
+enum nDurType {
+	//given in midi time-sig values == 2^v
+	Whole(0),Half(1),Quarter(2),Eighth(3),Sixteenth(4),Thirtisecond(5); 
+	private int value; 
+	private static Map<Integer, nDurType> map = new HashMap<Integer, nDurType>(); 
+	static { for (nDurType enumV : nDurType.values()) { map.put(enumV.value, enumV);}}
+	private nDurType(int _val){value = _val;} 
+	public int getVal(){return value;}
+	public static nDurType getVal(int idx){return map.get(idx);}
+	public static int getNumVals(){return map.size();}						//get # of values in enum
+};	
+//key signatures - given by #
+enum keySigVals {
+	CMaj(0),GMaj(1),DMaj(2),Amaj(3),EMaj(4),BMaj(5),CbMag(-7),FsMaj(6),GfMaj(-6), CsMaj(7), DbMaj(-5), AbMaj(-4),EbMaj(-3),BbMaj(-2),Fmaj(-1); 
+	private int value; 
+	private static Map<Integer, keySigVals> map = new HashMap<Integer, keySigVals>(); 
+	static { for (keySigVals enumV : keySigVals.values()) { map.put(enumV.value, enumV);}}
+	private keySigVals(int _val){value = _val;} 
+	public int getVal(){return value;} 	
+	public static keySigVals getVal(int idx){return map.get(idx);}
+	public static int getNumVals(){return map.size();}						//get # of values in enum
+};	
+
+//desciptor of score environment variable either key signature, time signature or tempo
+enum scoreEnvVal{
+	keySig(0),timeSig(1),tempo(2);
+	private int value; 
+	private static Map<Integer, scoreEnvVal> map = new HashMap<Integer, scoreEnvVal>(); 
+	static { for (scoreEnvVal enumV : scoreEnvVal.values()) { map.put(enumV.value, enumV);}}
+	private scoreEnvVal(int _val){value = _val;} 
+	public int getVal(){return value;} 	
+	public static scoreEnvVal getVal(int idx){return map.get(idx);}
+	public static int getNumVals(){return map.size();}						//get # of values in enum
+}
+
+//Midi commands
+enum MidiCommand {
+  //Channel voice messages
+  NoteOff(0x80), NoteOn(0x90), PolyKeyTouch(0xA0), CntrlChange(0xB0),ProgChange(0xC0),ChanTouch(0xD0), PitchBend(0xE0),
+
+  //Channel mode messages
+  ChannelMode(0xB8),//seems to not be used
+
+  //System exlcusive messages
+  SysEx(0xF0),  SysExPkt(0xF7), 
+  //SysRealTime(0xF8), SysStartCurrSeq(0xFA), SysContCurrSeq(0xFB), SysStop(0xFC),	//these are probably not present, and definitely not relevant
+
+  //MIDI file-only messages
+  FileMetaEvent(0xFF);
+	
+	private int value; 
+	private static Map<Integer, MidiCommand> map = new HashMap<Integer, MidiCommand>(); 
+	static { for (MidiCommand enumV : MidiCommand.values()) { map.put(enumV.value, enumV);}}
+	private MidiCommand(int _val){value = _val;} 
+	public int getVal(){return value;} 	
+	public static MidiCommand getVal(int idx){return map.get(idx);}
+	public static int getNumVals(){return map.size();}						//get # of values in enum			
+};
+
+//MIDI file meta-event codes
+enum MidiMeta {
+  SeqNumber(0x0), Text(0x1), Copyright(0x2), TrackTitle(0x3), TrackInstName(0x4), Lyric(0x5), Marker(0x6), CuePoint(0x7),
+  ChPrefix(0x20), Port(0x21), EndTrack(0x2F), SetTempo(0x51), SMPTEOffset(0x54), TimeSig(0x58), KeySig(0x59), SeqSpecific(0x7F);
+	
+	private int value; 
+	private static Map<Integer, MidiMeta> map = new HashMap<Integer, MidiMeta>(); 
+	static { for (MidiMeta enumV : MidiMeta.values()) { map.put(enumV.value, enumV);}}
+	private MidiMeta(int _val){value = _val;} 
+	public int getVal(){return value;} 	
+	public static MidiMeta getVal(int idx){return map.get(idx);}
+	public static int getNumVals(){return map.size();}						//get # of values in enum			
+
+};
+
 

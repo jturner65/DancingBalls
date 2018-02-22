@@ -18,7 +18,7 @@ public abstract class myDispWindow {
 	public static final int topOffY = 40;			//offset values to render boolean menu on side of screen - offset at top before drawing
 	public static final float clkBxDim = 10;//size of interaction/close window box in pxls
 
-	public int lastAnimTime, stAnimTime;
+	//public int lastAnimTime, stAnimTime;
 	
 	public int pFlagIdx;					//the flags idx in the PApplet that controls this window - use -1 for none	
 	private int[] dispFlags;	
@@ -123,8 +123,8 @@ public abstract class myDispWindow {
 		
 		msClkObj = -1;//	lastTrajIDX = -1; //lastPBEQueryPlayTime = 0;	
 		msOvrObj = -1;
-		stAnimTime=0;
-		lastAnimTime=0;
+//		stAnimTime=0;
+//		lastAnimTime=0;
 	}	
 	
 	protected void initTmpTrajStuff(boolean _trajIsFlat){
@@ -652,11 +652,11 @@ public abstract class myDispWindow {
 	}
 
 	
-	public void draw3D(myPoint trans){
+	public void draw3D(myPoint trans, float modAmtMillis){
 		if(!getFlags(showIDX)){return;}
-		stAnimTime = pa.millis();
-		float animTimeMod = ((stAnimTime-lastAnimTime)/1000.0f);
-		lastAnimTime = pa.millis();
+		//stAnimTime = pa.millis();
+		float animTimeMod = (modAmtMillis/1000.0f);
+		//lastAnimTime = pa.millis();
 		pa.pushMatrix();				pa.pushStyle();			
 		pa.setFill(fillClr);
 		pa.setStroke(strkClr);
@@ -685,11 +685,11 @@ public abstract class myDispWindow {
 //		pa.popStyle();pa.popMatrix();		
 	}//drawTraj3D
 	
-	public void draw2D(){
+	public void draw2D(float modAmtMillis){
 		if(!getFlags(showIDX)){drawSmall();return;}
-		stAnimTime = pa.millis();
-		float animTimeMod = ((stAnimTime-lastAnimTime)/1000.0f);
-		lastAnimTime = pa.millis();
+		//stAnimTime = pa.millis();
+		float animTimeMod = (modAmtMillis/1000.0f);
+		//lastAnimTime = pa.millis();
 		pa.pushMatrix();				pa.pushStyle();	
 		//pa.outStr2Scr("Hitting hint code draw2D");
 		pa.hint(PConstants.DISABLE_DEPTH_TEST);

@@ -18,7 +18,6 @@ public class myAudFileMgrLoader implements Runnable{
 	
 }//myAudFileMgrLoader
 
-//TODO replace with multi-threaded process driven by audioFileManager object
 class mySongLoadMapper implements Runnable{
 	myAudioManager mgr;
 	
@@ -84,7 +83,7 @@ class myMidFileProcessor implements Callable<Boolean>{
 		//build midi analyzer array and load files
 		ArrayList<myMidiFileAnalyzer> tmpMfAnalyzer = new ArrayList<myMidiFileAnalyzer>();
 		for (int i=0;i<midiFiles.size();++i) {
-			myMidiFileAnalyzer tmp = new myMidiFileAnalyzer(mgr, midiFiles.get(i));
+			myMidiFileAnalyzer tmp = new myMidiFileAnalyzer(mgr, midiFiles.get(i), idx);
 			boolean res = tmp.loadAudio();
 			if(res) {	tmpMfAnalyzer.add(tmp);   }
 		}	
@@ -95,8 +94,6 @@ class myMidFileProcessor implements Callable<Boolean>{
 			mfAnalyzerAra[i].analyze();
 			numTtlTracks += mfAnalyzerAra[i].numTracks;
 		}
-		
-	
 		return true;
 	}//call
 	

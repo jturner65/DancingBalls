@@ -93,7 +93,7 @@ public class myAudioManager {
 	public static String[][] songBanks = new String[][] {{"Midi"},{"Piano Scales","Piano Songs", "Misc Songs", "Bach Cello", "Piano Notes"}};
 	//list of song names
 	public static String[][][] songList = new String[][][]{
-		{{"Fugue1 Midi","Fugue 2 Midi","Fugue 3 Midi"}},
+		{{"Fugue0 Midi","Fugue1 Midi","Fugue 2 Midi","Fugue 3 Midi"}},
 		{{"Chromatic F#","Ab","A","Bb","B","C#","C","D","Eb","E","F#","F","G","Pentatonic F#","WholeTone C#","WholeTone C"},		
 		{"WellTmprdClav CMaj","Sati-Gnoss1","Sati-Gymn1","Fur Elise"},
 		{"PurpleHaze","UNATCO","Hunting","SavanaDance","Karelia","Choir"},
@@ -110,7 +110,7 @@ public class myAudioManager {
 	//0==mp3, 1==midi, used to determine display strings for some UI features
 	public int [][][] songTypes;
 	public String[][][] songFilenames = new String[][][]{
-		{{"fugue1.mid","fugue2.mid","fugue3.mid"}},
+		{{"fugue0.mid","fugue1.mid","fugue2.mid","fugue3.mid"}},
 		{{"scales_ChromaticF Sharp.mp3","scales_A Flat.mp3","scales_A.mp3",
 		"scales_B Flat.mp3","scales_B.mp3","scales_C Sharp.mp3","scales_C.mp3","scales_D.mp3","scales_E Flat.mp3","scales_E.mp3",
 		"scales_F Sharp.mp3","scales_F.mp3","scales_G.mp3","scales_Pentatonic on F Sharp.mp3","scales_WholeToneC Sharp.mp3","scales_WholeToneC.mp3"},
@@ -509,7 +509,7 @@ public class myAudioManager {
 					oldInterval = intervals[calcIDX].get(timeOfLastInterval[calcIDX]);
 					if(oldInterval!=null) {
 						oldInterval.finishInterval(loudestNote,animMillis);//win.getPrivFlags(DancingBallWin.calcSingleFreq) ? dftResIDX : fftResIDX
-//						if((win.getPrivFlags(DancingBallWin.playMP3Vis)) && (calcIDX == dftResIDX)) {
+//						if((win.getPrivFlags(DancingBallWin.playMP3Vis))) {// && (calcIDX == dftResIDX)) {
 //							pa.outStr2Scr("Old Interval : " + oldInterval.toString() + " animMillis : "+animMillis+"|new loudest note : " + loudestNote );
 //						}
 					}
@@ -521,7 +521,7 @@ public class myAudioManager {
 			case 1 : {//transition of interval				
 				myNoteIntervalTuple tmp = intervals[calcIDX].get(timeOfLastInterval[calcIDX]);
 				if(tmp!=null) {tmp.setFirstTransition(loudestNote, animMillis);				}
-				else {pa.outStr2Scr("Most recent interval @" +timeOfLastInterval[calcIDX]+ "millis is NULL ERROR!");}
+				else {pa.outStr2Scr("buildIntervals : Most recent interval @" +timeOfLastInterval[calcIDX]+ " millis is NULL ERROR!");}
 				break;}
 			}
 			intProc[calcIDX] = (intProc[calcIDX] + 1)%2;
@@ -549,15 +549,17 @@ public class myAudioManager {
 		//once dft threads are done, process fft
 		//TODO Allow for multiple instruments by calling this repeatedly for each channel - specifically for midi
 		song.getFwdFreqLevelsInHarmonicBands(dispPiano.pianoMinFreqsHarmonics, lvlsPerPKey[fftResIDX], perKeyLvls[fftResIDX],curKeyLvlIdx, curChan);
+		//TODO change this to handle actual note data from midi instead of fft
 		procPerRunRes(fftResIDX, animMillis);		
 	}//calcPianoKeyMappings
 	
-	
+	private int nowTime = 0;
 	//private static int timer = 0;
 	//set process audio for each frame
 	public boolean processAudioData(float animTimeMod) {
 		boolean updateBall = false;
 		if(!getFlags(audioLoadedIDX)) {return updateBall;}
+		nowTime =pa.millis();
 		mySongHandler song = getCurrentClip();
 		if(song.isPlaying()) {
 			song.stepAudio();
@@ -582,7 +584,8 @@ public class myAudioManager {
 			}		
 			
 			//analyze frequencies of center notes of piano manually using DFT approx or via fft
-			calcPianoKeyMappings(song, pa.millis());
+			//TODO should pass time since song start
+			calcPianoKeyMappings(song, nowTime);
 			
 			//if we're showing beat detected and we're not using human tapped beats
 			if (win.getPrivFlags(DancingBallWin.showTapBeats) || simWTapOrSendToBall){
@@ -674,6 +677,36 @@ public class myAudioManager {
 		pa.popStyle();pa.popMatrix();		
 	}//drawFreqBand
 	
+	private void drawIntervalVis(int ftIDX, float height, int now) {
+		pa.pushMatrix();pa.pushStyle();
+		if(this.intervals[ftIDX].size() > 0) {
+			Integer lastKey = this.intervals[ftIDX].lastKey();
+			int offset = 0;//now - lastKey;
+			int num=0;
+			pa.translate(win.rectDim[2] * .5f - offset,  win.rectDim[3] * .9f);
+			pa.pushMatrix();pa.pushStyle();
+			pa.translate(-(now-lastKey), 0);
+			pa.sphere(10);
+			pa.popStyle();pa.popMatrix();
+			Integer oldKey = lastKey - 5;
+			float len;
+			for(Integer k : this.intervals[ftIDX].descendingKeySet()) {
+				++num;
+				myNoteIntervalTuple n = this.intervals[ftIDX].get(k);
+				len = (k- oldKey)/10.0f;
+				if(null != n) {
+					n.drawMe(len);
+				}	else {
+					pa.outStr2Scr("Null note interval for key : " + k);
+				}
+				pa.translate(len, 0, 0);
+				oldKey = k;
+				if(num>100) {break;}
+			}
+		}
+		pa.popStyle();pa.popMatrix();	
+	}//drawIntervalVis
+	
 	//remove custom handling of tap beats - have them treated just like detected beats
 //	//draw representations of beats on screen
 //	private void drawBeats(myBeat[] beats, float modAmtMillis, float height) {
@@ -716,13 +749,14 @@ public class myAudioManager {
 		boolean showBeats = win.getPrivFlags(DancingBallWin.showTapBeats),
 				showPianoNotes = win.getPrivFlags(DancingBallWin.showPianoKbd),
 				showFreqlbls = win.getPrivFlags(DancingBallWin.showFreqLbls),
+				showDFTRes = win.getPrivFlags(DancingBallWin.calcSingleFreq),
 				showAllBandRes = win.getPrivFlags(DancingBallWin.showAllBandRes);
+		int ftIDX = (showDFTRes ? 0 : 1);
 		if(showPianoNotes) {
-			boolean showDFTRes = win.getPrivFlags(DancingBallWin.calcSingleFreq),
-					showMelodyTrail = win.getPrivFlags(DancingBallWin.showMelodyTrail);
+			boolean showMelodyTrail = win.getPrivFlags(DancingBallWin.showMelodyTrail);
 
 			if(getFlags(audioLoadedIDX)) {
-				int barWidth = 400,ftIDX = (showDFTRes ? 0 : 1);
+				int barWidth = 400;
 				//draw band Res
 				mySongHandler song = getCurrentClip();
 				//need scale factor for bars so they don't go off screen, should be max level seen so far in song
@@ -760,9 +794,9 @@ public class myAudioManager {
 							dispPiano.drawPianoBandRes( lvlsPerPKey[ftIDX], scaleFactor,barWidth,  6, transForNum);
 						} 				
 					}//use FFT mechanism
-				}
-			}
-		}		
+				}//if((maxLvl >= pa.epsValCalc) && !(showAllBandRes)) 
+			}//if(getFlags(audioLoadedIDX)) 
+		}//if(showPianoNotes)		
 		if (showAllBandRes) {//if showing all bands, displace by piano keys' width
 			if(showPianoNotes) {//if showing piano notes, displace by piano keys' width
 				pa.pushMatrix();pa.pushStyle();
@@ -771,6 +805,7 @@ public class myAudioManager {
 			drawFreqBands(allBandsRes, allBandFreqs, 1.0f, pa.gui_TransRed, showBeats,showFreqlbls);
 		}
 		else if(win.getPrivFlags(DancingBallWin.showZoneBandRes)) {drawFreqBands(bandRes, bandFreqs, bandResHeight, pa.gui_Blue, showBeats, showFreqlbls);}
+		else if(win.getPrivFlags(DancingBallWin.showIntrvls)) {		drawIntervalVis(ftIDX, bandResHeight, nowTime);}
 		if(showAllBandRes && showPianoNotes) {	pa.popStyle();pa.popMatrix();	}							//undo piano translation		
 		if(showBeats) {	drawDetectedBeats(beatDetRes, lastBeatDetRes, getBeats(),  bandResHeight);}			//show beats if detecting them
 		pa.hint(PConstants.ENABLE_DEPTH_TEST);		

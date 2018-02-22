@@ -10,6 +10,7 @@ package dancingBallsPKG;
  *
  */
 public class myNoteIntervalTuple {
+	private static DancingBalls pa;
 	public myAudioManager mgr;
 	public int ID;
 	public static int idBase = 0;
@@ -23,7 +24,7 @@ public class myNoteIntervalTuple {
 	public myNoteIntervalTuple prev, next;
 
 	public myNoteIntervalTuple(myAudioManager _mgr, int _stTime,int _initnote, myNoteIntervalTuple _last) {	
-		mgr=_mgr;ID = idBase++;stTime = _stTime;
+		mgr=_mgr;ID = idBase++;stTime = _stTime; pa = mgr.pa;
 		notes = new int[3];
 		dur = new int[2];
 		notes[0]=_initnote;		
@@ -54,6 +55,16 @@ public class myNoteIntervalTuple {
 		for(int i=0;i<transTuple.length-1;++i) {	res +=transTuple[i]+", ";}
 		res += transTuple[transTuple.length-1]+")";
 		return res;
+	}
+	
+	public void drawMe(float len) {
+		pa.pushMatrix();pa.pushStyle();
+		//draw vector-type object inferring direction and magnitude of interval
+		pa.strokeWeight(1.0f);
+		pa.rect(new float[] {0,0,len,-(transTuple[0]%12)*5} );
+		//pa.line(new myPointf(0,0,0), new myPointf(0,-transTuple[0]*5,0));
+		
+		pa.popStyle();pa.popMatrix();	
 	}
 	
 

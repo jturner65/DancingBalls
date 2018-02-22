@@ -314,7 +314,7 @@ class myMP3SongHandler extends mySongHandler{
 }//myMP3SongHandler
 
 
-//handle midi songs
+//analyse midi songs 
 class myMidiSongHandler extends mySongHandler{
 	// what we need from JavaSound for sequence playback
 	private Sequencer sequencer;
@@ -533,7 +533,7 @@ class Synth implements ddf.minim.ugens.Instrument{
 		setBaseAmplitude(velocity);
 		sum = new Summer();		
 		// Damp arguments are: attack time, damp time, and max amplitude
-		env  = new Damp( 0.001f, 0.1f, 1.0f );
+		env = new Damp( 0.001f, 1.0f, 1.0f );
 		for(int i=0;i<waves.length;++i) {
 			waves[i]=new Oscil(freq*(i+1), ampAra[i], Waves.SINE);
 			waves[i].patch(sum);
@@ -563,12 +563,14 @@ class Synth implements ddf.minim.ugens.Instrument{
 	
 	public void noteOn(float dur ){
 		//make sound
+		env.setDampTime(1.0f);
 		env.activate();
 		env.patch(out);
 	}
 	
 	public void noteOff(){
 		//stop sound - remove envelope from output
+		env.setDampTime(0.1f);
 		env.unpatchAfterDamp(out);
 	}
 }
