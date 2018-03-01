@@ -85,6 +85,9 @@ public class myAudioManager {
 	//handler to manage structure of audio files under "data" dir
 	public myAudioFileManager audioFileIO;
 	
+	//threaded handler to load, process,and save midi data to feature data
+	public myMidiFileProcMapper midiFProcMap;
+	
 	//threshold below which audio is ignored - fraction of max level seen. set by UI
 	public static float audThreshold = .55f;
 	
@@ -163,6 +166,7 @@ public class myAudioManager {
 		//build DFT threads and precalc local cos/sin values
 		//pa.outStr2Scr("Num threads in myAudioManager : " +pa.numThreadsAvail );
 		initDFTAnalysisThrds(pa.numThreadsAvail-2);	
+	
 		//changeCurrentSong(songType, songBank, songIDX);
 	}//initMe
 	
@@ -197,19 +201,42 @@ public class myAudioManager {
 					curTypeList = audioFileIO.getTypeSubdirNames();
 					pa.outStr2Scr("End building audio File IO @ Millis since start of program : "+ (pa.timeSinceStart()));
 					win.clearFuncBtnSt_BuildAudioFileIO();
+					//make mapper once loaded
+					midiFProcMap = new myMidiFileProcMapper(this);					
 				}
 				break;}
 		}
 		
 	}//setFlags
 
+	//fire off the midi proc call - do this after setting what command should exec
+	private void runMidiProc() {
+		//fire and forget midi processing		
+		pa.th_exec.execute(midiFProcMap);		
+	}	
+	//load all the midi data into memory, so preprocessing can continue
+	public void loadMidiData() {
+		if (!getFlags(audFMgrLoadedIDX)) {	pa.outStr2Scr("Audio File IO Manager must be loaded before Midi Data can be loaded");return;}//if audiofilemanager is not loaded, then just ignore this request
+		boolean rdyCheck = midiFProcMap.setToLoadAudio();
+		if(!rdyCheck) {pa.outStr2Scr("Unable to load midi data - midiFProcMap not ready"); return;}
+		runMidiProc();
+	}//loadMidiData	
 	//launch preprocessing of midi data
 	public void preprocMidiData() {
 		if (!getFlags(audFMgrLoadedIDX)) {	pa.outStr2Scr("Audio File IO Manager must be loaded before Midi Data can be processed");return;}//if audiofilemanager is not loaded, then just ignore this request
-		//fire and forget midi processing		
-		pa.th_exec.execute(new myMidiFileProcMapper(this));
+		boolean rdyCheck = midiFProcMap.setToProcAudio();
+		if(!rdyCheck) {pa.outStr2Scr("Unable to process midi data - midi data not loaded."); return;}
+		runMidiProc();
 	}//preprocMidiData
-
+	//save results of processed midi data
+	public void saveProcMidiData() {
+		if (!getFlags(audFMgrLoadedIDX)) {	pa.outStr2Scr("Audio File IO Manager must be loaded before Midi Data can be loaded");return;}//if audiofilemanager is not loaded, then just ignore this request
+		boolean rdyCheck = midiFProcMap.setToSaveProcAudio();
+		if(!rdyCheck) {pa.outStr2Scr("Unable to save processed midi data - midi data either not loaded or not processed."); return;}
+		runMidiProc();		
+	}//saveProcMidiData
+	
+	
 	//initialize array of mybeat to hold results of tapped beat data
 	protected void initTapBeatStructs() {
 		//beat holding array

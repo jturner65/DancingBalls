@@ -69,7 +69,7 @@ public class DancingBallWin extends myDispWindow {
 	/////////
 	//ui button names -empty will do nothing
 	public String[] menuDbgBtnNames = new String[] {};//must have literals for every button or ignored
-	public String[] menuFuncBtnNames = new String[] {"Init AudIO","Proc Midi", "Func 2", "Func 3", "Func 4"};//must have literals for every button or ignored
+	public String[] menuFuncBtnNames = new String[] {"Init AudIO","Load Midi", "Proc Midi", "Func 3", "Func 4"};//must have literals for every button or ignored
 	
 	
 	public String[] dftResTypeToShow = new String[] {"Global","Per Zone","Per Thread"};
@@ -611,9 +611,17 @@ public class DancingBallWin extends myDispWindow {
 		clearFuncBtnState(0, true);
 	}
 	
+	//clear btn state for loading midi data - won't finish before mouse is relased - need to turn button off in UI
+	public void clearFuncBtnSt_BuildMidiData() {
+		clearFuncBtnState(1,true);
+	}
 	//clear btn state for processing midi data - won't finish before mouse is relased - need to turn button off in UI
 	public void clearFuncBtnSt_ProcMidiData() {
-		clearFuncBtnState(1,true);
+		clearFuncBtnState(2,true);
+	}
+	//clear btn state for processing midi data - won't finish before mouse is relased - need to turn button off in UI
+	public void clearFuncBtnSt_SaveMidiData() {
+		clearFuncBtnState(3,true);
 	}
 	
 	//custom functions launched by UI input
@@ -623,15 +631,17 @@ public class DancingBallWin extends myDispWindow {
 		//clearFuncBtnState(0);
 	}			
 	private void custFunc1(){
-		audMgr.preprocMidiData();	
+		audMgr.loadMidiData();	
 		//clearFuncBtnState(1);
 	}	
 	
 	private void custFunc2(){	
+		audMgr.preprocMidiData();	
 		//custom function code here
 		clearFuncBtnState(2,false);
 	}			
 	private void custFunc3(){	
+		audMgr.saveProcMidiData();	
 		//custom function code here
 		clearFuncBtnState(3,false);
 	}			
@@ -853,5 +863,7 @@ enum MidiMeta {
 	public static int getNumVals(){return map.size();}						//get # of values in enum			
 
 };
+
+
 
 

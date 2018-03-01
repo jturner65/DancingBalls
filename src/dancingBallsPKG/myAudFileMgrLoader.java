@@ -64,76 +64,129 @@ class mySongLoadMapper implements Runnable{
 	
 }//mySongLoadMapper
 
-class myMidFileProcessor implements Callable<Boolean>{
+class myMidiFileProcessor implements Callable<Boolean>{
 	myAudioManager mgr;
 	ArrayList<AudioFile> midiFiles;
-	
+	//state of the mf analyzers : 0==not loaded, 1==loaded but not proced, 2==proced but not saved, 3==proced and saved
+	public int mfaState;
+	//audioCmd : what to do on call : 0==load audio, 1==process audio, 2==save audio
+	private int audioCmd;
 	public myMidiFileAnalyzer[] mfAnalyzerAra;
 	//index in thread ara
 	int idx;
 	
-	public myMidFileProcessor(myAudioManager _mgr, ArrayList<AudioFile> _midiFiles, int _idx) {
+	//# of files failed to load
+	public int failedLoad;
+	
+	public myMidiFileProcessor(myAudioManager _mgr, ArrayList<AudioFile> _midiFiles, int _idx) {
 		mgr = _mgr; idx=_idx;
 		midiFiles = _midiFiles;
+		mfaState = 0;
+		audioCmd = 0;
+		failedLoad = 0;
 	}
 	public int numTtlTracks;
 	
+	public void setToLoadAudio() {audioCmd=0;}
+	public void setToProcAudio() {audioCmd=1;}
+	public void setToSaveProcAudio() {audioCmd=2;}
+	
+	
+	//either load audio, or process audio - separate 
 	@Override
 	public Boolean call() throws Exception {
 		//build midi analyzer array and load files
-		ArrayList<myMidiFileAnalyzer> tmpMfAnalyzer = new ArrayList<myMidiFileAnalyzer>();
-		for (int i=0;i<midiFiles.size();++i) {
-			myMidiFileAnalyzer tmp = new myMidiFileAnalyzer(mgr, midiFiles.get(i), idx);
-			boolean res = tmp.loadAudio();
-			if(res) {	tmpMfAnalyzer.add(tmp);   }
-		}	
-		mfAnalyzerAra = tmpMfAnalyzer.toArray(new myMidiFileAnalyzer[0]);
-		//now analyze each file
-		numTtlTracks = 0;
-		for (int i=0;i<mfAnalyzerAra.length;++i) {
-			mfAnalyzerAra[i].analyze();
-			numTtlTracks += mfAnalyzerAra[i].numTracks;
+		switch (audioCmd){
+		case 0 :{//load
+			ArrayList<myMidiFileAnalyzer> tmpMfAnalyzer = new ArrayList<myMidiFileAnalyzer>();
+			for (int i=0;i<midiFiles.size();++i) {
+				myMidiFileAnalyzer tmp = new myMidiFileAnalyzer(mgr, midiFiles.get(i), idx);
+				boolean res = tmp.loadAudio();
+				if(res) {	tmpMfAnalyzer.add(tmp);   } else {++failedLoad;}
+			}	
+			mfAnalyzerAra = tmpMfAnalyzer.toArray(new myMidiFileAnalyzer[0]);
+			mfaState = 1;
+			break;}
+		case 1 :{//process
+			//now analyze each file
+			numTtlTracks = 0;
+			for (int i=0;i<mfAnalyzerAra.length;++i) {
+				mfAnalyzerAra[i].analyze();
+				numTtlTracks += mfAnalyzerAra[i].numTracks;
+			}
+			mfaState = 2;			
+			break;}
+		case 2 :{//save proc'ed data
+			for (int i=0;i<mfAnalyzerAra.length;++i) {
+				mfAnalyzerAra[i].saveProcMidi();
+			}			
+			mfaState = 3;
+			break;}
 		}
 		return true;
 	}//call
 	
-	
-	
-	
 }//myMidFileProcessor
-
 
 //fire and forget midi file preprocessor
 class myMidiFileProcMapper implements Runnable{
 	myAudioManager mgr;	
-	List<myMidFileProcessor> callMidiProcessors;
-	List<Future<Boolean>> callMidiProcFtrs;		
+	List<myMidiFileProcessor> callMidiProcessors;
+	List<Future<Boolean>> callMidiProcFtrs;	
+	
+	//audioCmd : what to do on call : 0==load audio, 1==process audio, 2==save audio
+	private int audioCmd;
+	//state of the current midi file analysis : 0==not loaded, 1==loaded but not proced, 2==proced but not saved, 3==proced and saved
+	public int curMidState;
+	private String taskToDo;
 
 	public myMidiFileProcMapper(myAudioManager _mgr) {
 		mgr=_mgr;	
-		callMidiProcessors = new ArrayList<myMidFileProcessor>();
-		callMidiProcFtrs = new ArrayList<Future<Boolean>>();		
+		callMidiProcessors = new ArrayList<myMidiFileProcessor>();
+		//only run when audioFileIO is loaded - check before call
+		//get ref to audio file array, to build individual threads -  audioFileIO.midiFiles has 1 arraylist of files per thread (should be 10)
+ 		ArrayList<AudioFile>[] midiFiles = mgr.audioFileIO.midiFiles;
+ 		//# of threads == midiFiles.length - build threads
+ 		for (int i=0;i<midiFiles.length;++i) {callMidiProcessors.add(new myMidiFileProcessor(mgr, midiFiles[i], i));}
+
+		callMidiProcFtrs = new ArrayList<Future<Boolean>>();	
+		audioCmd = 0;
+		curMidState = 0;
+		taskToDo = "loading all";
 	}
+	public boolean setToLoadAudio() {audioCmd=0; taskToDo = "loading all";return true;}
+	public boolean setToProcAudio() {if(curMidState >=1) {audioCmd=1;taskToDo = "analysis of all"; return true;}return false;}
+	public boolean setToSaveProcAudio() {if(curMidState >=2) {audioCmd=2; taskToDo = "saving all processed";return true;}return false;}
+	
+	private void loadAudio() {
+ 		for (int i=0;i<callMidiProcessors.size();++i) {callMidiProcessors.get(i).setToLoadAudio();}
+		try {callMidiProcFtrs = mgr.pa.th_exec.invokeAll(callMidiProcessors);for(Future<Boolean> f: callMidiProcFtrs) { f.get(); }} catch (Exception e) { e.printStackTrace(); }		
+		mgr.win.clearFuncBtnSt_BuildMidiData();
+	}//loadAudio
+	
+	private void procAudio() {
+ 		for (int i=0;i<callMidiProcessors.size();++i) {callMidiProcessors.get(i).setToProcAudio();}
+		try {callMidiProcFtrs = mgr.pa.th_exec.invokeAll(callMidiProcessors);for(Future<Boolean> f: callMidiProcFtrs) { f.get(); }} catch (Exception e) { e.printStackTrace(); }				
+		mgr.win.clearFuncBtnSt_ProcMidiData();
+	}//procAudio
+	
+	private void saveAudio() {
+ 		for (int i=0;i<callMidiProcessors.size();++i) {callMidiProcessors.get(i).setToSaveProcAudio();}
+		try {callMidiProcFtrs = mgr.pa.th_exec.invokeAll(callMidiProcessors);for(Future<Boolean> f: callMidiProcFtrs) { f.get(); }} catch (Exception e) { e.printStackTrace(); }				
+		mgr.win.clearFuncBtnSt_SaveMidiData();
+	}//saveAudio
 	
 	@Override
 	public void run() {
-		mgr.pa.outStr2Scr("Start analysis of midi files at : "+ mgr.pa.timeSinceStart());
-		//only run when audioFileIO is loaded - check before call
- 		myAudioFileManager audioFileIO = mgr.audioFileIO;
-		//get ref to audio file array, to build individual threads -  audioFileIO.midiFiles has 1 array per thread (should be around 10?)
- 		ArrayList<AudioFile>[] midiFiles = audioFileIO.midiFiles;
- 		//# of threads == midiFiles.length - build threads
- 		for (int i=0;i<midiFiles.length;++i) {callMidiProcessors.add(new myMidFileProcessor(mgr, midiFiles[i], i));}
-		try {callMidiProcFtrs = mgr.pa.th_exec.invokeAll(callMidiProcessors);for(Future<Boolean> f: callMidiProcFtrs) { f.get(); }} catch (Exception e) { e.printStackTrace(); }
+		mgr.pa.outStr2Scr("Start " +taskToDo + " midi files at : "+ mgr.pa.timeSinceStart());
+		switch(audioCmd) {
+		case 0 :{	loadAudio();	break;}
+		case 1 :{	procAudio();	break;}
+		case 2 :{	saveAudio();	break;}
+		}
+		curMidState = audioCmd + 1;
+		mgr.pa.outStr2Scr("End " +taskToDo+ " midi files at  : "+ mgr.pa.timeSinceStart());
 
-		for (int i=0;i<midiFiles.length;++i) {
- 			mgr.pa.outStr2Scr(""+i+" index had : " +midiFiles[i].size() + " files and loaded  : " + callMidiProcessors.get(i).mfAnalyzerAra.length +
- 					" files, resulting in " + (midiFiles[i].size()-callMidiProcessors.get(i).mfAnalyzerAra.length) +
- 					" failures | # tracks : " + callMidiProcessors.get(i).numTtlTracks); 			
- 		}
-				
-		mgr.pa.outStr2Scr("End analysis of midi files at : "+ mgr.pa.timeSinceStart());
-		mgr.win.clearFuncBtnSt_ProcMidiData();
 	}//run
 	
 }//myMidiFileProcessor

@@ -4,7 +4,7 @@ import java.io.*;
 
 import javax.sound.midi.*;
 
-//a class that provides functionality to load and analyze a midi file, and save analysis data
+//a class that provides functionality to load a midi file and save analysis data
 public class myMidiFileAnalyzer {
 	myAudioManager mgr;
 	//ref to info about file from audioFileManager
@@ -48,19 +48,19 @@ public class myMidiFileAnalyzer {
 			return false;}
 		return true;
 	}//loadAudio
-
 	
-	//have everything in ticks - maybe should use location in ticks to define training examples
-	
+	//have everything in ticks - maybe should use location in ticks to define training examples	
 	public void analyze() {
 		if(!loadedSeq) {return;}
-
-		midiSong =  new myMidiSongData(this,format, sequence);
-
-		
-	}//analyze
+		midiSong =  new myMidiSongData(this,format, sequence);		
+	}//analyze	
 	
-	
+	//write the results of the audio processing
+	public void saveProcMidi() {
+		if(!loadedSeq) {return;}
+		if(!midiSong.procDone) {mgr.pa.outStr2Scr("Midi Song processing not complete : " + midiSong.title + " not processed so cannot save;"); return;	}
+		midiSong.saveData();		
+	}//saveProcMidi	
 	
 }//myMidiFileAnalyzer
 
