@@ -1,6 +1,5 @@
 package dancingBallsPKG;
 
-import java.util.*;
 import java.util.concurrent.*;
 
 import javax.sound.midi.*;
