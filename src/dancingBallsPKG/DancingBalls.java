@@ -10,7 +10,6 @@ import processing.opengl.*;
 
 import ddf.minim.*;
 import ddf.minim.ugens.*;
-
 /**
  * Dancing Balls - a ball moves and deforms to the music
  * @author john turner
@@ -21,7 +20,9 @@ public class DancingBalls extends PApplet{
 
 	public String prjNmLong = "Dancing Balls Project", prjNmShrt = "DancingBalls";
 	public String authorString = "John Turner";
-	
+	//don't use sphere background for this program
+	private boolean useSphereBKGnd = true;
+
 	// tools for playing music
 	public Minim minim;		
 	public AudioOutput glblOut;		
@@ -45,11 +46,6 @@ public class DancingBalls extends PApplet{
 				trajDragScaleAmt = 100.0f;					//amt of displacement when dragging drawn trajectory to edit
 			
 	public String msClkStr = "";
-			
-	public int glblStartSimTime,			//begin of draw
-		glblLastSimTime,					//begin of last draw
-		glblStartProgTime;					//start of program
-	
 	//enums used for note and key data
 
 	public static String[] ForceType2str = {"None", "Gravity-type force (scalar particle quantity)", "Air Drag-type force (vector particle quantity)", "Attractor", "Repulsor", "Damped Spring", "Force back to ThetaBar"};
@@ -71,29 +67,36 @@ public class DancingBalls extends PApplet{
 		size((int)(displayWidth*.95f), (int)(displayHeight*.92f),P3D);
 		noSmooth();
 	}		
-
 	public void setup() {
 		colorMode(RGB, 255, 255, 255, 255);
 		frameRate(frate);
+		if(useSphereBKGnd) {
+			setBkgndSphere();
+		} else {
+			setBkgrnd();
+		}
+		initVisOnce();
+		//call this in first draw loop?
+		//initOnce();
+	}// setup
+	
+	private void setBkgndSphere() {
 		sphereDetail(100);
 		//TODO move to window to set up specific background for each different "scene" type
 		PImage bgrndTex = loadImage("bkgrndTex.jpg");
 		bgrndSphere = createShape(SPHERE, 10000);
 		bgrndSphere.setTexture(bgrndTex);
 		bgrndSphere.rotate(HALF_PI,-1,0,0);
-		bgrndSphere.setStroke(false);
-		setBkgrnd();
-		sphereDetail(10);
-		
-		initOnce();
-		//PImage bgrndTex = loadImage("sky_1.jpg");
-	}// setup
-	
-	public void setBkgrnd(){
+		bgrndSphere.setStroke(false);	
 		//TODO move to myDispWindow
 		background(bground[0],bground[1],bground[2],bground[3]);		
-		shape(bgrndSphere);		
-	}
+		shape(bgrndSphere);	
+	}//setBkgndSphere
+	
+	public void setBkgrnd(){
+		if(useSphereBKGnd) {shape(bgrndSphere);} else {background(bground[0],bground[1],bground[2],bground[3]);	}
+	}//setBkgrnd
+	
 	//build audio specific constructs
 	public void initAudio(){		
 		minim = new Minim(this); 		// Declares minim which we use for sounds
@@ -113,24 +116,16 @@ public class DancingBalls extends PApplet{
 	}
 
 	private void initOnce() {
-		//textSize(10);		
-		initVisOnce();						//always first
-		sceneIDX = 1;//(flags[show3D] ? 1 : 0);
-		glblStartSimTime = millis();
-		glblLastSimTime =  millis();	
-		glblStartProgTime = millis();
 		numThreadsAvail = Runtime.getRuntime().availableProcessors();
 		initAudio();
 		pr("# threads : "+ numThreadsAvail);
-//		th_exec = Executors.newFixedThreadPool(numThreadsAvail);
 		th_exec = Executors.newCachedThreadPool();		
-		focusTar = new myVector(sceneFcsVals[sceneIDX]);		 
 		initDispWins();
 		setFlags(showUIMenu, true);					//show input UI menu	
-		setFlags(showJTWin, true);					//show first window
-		setCamView(); 
+		setFlags(show1stWinIDX, true);					//show first window
 		initProgram();
-	}	
+		setFlags(finalInitDone, true);
+	}//	initOnce
 	
 	public int timeSinceStart() {return millis() - glblStartProgTime;}
 	//called multiple times, whenever re-initing
@@ -138,12 +133,19 @@ public class DancingBalls extends PApplet{
 		initVisProg();				//always first
 		drawCount = 0;
 	}//initProgram
+	
+	//get difference between frames and set both glbl times
+	private float getModAmtMillis() {
+		glblStartSimFrameTime = millis();
+		float modAmtMillis = (glblStartSimFrameTime - glblLastSimFrameTime);
+		glblLastSimFrameTime = millis();
+		return modAmtMillis;
+	}
 
 	public void draw(){	
+		if(!flags[finalInitDone]) {initOnce(); return;}	
+		float modAmtMillis = getModAmtMillis();
 		//simulation section
-		glblStartSimTime = millis();
-		float modAmtMillis = (glblStartSimTime - glblLastSimTime);///1000.0f;
-		glblLastSimTime = millis();
 		if(flags[runSim] ){
 			//run simulation
 			drawCount++;									//needed to stop draw update so that pausing sim retains animation positions	
@@ -155,7 +157,6 @@ public class DancingBalls extends PApplet{
 		//drawing section
 		pushMatrix();pushStyle();
 		drawSetup();																//initialize camera, lights and scene orientation and set up eye movement		
-		translate(focusTar.x,focusTar.y,focusTar.z);								//focus location center of screen					
 		if((curFocusWin == -1) || (dispWinIs3D[curFocusWin])){	//allow for single window to have focus, but display multiple windows	
 			//if refreshing screen, this clears screen, sets background
 			setBkgrnd();				
@@ -171,35 +172,29 @@ public class DancingBalls extends PApplet{
 			popStyle();popMatrix(); 
 			for(int i =1; i<numDispWins; ++i){if (isShowingWindow(i) && !(dispWinFrames[i].getFlags(myDispWindow.is3DWin))){dispWinFrames[i].draw2D(modAmtMillis);}}
 		}
-		//int stVal = pa.millis();//takes around 90 millis to draw ball
 		drawUI(modAmtMillis);																	//draw UI overlay on top of rendered results			
 		if (flags[saveAnim]) {	savePic();}
 		updateConsoleStrs();
 		surface.setTitle(prjNmLong + " : " + (int)(frameRate) + " fps|cyc curFocusWin : " + curFocusWin);
-		//outStr2Scr("took : " + (millis() - glblStartSimTime) + " millis to draw");
 	}//draw
 	
 	private void updateConsoleStrs(){
 		++drawCount;
-		if(drawCount % cnslStrDecay == 0){
-			drawCount = 0;
-			consoleStrings.poll();
-		}			
-	}
+		if(drawCount % cnslStrDecay == 0){drawCount = 0;	consoleStrings.poll();}			
+	}//updateConsoleStrs
 	
 	public void draw3D_solve3D(float modAmtMillis){
 		pushMatrix();pushStyle();
 		for(int i =1; i<numDispWins; ++i){
 			if((isShowingWindow(i)) && (dispWinFrames[i].getFlags(myDispWindow.is3DWin))){
-				dispWinFrames[i].draw3D(myPoint._add(sceneCtrVals[sceneIDX],focusTar), modAmtMillis);
+				dispWinFrames[i].draw3D(modAmtMillis);
 			}
 		}
 		popStyle();popMatrix();
 		//fixed xyz rgb axes for visualisation purposes and to show movement and location in otherwise empty scene
 		drawAxes(100,3, new myPoint(-c.viewDimW/2.0f+40,0.0f,0.0f), 200, false); 		
-		//if((canShow3DBox[this.curFocusWin]) && (flags[clearBKG])) {drawBoxBnds();}
-	}
-
+	}//draw3D_solve3D
+	
 	//if should show problem # i
 	public boolean isShowingWindow(int i){return flags[(i+this.showUIMenu)];}//showUIMenu is first flag of window showing flags
 	public void drawUI(float modAmtMillis){					
@@ -211,30 +206,7 @@ public class DancingBalls extends PApplet{
 		dispWinFrames[0].drawHeader(modAmtMillis);
 		drawOnScreenData();				//debug and on-screen data
 	}//drawUI	
-	public void translateSceneCtr(){translate(sceneCtrVals[sceneIDX].x,sceneCtrVals[sceneIDX].y,sceneCtrVals[sceneIDX].z);}
-	
-	//perform full translations for 3d render - scene center and focus tar
-	public void translateFull3D(){
-		translate(focusTar.x,focusTar.y,focusTar.z);
-		translateSceneCtr();
-	}
-	
-	public void setFocus(){
-		focusTar.set(sceneFcsVals[(sceneIDX+sceneFcsVals.length)%sceneFcsVals.length]);
-		switch (sceneIDX){//special handling for each view
-		case 0 : {initProgram();break;} //refocus camera on center
-		case 1 : {initProgram();break;}  
-		}
-	}
-	
-	public void setCamView(){//also sets idx in scene focus and center arrays
-		sceneIDX = (curFocusWin == -1 || this.dispWinIs3D[curFocusWin]) ? 1 : 0;
-		rx = (float)cameraInitLocs[sceneIDX].x;
-		ry = (float)cameraInitLocs[sceneIDX].y;
-		dz = (float)cameraInitLocs[sceneIDX].z;
-		setFocus();
-	}
-	
+
 	//keyVal is actual value of key (screen character as int)
 	//keyPressed is actual key pressed (shift-1 gives keyVal 33 ('!') but keyPressed 49 ('1')) 
 	//need to subtract 48 to get actual number
@@ -243,8 +215,8 @@ public class DancingBalls extends PApplet{
 		//this.outStr2Scr("key: -'"+key+"'- int key : "+(int)keyVal+" keycode : "+ keyPressed + " number : " + num);
 		if (key == '0') {
 			setFlags(showUIMenu,true);
-		} else if((curFocusWin == dispJTWinIDX) && (keyVal == keyPressed)) {//only pass if shift/alt/cntl all not pressed			
-			((DancingBallWin) dispWinFrames[dispJTWinIDX]).saveTapBeat(num - 1);			
+		} else if((curFocusWin == disp1stWinIDX) && (keyVal == keyPressed)) {//only pass if shift/alt/cntl all not pressed			
+			((DancingBallWin) dispWinFrames[disp1stWinIDX]).saveTapBeat(num - 1);			
 		}
 		
 	}//handleNumberKeyPress
@@ -266,7 +238,7 @@ public class DancingBalls extends PApplet{
 				//handle all other keys
 				switch (key){
 					case ' ' : {setFlags(runSim,!flags[runSim]); break;}							//run sim
-					case 'f' : {setCamView();break;}//reset camera
+					case 'f' : {dispWinFrames[curFocusWin].setInitCamView();break;}//reset camera
 					case 'a' :
 					case 'A' : {setFlags(saveAnim,!flags[saveAnim]);break;}						//start/stop saving every frame for making into animation
 					case 's' :
@@ -305,7 +277,7 @@ public class DancingBalls extends PApplet{
 	public double clickValModMult(){
 		return ((flags[altKeyPressed] ? .1 : 1.0) * (flags[cntlKeyPressed] ? 10.0 : 1.0));			
 	}
-	public void mouseMoved(){for(int i =0; i<numDispWins; ++i){if (dispWinFrames[i].handleMouseMove(mouseX, mouseY,c.getMseLoc(sceneCtrVals[sceneIDX]))){return;}}}
+	public void mouseMoved(){for(int i =0; i<numDispWins; ++i){if (dispWinFrames[i].handleMouseMove(mouseX, mouseY)){return;}}}
 	public void mousePressed() {
 		//verify left button if(mouseButton == LEFT)
 		setFlags(mouseClicked, true);
@@ -314,27 +286,20 @@ public class DancingBalls extends PApplet{
 		//for(int i =0; i<numDispWins; ++i){	if (dispWinFrames[i].handleMouseClick(mouseX, mouseY,c.getMseLoc(sceneCtrVals[sceneIDX]))){	return;}}
 	}// mousepressed	
 	
-	private void mouseClicked(int mseBtn){ for(int i =0; i<numDispWins; ++i){if (dispWinFrames[i].handleMouseClick(mouseX, mouseY,c.getMseLoc(sceneCtrVals[sceneIDX]),mseBtn)){return;}}}		
-	private void moveZoom(float diff){dz-=diff;}
+	private void mouseClicked(int mseBtn){ for(int i =0; i<numDispWins; ++i){if (dispWinFrames[i].handleMouseClick(mouseX, mouseY,mseBtn)){return;}}}
 	public void mouseDragged(){//pmouseX is previous mouse x
-		if((flags[shiftKeyPressed]) && (canMoveView[curFocusWin])){		//modifying view - always bypass HUD windows if doing this
-			flags[modView]=true;
-			if(mouseButton == LEFT){			rx-=PI*(mouseY-pmouseY)/height; ry+=PI*(mouseX-pmouseX)/width;} 
-			else if (mouseButton == RIGHT) {	moveZoom(mouseY-pmouseY);}//dz-=(float)(mouseY-pmouseY);}
-		} else {
-			if(mouseButton == LEFT){			mouseDragged(0);}
-			else if (mouseButton == RIGHT) {	mouseDragged(1);}
-		}
+		if(mouseButton == LEFT){			mouseDragged(0);}
+		else if (mouseButton == RIGHT) {	mouseDragged(1);}
 	}//mouseDragged()
-	
+	//only for zooming
 	public void mouseWheel(MouseEvent event) {
-		if (canMoveView[curFocusWin]){	
+		if (dispWinFrames[curFocusWin].getFlags(myDispWindow.canChgView)) {// (canMoveView[curFocusWin]){	
 			float mult = (flags[shiftKeyPressed]) ? 5.0f * mouseWhlSens : mouseWhlSens;
-			moveZoom(mult * event.getCount());
+			dispWinFrames[curFocusWin].handleViewChange(true,(mult * event.getCount()),0);
 		}
 	}
 	private void mouseDragged(int mseBtn){
-		for(int i =0; i<numDispWins; ++i){if (dispWinFrames[i].handleMouseDrag(mouseX, mouseY, pmouseX, pmouseY,c.getMseLoc(sceneCtrVals[sceneIDX]),c.getMseDragVec(),mseBtn)) {return;}}		
+		for(int i =0; i<numDispWins; ++i){if (dispWinFrames[i].handleMouseDrag(mouseX, mouseY, pmouseX, pmouseY,c.getMseDragVec(),mseBtn)) {return;}}		
 	}
 	
 	public void mouseReleased(){
@@ -362,7 +327,7 @@ public class DancingBalls extends PApplet{
 		//val is btn state before transition 
 		boolean bVal = (val == 1?  false : true);
 		switch(btn){
-			case 0 : {setFlags(showJTWin, bVal);break;}
+			case 0 : {setFlags(show1stWinIDX, bVal);break;}
 			case 1 : {setFlags(show2ndWinIDX, bVal);break;}
 			}
 		}
@@ -459,27 +424,34 @@ public class DancingBalls extends PApplet{
 	public void initDispWins(){
 		//float popUpWinHeight = PopUpWinOpenFraction * height;		//how high is the InstEdit window when shown
 		//instanced window dimensions when open and closed - only showing 1 open at a time
-		winRectDimOpen[dispJTWinIDX] =  new float[]{menuWidth, 0,width-menuWidth,height};			
+		winRectDimOpen[disp1stWinIDX] =  new float[]{menuWidth, 0,width-menuWidth,height};			
 		winRectDimOpen[disp2ndWinIDX] =   new float[]{menuWidth, 0,width-menuWidth,height};				
 		//hidden
-		winRectDimClose[dispJTWinIDX] =  new float[]{menuWidth, 0, hideWinWidth, height};				
+		winRectDimClose[disp1stWinIDX] =  new float[]{menuWidth, 0, hideWinWidth, height};				
 		winRectDimClose[disp2ndWinIDX] =  new float[]{menuWidth, 0, hideWinWidth, height};				
 		
 		winTrajFillClrs = new int []{gui_Black,gui_LightGray,gui_LightGray};		//set to color constants for each window
 		winTrajStrkClrs = new int []{gui_Black,gui_DarkGray,gui_DarkGray};				//set to color constants for each window			
 		
 		//			//display window initialization	
-		int wIdx = dispJTWinIDX , fIdx = showJTWin;
+		int wIdx = disp1stWinIDX , fIdx = show1stWinIDX;
 		dispWinFrames[wIdx] = new DancingBallWin(this, winTitles[wIdx], fIdx,winFillClrs[wIdx], winStrkClrs[wIdx], winRectDimOpen[wIdx], winRectDimClose[wIdx], winDescr[wIdx],canDrawInWin[wIdx]);
 		wIdx = disp2ndWinIDX; fIdx = show2ndWinIDX;
 		dispWinFrames[wIdx] = new altWindow(this, winTitles[wIdx], fIdx,winFillClrs[wIdx], winStrkClrs[wIdx], winRectDimOpen[wIdx], winRectDimClose[wIdx], winDescr[wIdx],canDrawInWin[wIdx]);
 		
 		for(int i =0; i < numDispWins; ++i){
 			//dispWinFrames[i].initDrwnTrajs();		//drawn trajectories not used in this application (so far)
-			outStr2Scr("i:"+i);
-			dispWinFrames[i].setFlags(myDispWindow.is3DWin, dispWinIs3D[i]);
+			//outStr2Scr("i:"+i);
+			//init focus and scene center variables for each window
+
+			int scIdx = dispWinIs3D[i] ? 1 : 0;
+			dispWinFrames[i].finalInit(dispWinIs3D[i], canMoveView[i], sceneCtrValsBase[scIdx], sceneFcsValsBase[scIdx]);
 			dispWinFrames[i].setTrajColors(winTrajFillClrs[i], winTrajStrkClrs[i]);
+			dispWinFrames[i].setRtSideUIBoxClrs(new int[]{255,255,255,255},new int[]{0,0,0,255});
 		}	
+		//set initial state to be true - show info window
+		setFlags(showRtSideMenu, true);
+
 	}//initDispWins
 	
 	//get the ui rect values of the "master" ui region (another window) -> this is so ui objects of one window can be made, clicked, and shown displaced from those of the parent windwo
@@ -487,7 +459,7 @@ public class DancingBalls extends PApplet{
 			//this.pr("In getUIRectVals for idx : " + idx);
 		switch(idx){
 			case dispMenuIDX 		: {return new float[0];}			//idx 0 is parent menu sidebar
-			case dispJTWinIDX 	: {return dispWinFrames[dispMenuIDX].uiClkCoords;}
+			case disp1stWinIDX 	: {return dispWinFrames[dispMenuIDX].uiClkCoords;}
 			case disp2ndWinIDX 	: {	return dispWinFrames[dispMenuIDX].uiClkCoords;}
 			default :  return dispWinFrames[dispMenuIDX].uiClkCoords;
 			}
@@ -507,6 +479,9 @@ public class DancingBalls extends PApplet{
 //////////////////////////////////////////
 /// graphics and base functionality utilities and variables
 //////////////////////////////////////////
+	public int glblStartSimFrameTime,			//begin of draw
+		glblLastSimFrameTime,					//begin of last draw
+		glblStartProgTime;						//start of program
 	
 	//size of printed text (default is 12)
 	public static final int txtSz = 10;
@@ -532,26 +507,15 @@ public class DancingBalls extends PApplet{
 			scrHeightMod = 0;
 	public final float frate = 60.0f;								//frame rate - # of playback updates per second
 	
-	public int sceneIDX;			//which idx in the 2d arrays of focus vals and glbl center vals to use, based on state
-	public myVector[] sceneFcsVals = new myVector[]{						//set these values to be different targets of focus
+	//2D, 3D
+	private myVector[] sceneFcsValsBase = new myVector[]{						//set these values to be different targets of focus
 			new myVector(-grid2D_X/2,-grid2D_Y/1.75f,0),
 			new myVector(0,0,0)
 	};
-	
-	public myPoint[] sceneCtrVals = new myPoint[]{				//set these values to be different display center translations -
+	//2D, 3D
+	private myPoint[] sceneCtrValsBase = new myPoint[]{				//set these values to be different display center translations -
 		new myPoint(0,0,0),										// to be used to calculate mouse offset in world for pick
 		new myPoint(-gridDimX/2.0,-gridDimY/2.0,-gridDimZ/2.0)
-	};
-	
-	private float dz=0, rx=-0.06f*TWO_PI, ry=-0.04f*TWO_PI;		// distance to camera. Manipulated with wheel or when,view angles manipulated when space pressed but not mouse	
-	public final float camInitialDist = -200,		//initial distance camera is from scene - needs to be negative
-			camInitRy = ry,
-			camInitRx = rx;
-	
-	public myVector[] cameraInitLocs = new myVector[]{						//set these values to be different initial camera locations based on 2d or 3d
-		new myVector(camInitRx,camInitRy,camInitialDist),
-		new myVector(camInitRx,camInitRy,camInitialDist),
-		new myVector(-0.47f,-0.61f,-gridDimZ*.25f)			
 	};
 	
 	//static variables - put obj constructor counters here
@@ -562,31 +526,34 @@ public class DancingBalls extends PApplet{
 	public boolean[] flags;
 	//dev/debug flags
 	public final int debugMode 			= 0;			//whether we are in debug mode or not	
-	public final int saveAnim 			= 1;			//whether we are saving or not
+	public final int finalInitDone		= 1;
+	public final int saveAnim 			= 2;			//whether we are saving or not
 	//interface flags	
-	public final int shiftKeyPressed 	= 2;			//shift pressed
-	public final int altKeyPressed  	= 3;			//alt pressed
-	public final int cntlKeyPressed  	= 4;			//cntrl pressed
-	public final int mouseClicked 		= 5;			//mouse left button is held down	
-	public final int drawing			= 6; 			//currently drawing
-	public final int modView	 		= 7;			//shift+mouse click+mouse move being used to modify the view
+	public final int shiftKeyPressed 	= 3;			//shift pressed
+	public final int altKeyPressed  	= 4;			//alt pressed
+	public final int cntlKeyPressed  	= 5;			//cntrl pressed
+	public final int mouseClicked 		= 6;			//mouse left button is held down	
+	public final int drawing			= 7; 			//currently drawing
+	public final int modView	 		= 8;			//shift+mouse click+mouse move being used to modify the view
 	//simulation
-	public final int runSim				= 8;			//run simulation
-	public final int singleStep			= 9;			//run single sim step
-	public final int flipDrawnTraj  	= 10;			//whether or not to flip the direction of the drawn trajectory
+	public final int runSim				= 9;			//run simulation
+	public final int singleStep			= 10;			//run single sim step
+	public final int showRtSideMenu		= 11;			//display the right side info menu for the current window, if it supports that display
+	public final int flipDrawnTraj  	= 12;			//whether or not to flip the direction of the drawn trajectory
 	//window control
-	public final int showUIMenu 		= 11;			//whether or not to show sidebar menu
-	public final int showJTWin			= 12;			//whether to show JT window
-	public final int show2ndWinIDX			= 13;			//whether to show YY window
+	public final int showUIMenu 		= 13;			//whether or not to show sidebar menu
+	public final int show1stWinIDX		= 14;			//whether to show first window
+	public final int show2ndWinIDX		= 15;			//whether to show 2nd window
 	
-	public final int numFlags = 14;
+	public final int numFlags = 16;
 	
 	//flags to actually display in menu as clickable text labels - order does matter
 	public List<Integer> flagsToShow = Arrays.asList( 
 		debugMode, 			
 		saveAnim,
 		runSim,
-		singleStep
+		singleStep,
+		showRtSideMenu
 		);
 	
 	public final int numFlagsToShow = flagsToShow.size();
@@ -609,7 +576,7 @@ public class DancingBalls extends PApplet{
 	public myDispWindow[] dispWinFrames;
 	//idx's in dispWinFrames for each window
 	public static final int dispMenuIDX = 0,
-							dispJTWinIDX = 1,
+							disp1stWinIDX = 1,
 							disp2ndWinIDX = 2;
 	
 	public static final int numDispWins = 3;	
@@ -642,7 +609,7 @@ public class DancingBalls extends PApplet{
 	public float[][] winRectDimClose;// = new float[][]{new float[]{0,0,0,0},new float[]{0,0,0,0},new float[]{0,0,0,0},new float[]{0,0,0,0}};
 	
 	public boolean showInfo;										//whether or not to show start up instructions for code		
-	public myVector focusTar;										//target of focus - used in translate to set where the camera is looking - 
+	//public myVector focusTar;										//target of focus - used in translate to set where the camera is looking - 
 																//set array of vector values (sceneFcsVals) based on application
 	//private boolean cyclModCmp;										//comparison every draw of cycleModDraw			
 	public final int[] bground = new int[]{244,244,255,255};		//bground color
@@ -668,9 +635,8 @@ public class DancingBalls extends PApplet{
 	
 	//animation control variables	
 	public final float maxAnimCntr = PI*1000.0f, baseAnimSpd = 1.0f;
-		
-	my3DCanvas c;												//3d interaction stuff and mouse tracking
-	
+	public float msSclX, msSclY;											//scaling factors for mouse movement		
+	my3DCanvas c;												//3d interaction stuff and mouse tracking	
 	public float[] camVals;		
 	public String dateStr, timeStr;								//used to build directory and file names for screencaps
 	
@@ -706,11 +672,15 @@ public class DancingBalls extends PApplet{
 	///////////////////////////////////
 	//1 time initialization of things that won't change
 	public void initVisOnce(){	
+		//date and time of program launch
 		dateStr = "_"+day() + "-"+ month()+ "-"+year();
 		timeStr = "_"+hour()+"-"+minute()+"-"+second();
 		now = Calendar.getInstance();
 		scrWidth = width + scrWidthMod;
 		scrHeight = height + scrHeightMod;		//set to be applet.width and applet.height unless otherwise specified below
+
+		msSclX = PI/width;
+		msSclY = PI/height;
 		
 		consoleStrings = new ArrayDeque<String>();				//data being printed to console		
 		menuWidth = width * menuWidthMult;						//grid2D_X of menu region	
@@ -731,7 +701,6 @@ public class DancingBalls extends PApplet{
 		
 		colorMode(RGB, 255, 255, 255, 255);
 		mseCurLoc2D = new myPoint(0,0,0);	
-		sphereDetail(4);
 		initBoolFlags();
 		//camVals = new float[]{width/2.0f, height/2.0f, (height/2.0f) / tan(PI/6.0f), width/2.0f, height/2.0f, 0, 0, 1, 0};
 		camVals = new float[]{0, 0, (height/2.0f) / tan(PI/6.0f), 0, 0, 0, 0,1,0};
@@ -740,11 +709,14 @@ public class DancingBalls extends PApplet{
 		outStr2Scr("Current sketchPath " + sketchPath());
 		textureMode(NORMAL);			
 		rectMode(CORNER);	
-		
-		initCamView();
+		sphereDetail(4);
 		simCycles = 0;
-		screenShotPath = sketchPath() +File.separatorChar+prjNmShrt+"_" + (int) random(1000)+File.separatorChar;
-	}				
+		screenShotPath = sketchPath() +File.separatorChar+prjNmShrt+"_" + (int) random(1000)+File.separatorChar;		
+		glblStartProgTime = millis();
+		glblStartSimFrameTime = glblStartProgTime;
+		glblLastSimFrameTime =  glblStartProgTime;	
+	}//initVisOnce
+	
 		//init boolean state machine flags for program
 	public void initBoolFlags(){
 		flags = new boolean[numFlags];
@@ -768,6 +740,7 @@ public class DancingBalls extends PApplet{
 				if(val==false) {for(int i=1; i<dispWinFrames.length;++i){if(isShowingWindow(i)) {dispWinFrames[i].stopMe();}}}
 				break;}
 			case singleStep			: {break;}////anything special for single step	
+			case showRtSideMenu		: {for(int i =1; i<dispWinFrames.length;++i){dispWinFrames[i].setRtSideInfoWinSt(val);}break;}	//set value for every window - to show or not to show info window
 			//case flipDrawnTraj		: { dispWinFrames[dispPianoRollIDX].rebuildDrawnTraj();break;}						//whether or not to flip the drawn melody trajectory, width-wise
 			case flipDrawnTraj		: { for(int i =1; i<dispWinFrames.length;++i){dispWinFrames[i].rebuildAllDrawnTrajs();}break;}						//whether or not to flip the drawn melody trajectory, width-wise
 			case showUIMenu 	    : { dispWinFrames[dispMenuIDX].setFlags(myDispWindow.showIDX,val);    break;}											//whether or not to show the main ui window (sidebar)			
@@ -781,7 +754,7 @@ public class DancingBalls extends PApplet{
 //				}
 //			
 //				break;}
-			case showJTWin		: {setWinFlagsXOR(dispJTWinIDX, val); break;}
+			case show1stWinIDX		: {setWinFlagsXOR(disp1stWinIDX, val); break;}
 			case show2ndWinIDX		: {setWinFlagsXOR(disp2ndWinIDX, val); break;}
 			//following for popup window
 			//case showPopUpWinUI 		: {dispWinFrames[dispYYWinIDX].setShow(val);handleShowWin(dispYYWinIDX-1 ,(val ? 1 : 0),false); setWinsHeight(); break;}	//show InstEdit window
@@ -791,9 +764,9 @@ public class DancingBalls extends PApplet{
 	}//setFlags  	
 	
 	//specify mutually exclusive flags here
-	public int[] winFlagsXOR = new int[]{showJTWin,show2ndWinIDX};//showSequence,showSphereUI};
+	public int[] winFlagsXOR = new int[]{show1stWinIDX,show2ndWinIDX};//showSequence,showSphereUI};
 	//specify windows that cannot be shown simultaneously here
-	public int[] winDispIdxXOR = new int[]{dispJTWinIDX, disp2ndWinIDX};//dispPianoRollIDX,dispSphereUIIDX};
+	public int[] winDispIdxXOR = new int[]{disp1stWinIDX, disp2ndWinIDX};//dispPianoRollIDX,dispSphereUIIDX};
 	public void setWinFlagsXOR(int idx, boolean val){
 		//outStr2Scr("SetWinFlagsXOR : idx " + idx + " val : " + val);
 		if(val){//turning one on
@@ -805,7 +778,8 @@ public class DancingBalls extends PApplet{
 					handleShowWin(i ,1,false); 
 					flags[winFlagsXOR[i]] = true;
 					curFocusWin = winDispIdxXOR[i];
-					setCamView();
+					//setCamView();	//camera now handled by individual windows
+					dispWinFrames[idx].setInitCamView();
 				}
 			}
 		} else {//if turning off a window - need a default uncloseable window - for now just turn on next window
@@ -821,7 +795,6 @@ public class DancingBalls extends PApplet{
 	public void clearFlags(int[] idxs){		for(int idx : idxs){flags[idx]=false;}	}			
 		//called every time re-initialized
 	public void initVisProg(){	drawCount = 0;		debugInfoString = "";		reInitInfoStr();}	
-	public void initCamView(){	dz=camInitialDist;	ry=camInitRy;	rx=camInitRx - ry;	}
 	public void reInitInfoStr(){		DebugInfoAra = new ArrayList<String>();		DebugInfoAra.add("");	}	
 	public int addInfoStr(String str){return addInfoStr(DebugInfoAra.size(), str);}
 	public int addInfoStr(int idx, String str){	
@@ -853,17 +826,17 @@ public class DancingBalls extends PApplet{
 	//drawsInitial setup for each draw
 	public void drawSetup(){
 		perspective(PI/3.0f, (1.0f*width)/(1.0f*height), .5f, camVals[2]*100.0f);
-		dispWinFrames[curFocusWin].setCamera(camVals, rx,ry,dz);
 	    turnOnLights();
+	    dispWinFrames[curFocusWin].drawSetupWin(camVals);
 	}//drawSetup	
 	//turn on lights for this sketch
 	public void turnOnLights(){
 	    lights(); 		
 	}
-	//used to handle camera location/motion
-	public void setCamOrient(){rotateX(rx);rotateY(ry); rotateX(HALF_PI);		}//sets the rx, ry, pi/2 orientation of the camera eye	
-	//used to draw text on screen without changing mode - reverses camera orientation setting
-	public void unSetCamOrient(){rotateX(-HALF_PI); rotateY(-ry);   rotateX(-rx); }//reverses the rx,ry,pi/2 orientation of the camera eye - paints on screen and is unaffected by camera movement
+	//used to handle camera location/motion - handled by individual windows because each maintains their own camera
+	public void setCamOrient(){dispWinFrames[curFocusWin].setCamOrient();		}//sets the rx, ry, pi/2 orientation of the camera eye	
+	//used to draw text on screen without changing mode - reverses camera orientation setting - handled by individual windows because each maintains their own camera
+	public void unSetCamOrient(){dispWinFrames[curFocusWin].unSetCamOrient(); }//reverses the rx,ry,pi/2 orientation of the camera eye - paints on screen and is unaffected by camera movement
 	//public void unSetCamOrient(){rotateY(-ry);   rotateX(-rx); }//reverses the rx,ry,pi/2 orientation of the camera eye - paints on screen and is unaffected by camera movement
 	public void drawAxes(double len, float stW, myPoint ctr, int alpha, boolean centered){//axes using current global orientation
 		pushMatrix();pushStyle();
@@ -931,7 +904,7 @@ public class DancingBalls extends PApplet{
 		if(flags[debugMode]){
 			pushMatrix();pushStyle();			
 			reInitInfoStr();
-			addInfoStr(0,"mse loc on screen : " + new myPoint(mouseX, mouseY,0) + " mse loc in world :"+c.mseLoc +"  Eye loc in world :"+ c.eyeInWorld+ " camera rx :  " + rx + " ry : " + ry + " dz : " + dz);
+			addInfoStr(0,"mse loc on screen : " + new myPoint(mouseX, mouseY,0) + " mse loc in world :"+c.mseLoc +"  Eye loc in world :"+ c.eyeInWorld+ dispWinFrames[curFocusWin].getCamDisp());//"  " camera rx :  " + rx + " ry : " + ry + " dz : " + dz);
 			String[] res = ((mySideBarMenu)dispWinFrames[dispMenuIDX]).getDebugData();		//get debug data for each UI object
 			int numToPrint = min(res.length,80);
 			for(int s=0;s<numToPrint;++s) {	addInfoStr(res[s]);}				//add info to string to be displayed for debug
@@ -1390,6 +1363,10 @@ public class DancingBalls extends PApplet{
 	public void showOffsetText(float d, int tclr, String txt){
 		setColorValFill(tclr);setColorValStroke(tclr);
 		text(txt, d, d,d); 
+	}
+	public void showOffsetText(float[] c, int tclr, String txt){
+		setColorValFill(tclr);setColorValStroke(tclr);
+		text(txt, c[0], c[1], c[2]); 
 	}
 
 	public void showFlat(myPointf P, float r,int fclr, int sclr, int tclr, String txt) {

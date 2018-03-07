@@ -528,7 +528,7 @@ public class DancingBallWin extends myDispWindow {
 	public void drawTraj3D(float animTimeMod,myPoint trans){}//drawTraj3D	
 	//set camera to either be global or from pov of one of the boids
 	@Override
-	protected void setCameraIndiv(float[] camVals, float rx, float ry, float dz){
+	protected void setCameraIndiv(float[] camVals){
 		pa.camera(camVals[0],camVals[1],camVals[2],camVals[3],camVals[4],camVals[5],camVals[6],camVals[7],camVals[8]);      
 		// puts origin of all drawn objects at screen center and moves forward/away by dz
 		pa.translate(camVals[0],camVals[1],(float)dz); 
@@ -537,18 +537,20 @@ public class DancingBallWin extends myDispWindow {
 
 	@Override
 	//draw 2d constructs over 3d area on screen
-	protected void drawOnScreenStuff(float modAmtMillis) {
-		pa.pushMatrix();pa.pushStyle();
-		//move to side of menu
-		pa.translate(rectDim[0],0,0);
+	protected void drawOnScreenStuffPriv(float modAmtMillis) {
 		//draw all 2d screen audio
 		if (getPrivFlags(showPianoKbd)){
 			dispPiano.drawMe(getPrivFlags(showPianoNoteNames));
 		}
-		audMgr.drawScreenData(modAmtMillis);	
-		pa.popStyle();pa.popMatrix();				
+		audMgr.drawScreenData(modAmtMillis);		
 	}//drawOnScreenStuff
-	
+	@Override
+	//put information in right-side hideable window for this window
+	protected void drawRightSideInfoBar(float modAmtMillis) {
+		
+		
+	}
+
 	@Override
 	protected void drawMe(float animTimeMod) {
 //		curMseLookVec = pa.c.getMse2DtoMse3DinWorld(pa.sceneCtrVals[pa.sceneIDX]);			//need to be here
@@ -576,14 +578,16 @@ public class DancingBallWin extends myDispWindow {
 	
 	@Override
 	//modAmtMillis is time passed per frame in milliseconds
-	protected void simMe(float modAmtMillis) {//run simulation
-		if(!getPrivFlags(ballIsMade)) {return;}
+	protected boolean simMe(float modAmtMillis) {//run simulation
+		if(!getPrivFlags(ballIsMade)) {return true;}
 		//int stVal = pa.millis();//takes around 5 millis to sim ball
 		if(getPrivFlags(sendAudioToBall)) {
 			//ball.stimulateBall(getPrivFlags(useForces), modAmtMillis);
 			ball.setSimVals();
 			ball.simMe( modAmtMillis,  getPrivFlags(stimWithTapBeats),  getPrivFlags(useForcesForBall)); 
 		}
+		//set to true to finish simulation
+		return false;
 		//pa.outStr2Scr("took : " + (pa.millis() - stVal) + " millis to ball simulate");
 	}//simMe
 	
@@ -701,8 +705,6 @@ public class DancingBallWin extends myDispWindow {
 	@Override
 	protected void processTrajIndiv(myDrawnSmplTraj drawnNoteTraj){	}
 	@Override
-	protected myPoint getMouseLoc3D(int mouseX, int mouseY){return pa.P(mouseX,mouseY,0);}
-	@Override
 	protected boolean hndlMouseMoveIndiv(int mouseX, int mouseY, myPoint mseClckInWorld){return false;}
 	//alt key pressed handles trajectory
 	//cntl key pressed handles unfocus of spherey
@@ -710,6 +712,8 @@ public class DancingBallWin extends myDispWindow {
 	protected boolean hndlMouseClickIndiv(int mouseX, int mouseY, myPoint mseClckInWorld, int mseBtn) {	boolean res = checkUIButtons(mouseX, mouseY);	return res;}//hndlMouseClickIndiv
 	@Override
 	protected boolean hndlMouseDragIndiv(int mouseX, int mouseY, int pmouseX, int pmouseY, myPoint mouseClickIn3D, myVector mseDragInWorld, int mseBtn) {boolean res = false;return res;}	
+	@Override
+	protected myPoint getMsePtAs3DPt(int mouseX, int mouseY){return pa.P(mouseX,mouseY,0);}
 	@Override
 	protected void snapMouseLocs(int oldMouseX, int oldMouseY, int[] newMouseLoc) {}	
 	@Override
@@ -731,6 +735,7 @@ public class DancingBallWin extends myDispWindow {
 	//resize drawn all trajectories
 	@Override
 	protected void resizeMe(float scale) {		dispPiano.updateGridXandY( rectDim);		}
+
 }//DancingBallWin
 //ENUMS
 

@@ -175,20 +175,19 @@ public class altWindow extends myDispWindow {
 	
 	//draw stuff to put on screen as 2d text/images
 	@Override
-	protected void drawOnScreenStuff(float modAmtMillis) {
-		pa.pushMatrix();pa.pushStyle();
-		//move to side of menu
-		pa.translate(rectDim[0],0,0);
+	protected void drawOnScreenStuffPriv(float modAmtMillis) {
 		//draw all 2d screen data here, super-imposed over background
 		if (getPrivFlags(showPianoKbd)){
 			dispPiano.drawMe(true);//change to local boolean flag if want to control whether notes are shown
 		}
-		
-		///
-		pa.popStyle();pa.popMatrix();				
 	}
 
-
+	@Override
+	//put information in right-side hideable window for this window
+	protected void drawRightSideInfoBar(float modAmtMillis) {		
+		
+	}
+	
 	@Override
 	public void drawCustMenuObjs() {
 		pa.pushMatrix();				pa.pushStyle();		
@@ -202,10 +201,10 @@ public class altWindow extends myDispWindow {
 	
 	//any simulation stuff - executes before draw on every draw cycle
 	@Override
-	//modAmtMillis is time passed per frame in milliseconds
-	protected void simMe(float modAmtSec) {
-		// TODO Auto-generated method stub
-
+	//modAmtMillis is time passed per frame in milliseconds - returns if sim is done
+	protected boolean simMe(float modAmtSec) {
+		
+		return true;
 	}
 	
 	@Override
@@ -222,6 +221,10 @@ public class altWindow extends myDispWindow {
 		
 	}
 	
+	@Override
+	protected void stopMe() {}
+
+
 	//custom functions launched by UI input
 	//if launching threads for custom functions, need to remove clearFuncBtnState call in function below and call clearFuncBtnState when thread ends
 	private void custFunc0(){	
@@ -289,23 +292,19 @@ public class altWindow extends myDispWindow {
 	}//clickDebug
 
 	@Override
-	protected void setCameraIndiv(float[] camVals, float rx, float ry, float dz) {
+	protected void setCameraIndiv(float[] camVals) {
 		pa.camera(camVals[0],camVals[1],camVals[2],camVals[3],camVals[4],camVals[5],camVals[6],camVals[7],camVals[8]);      
 		// puts origin of all drawn objects at screen center and moves forward/away by dz
 		pa.translate(camVals[0],camVals[1],(float)dz); 
 	    pa.setCamOrient();	
 	}
-
-	@Override
-	protected void stopMe() {pa.outStr2Scr("Stop");}	
+	
 	@Override
 	public void hndlFileLoadIndiv(String[] vals, int[] stIdx) {}
 	@Override
 	public List<String> hndlFileSaveIndiv() {List<String> res = new ArrayList<String>();return res;}
 	@Override
 	protected void processTrajIndiv(myDrawnSmplTraj drawnNoteTraj){	}
-	@Override
-	protected myPoint getMouseLoc3D(int mouseX, int mouseY){return pa.P(mouseX,mouseY,0);}
 	@Override
 	protected boolean hndlMouseMoveIndiv(int mouseX, int mouseY, myPoint mseClckInWorld){return false;}
 	//alt key pressed handles trajectory
@@ -314,6 +313,8 @@ public class altWindow extends myDispWindow {
 	protected boolean hndlMouseClickIndiv(int mouseX, int mouseY, myPoint mseClckInWorld, int mseBtn) {	boolean res = checkUIButtons(mouseX, mouseY);	return res;}//hndlMouseClickIndiv
 	@Override
 	protected boolean hndlMouseDragIndiv(int mouseX, int mouseY, int pmouseX, int pmouseY, myPoint mouseClickIn3D, myVector mseDragInWorld, int mseBtn) {boolean res = false;return res;}	
+	@Override
+	protected myPoint getMsePtAs3DPt(int mouseX, int mouseY){return pa.P(mouseX,mouseY,0);}
 	@Override
 	protected void snapMouseLocs(int oldMouseX, int oldMouseY, int[] newMouseLoc) {}	
 	@Override
@@ -332,12 +333,10 @@ public class altWindow extends myDispWindow {
 	protected void delSScrToWinIndiv(int idx) {}	
 	@Override
 	protected void delTrajToScrIndiv(int subScrKey, String newTrajKey) {}
-	//resize drawn all trajectories
 	@Override
 	protected void resizeMe(float scale) {		dispPiano.updateGridXandY( rectDim);		}
 
 	@Override
 	protected void initDrwnTrajIndiv() {}
-
 
 }
