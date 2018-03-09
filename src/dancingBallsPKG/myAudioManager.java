@@ -786,6 +786,19 @@ public class myAudioManager {
 				int barWidth = 400;
 				//draw band Res
 				mySongHandler song = getCurrentClip();
+				
+				//TODO clean this up
+				if(song.isMidi) {
+					pa.pushMatrix(); pa.pushStyle();
+					pa.translate(100,win.rectDim[3]-100, 0);
+					pa.sphere(10.0f);
+					song.drawSongLvls(0,900);
+					
+					pa.popStyle();pa.popMatrix();
+				}
+				
+				
+				
 				//need scale factor for bars so they don't go off screen, should be max level seen so far in song
 				float scaleFactor = song.barDispMaxLvl[ftIDX], maxLvl = lvlsPerPKey[ftIDX].size() == 0 ? 0 : lvlsPerPKey[ftIDX].firstKey();
 				//TODO need to find appropriate way to consume this - when loud sections of song kick in, overpowers higher frequency parts
@@ -835,6 +848,8 @@ public class myAudioManager {
 		else if(win.getPrivFlags(DancingBallWin.showIntrvls)) {		drawIntervalVis(ftIDX, bandResHeight, nowTime);}
 		if(showAllBandRes && showPianoNotes) {	pa.popStyle();pa.popMatrix();	}							//undo piano translation		
 		if(showBeats) {	drawDetectedBeats(beatDetRes, lastBeatDetRes, getBeats(),  bandResHeight);}			//show beats if detecting them
+		
+
 		pa.hint(PConstants.ENABLE_DEPTH_TEST);		
 	}//drawScreenData
 	

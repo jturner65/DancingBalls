@@ -33,6 +33,8 @@ public class myMidiSongData {
 	public final int byteLen;
 	//type of midi file
 	public final int type;
+	//# of midi tracks
+	public final int numTracks;
 
 	//composer of this track, based on file listing
 	public final String composer;
@@ -48,7 +50,8 @@ public class myMidiSongData {
 	public songState state;
 	//this song has been processed
 	public boolean procDone;
-	
+	//map of all note volumes throughout song, for rhythm analysis
+	public ConcurrentSkipListMap<Long,Integer> noteHistogram;
 	
 	public myMidiSongData (myMidiFileAnalyzer _mfa, MidiFileFormat _fmt, Sequence _seq) {
 		mfa=_mfa;
@@ -62,8 +65,9 @@ public class myMidiSongData {
 		title =  mfa.fileListing.dispName;
 		//if type == 0 then only 1 track
 		Track[] tracks = _seq.getTracks();
-		int numTracks = tracks.length;	
+		numTracks = tracks.length;	
 		midiTracks = new myMidiTrackData[numTracks];
+		noteHistogram = new ConcurrentSkipListMap<Long, Integer>();
 		
 		procDone = false;
 		
@@ -101,6 +105,21 @@ public class myMidiSongData {
 		res += "\"";
 		return res;
 	}//buildStrFromByteAra
+	
+	//build a volume histogram of all the notes in this song, so that the rhythm can be inferred
+	public void addToRhythmHist(midiNoteData _note) {
+		//this will hold a record of all note volumes that have changed and when they change.  
+		ConcurrentSkipListMap<Integer, Integer> volVals = _note.getAllNoteVols();
+		//key is relative time from start of note; value is note volume at that location if it is different.  
+		for(int i=0;i<_note.noteDur; ++i) {
+			Long noteAbsLoc = i + _note.stTime;					//time in song
+			Integer oldVol = noteHistogram.get(noteAbsLoc);		//existing volume at this location in song
+			if(null == oldVol) {		oldVol = 0;	}			//if null set to 0
+			int vol = volVals.floorEntry(i).getValue() ;				//note's volume at this location
+			noteHistogram.put(noteAbsLoc, oldVol + vol);			
+		}
+	}//	addToRhythmHist
+	
 	
 	
 	//save all the song data in the appropriate format
@@ -145,9 +164,19 @@ class myMidiChannel{
 	
 	//add note to structure
 	public void addNote(midiNoteData _note) {
+		//add note's volumes to rhythm histogram
+		song.addToRhythmHist(_note);
 		notesOn.put(_note.stTime, _note);
 		notesOff.put(_note.endTime, _note);		
 	}
+	
+	//check if note already exists in channel
+	public boolean chanHasNote(int mididat1, Long endTime) {
+		midiNoteData _note = notesOff.get(endTime);
+		if(null==_note) {return false;}
+		return (_note.midiData == mididat1);//if note has identical midi data and start time then note is in channel already		
+	}
+	
 	//set/change instrument in this channel - uses general midi specification to describe instrument
 	public void addProgramChange(long _t, byte[] _info) {
 		int idx = (int)(_info[1]);
@@ -240,7 +269,6 @@ class myMidiTrackData {
 			lastOnNote[i] = new midiNoteData[128];
 		}
 		boolean hasChanEvt = false;
-		
 		for(int e=0;e<numEvents;++e) {
 			MidiEvent ev = trk.get(e);
 			events[e]=ev;
@@ -290,36 +318,45 @@ class myMidiTrackData {
 //						" channel : " + chan + " command : "+ cmd+" | " + str1 + " : " + dat1+" | note : " + notev  + " octave : " + octave + " | " + str2 + " : " +dat2+ " | bytes : [ "+msgStr + " ]");
 //					}
 					if((cmd == MidiCommand.NoteOff) || ((cmd == MidiCommand.NoteOn) && (dat2 == 0))) {//if turning off a note, or if noteOn + vol==0
-						cmd = MidiCommand.NoteOff;
 						midiNoteData note = lastOnNote[chan][dat1];
 						if(note == null) {//no note to turn off in array - happens because double notes at same timestamp, just ignore extra off command (errors in midi files)
-//							if((3== song.mfa.thdIDX) && (trIDX == 4)) {
-//								System.out.println("\nth : " + song.mfa.thdIDX + " | Track "+trIDX+"!!!!!!!!!!!Note in array structure is null for midi note : " + dat1 + " | Note : "+ notev + " | Octave : " + octave+ " | chan : " + chan+"\n");													
+//							if((1== song.mfa.thdIDX) && (trIDX == 3)) {
+//								if (!chans[chan].chanHasNote(dat1, stTime)) {
+//									System.out.println("th : " + song.mfa.thdIDX + " | Track "+trIDX+"!!!Ara is null for midi note : " + dat1 + " | chan : " + chan+"| end time : " +stTime + "| orig cmd : " + cmd +"| dat2 : " + dat2);													
+//								}
 //							}
 						} else {//set note end time, add note to structures
 							//turn off appropriate note, add note to permanent structures, remove from temp "on notes" structure
 							note.setEndTime(stTime);
 							chans[chan].addNote(note);
 							lastOnNote[chan][dat1] = null;
-//							System.out.println("Track "+trIDX+"| time : " +stTime + " | status : "+ String.format("0x%02X",status) + 
-//							" channel : " + chan + " command : "+ cmd+" | " + str1 + " : " + dat1+" | note : " + note  + " octave : " + octave + " | " + str2 + " : " +dat2+ " | bytes : [ "+msgStr + " ]");
-						}
-
+//							if((1== song.mfa.thdIDX) && (trIDX == 3)) {
+//								System.out.println("th : " + song.mfa.thdIDX + " | Track "+trIDX+"| time : " +stTime + " | status : "+ String.format("0x%02X",status) + " | Note end : " + note.toString()+ "| orig cmd : " + cmd +"| dat2 : " + dat2);	
+//							}
+						}	
+						cmd = MidiCommand.NoteOff;
+						
 						
 					} else {//make new note, add to temp struct holding non-terminated notes
-						midiNoteData note = new midiNoteData(dat1, chan, dat2, stTime);
 						//add note to temporary "on notes" queue
-						if(lastOnNote[chan][dat1] != null) {//if not null then previous note with same data was not turned off - probably happens because double notes (errors in midi files) - verify timestamp
+						if(lastOnNote[chan][dat1] != null) {//if not null then probably note sustaining with "expressive" change in volume 
+							//or maybe previous note with same data was not turned off - probably happens because double notes (errors in midi files) - verify volume level and timestamp
+							//discard same timestamp note as dupe
+							//if different time stamp note then modify note to have new volume at this time stamp							
 							midiNoteData otrNote = lastOnNote[chan][dat1];
-							if(otrNote.stTime != note.stTime) {//if not equal then double notes are in sequence-  turn off old note, add new one
-								//end current note, add new note
-								otrNote.setEndTime(stTime);
-								chans[chan].addNote(otrNote);
-								lastOnNote[chan][dat1] = note;
-								//System.out.println("\nth : " + song.mfa.thdIDX + " | Track "+trIDX+"!!!!!!!!!!!Note : " + note.toString() + "\ncollided in lastOnNote array with note " + lastOnNote[chan][dat1].toString()+"\n");							
+							if(otrNote.stTime != stTime) {//if not equal then command is probably volume command for otrNote.  if vol different than last vol, save new volume of otrNote
+								otrNote.setNoteVol(stTime, dat2);
+//								//end current note, add new note
+//								otrNote.setEndTime(stTime);
+//								chans[chan].addNote(otrNote);
+//								lastOnNote[chan][dat1] = note;
+								//System.out.println("\nth : " + song.mfa.thdIDX + " | Track "+trIDX+" | Volume Mod of Note : " + otrNote.toString() + " from " + otrNote.getMostRecentVol() + " to " + dat2+"\n");							
 							}
-						} else {
-							lastOnNote[chan][dat1] = note;
+							//else start time same, note same, ignore dupe note
+								
+						} else {//						midiNoteData note = new midiNoteData(dat1, chan, dat2, stTime);
+							//new note starting for this channel
+							lastOnNote[chan][dat1] = new midiNoteData(dat1, chan, dat2, stTime);
 						}						
 //						System.out.println("Track "+trIDX+"| time : " +stTime + " | status : "+ String.format("0x%02X",status) + 
 //						" channel : " + chan + " command : "+ cmd+" | " + str1 + " : " + dat1+" | note : " + note  + " octave : " + octave + " | " + str2 + " : " +dat2+ " | bytes : [ "+msgStr + " ]");					
@@ -771,14 +808,50 @@ class timeSig {
 class midiNoteData implements Comparable<midiNoteData>{
 	public final long stTime;
 	public long endTime;
-	public final int octave, midiData, vol;
+	public final int octave, midiData;
 	public final int channel;
 	public final nValType note;
 	
+	//map of volume for notes - "expressive" notes change volume through explicity midi commands
+	//key is offset from start of note
+	private ConcurrentSkipListMap<Integer, Integer> noteVol;
+	//the max volume of this note, and the time relative to the start of the note when it happens
+	private int maxVol, maxVolRelTime;
+	public int noteDur;
+	
 	//_mDat is midi note value, _vol is midi volume.  
-	public midiNoteData(int _mDat,int _chan, int _vol, long _stTime) {midiData=_mDat;channel=_chan;vol=_vol;note = nValType.getVal((midiData % 12));octave = midiData / 12 -1;stTime=_stTime;}
-	public void setEndTime(long _endTime) {endTime = _endTime;}	
+	public midiNoteData(int _mDat,int _chan, int _vol, long _stTime) {
+		midiData=_mDat;channel=_chan;note = nValType.getVal((midiData % 12));octave = midiData / 12 -1;stTime=_stTime;
+		noteVol = new ConcurrentSkipListMap<Integer, Integer>();
+		noteDur = 0;
+		noteVol.put(0,_vol);
+		maxVol = _vol;
+		maxVolRelTime = 0;
+	}
+	
+	public void setEndTime(long _endTime) {endTime = _endTime; noteDur = (int)(endTime-stTime);}	
 	public long getEndTime() {return endTime;}
+	//get record of volume changes for note
+	public void setNoteVol(long _absTime, int _vol) {
+		int relTime = (int)(_absTime - stTime);
+		noteVol.put(relTime, _vol);
+		if(_vol > maxVol) {
+			maxVol = _vol;
+			maxVolRelTime = relTime;
+		}
+	}
+	//get volume of note when note starts
+	public int getNoteStVol() {	return noteVol.get(0);}
+	
+	public ConcurrentSkipListMap<Integer, Integer> getAllNoteVols(){
+		return noteVol;
+	}
+	
+	//get relative time and value of note's max volume
+	//idx 0 : relative time from beginning of note
+	//idx 1 : max volume
+	public int[] getNoteMaxVol() {	return new int[] {maxVolRelTime, maxVol};}
+	public int getMostRecentVol() {return noteVol.lastEntry().getValue();}
 	
 	@Override
 	public int compareTo(midiNoteData otr) {//sort first by start time, then note value, if they start at the same time
@@ -790,7 +863,7 @@ class midiNoteData implements Comparable<midiNoteData>{
 	
 	
 	public String toString() {
-		String res = "Note : "+ note + " | Octave : "+ octave +" | Chan : " + channel + " | StTime:"+stTime+" | Endtime : " + endTime +" | Vol : "+vol+" | midiNote : " + midiData; 
+		String res = "Note : "+ note + " | Octave : "+ octave +" | Chan : " + channel + " | StTime:"+stTime+" | Endtime : " + endTime +" | midiNote : " + midiData; 
 		return res;
 	}
 

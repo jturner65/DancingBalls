@@ -29,7 +29,16 @@ public abstract class mySongHandler {
 	protected boolean[] fIsOnset;
 	protected float[][] feBuffer, fdBuffer;
 	protected long[] fTimer;
-
+	
+	public boolean isMidi;
+	
+	//array to hold scaled levels of entire song - use this to display lvl 
+	protected float[] songLvls;
+	//level multiplier to facilitate display of volume histogram
+	protected float lvlMult = 200.0f;
+	//sample resolution - # of samples to be averaged for each value in songlvls
+	protected int lvlSampleRes = 10;
+	
 	public mySongHandler(DancingBalls _pa,Minim _minim, AudioFile _songFile, int _sbufSize) {
 		pa=_pa;minim=_minim; songFile = _songFile;		
 		songBufSize=_sbufSize;
@@ -43,7 +52,26 @@ public abstract class mySongHandler {
 			boolean songLoaded=loadAudio(filePath);
 			if(!songLoaded) {		pa.outStr2Scr("WARNING in mySongHandler : Failed to load Audio File : " + songFile);}
 		}
+		initDispLvls();
+		isMidi = false;
 	}//ctor
+	
+	//build the array to display the lvl values for the song - takes all samples and averages each contiguous window of  lvlSampleRes samples.
+	protected void buildDispAra(float[] tmpAra) {
+		pa.outStr2Scr("Song : " + songFile.dispName + " has "+ tmpAra.length+" samples.");
+		songLvls = new float[(int)(tmpAra.length/(1.0f*lvlSampleRes)) + 1];
+		int stIdx = 0, endIdx = lvlSampleRes;
+		float numSamples = lvlSampleRes;
+		for(int i=0;i<songLvls.length;++i) {
+			float tmpSum = 0;
+			for(int j=stIdx; j<endIdx; ++j) {tmpSum +=tmpAra[j];}
+			tmpSum /= numSamples;
+			songLvls[i] = tmpSum;			
+			stIdx = endIdx;
+			endIdx = (endIdx + lvlSampleRes > tmpAra.length ? tmpAra.length : endIdx + lvlSampleRes);
+			numSamples = endIdx - stIdx;
+		}		
+	}
 	
 	public void setForwardVals(WindowFunction win, int fftMinBandwidth, int _numZones) {
 		numZones = _numZones;//number of zones for dancing ball (6)
@@ -121,6 +149,30 @@ public abstract class mySongHandler {
 			insertAt = 0;
 		}
 	}//
+
+	public void drawSongLvls(int stIdx, int numSmpls) {
+		if((stIdx < 0) || (stIdx >= songLvls.length)){return;}
+		float curPos = getPlayPos()/10.0f;
+		System.out.println("curPos : " + curPos +"|"+ songLvls.length);
+		int endIdx = pa.min(stIdx + numSmpls,songLvls.length-1);
+		pa.pushMatrix();pa.pushStyle();
+		pa.strokeWeight(1.0f);
+		for(int i=stIdx;i<endIdx;++i) {
+			if(i>curPos) {
+			pa.setColorValFill(pa.gui_Red);
+			pa.setColorValStroke(pa.gui_Red);
+			}
+			else {
+			pa.setColorValFill(pa.gui_White);
+			pa.setColorValStroke(pa.gui_White);
+			}
+			pa.line(0,0,0,0,-songLvls[i],0);
+			pa.translate(1.0f, 0, 0);
+		}	
+		pa.popStyle(); pa.popMatrix();
+	}//drawSongLvls
+	
+	protected abstract void initDispLvls();
 	
 	//check this to see if beat has been detected
 	public boolean[] beatDetectZones() {
@@ -186,6 +238,14 @@ class myMP3SongHandler extends mySongHandler{
 		sensitivity = 10;	
 		sampleRate = playMe.sampleRate();
 		//System.out.println("Song: " + dispName + " sample rate : " + playMe.sampleRate());
+	}
+	//set up array holding song levels for display
+	@Override
+	protected void initDispLvls() {
+		//TODO this isn't working properly - need entire file in memory to build array
+		buildDispAra(playMe.mix.toArray());
+		
+		//pa.outStr2Scr("Song : " + songFile.dispName + " smp size : " + smp. + " # volume smpls  :  " + songLvls.length);		
 	}
 
 	@Override
@@ -282,6 +342,7 @@ class myMP3SongHandler extends mySongHandler{
 		barDispMaxLvl[1] = (barDispMaxLvl[1] < maxLvl ? maxLvl : barDispMaxLvl[1]);
 	}//getFwdFreqLevelsInHarmonicBands
 	
+	
 	@Override
 	public boolean isPlaying() {return playMe.isPlaying();}
 	//song control
@@ -319,7 +380,7 @@ class myMidiSongHandler extends mySongHandler{
 	// what we need from JavaSound for sequence playback
 	private Sequencer sequencer;
 	// holds the actual midi data
-	private Sequence sequence;
+	//private Sequence sequence;
 	// output pipe
 	public AudioOutput out;
 	private Long songTickLen, startTickLoc;
@@ -331,46 +392,50 @@ class myMidiSongHandler extends mySongHandler{
 	
 	//up to 16 channels of up to 127 notes playing - need to block on this ?
 	public float[][] midi_notesLvls, pianoNoteLvls;
-
+	
+	public myMidiFileAnalyzer mfa;
+	
 	
 	public myMidiSongHandler(DancingBalls _pa,Minim _minim, AudioFile _songFile, int _sbufSize) {
 		super(_pa,_minim,_songFile, _sbufSize);
 		sampleRate = out.sampleRate();
 		ticksPerMillis = 1;
+		isMidi = true;
+		
 	}//myMidiSongHandler
+	//set up array holding song levels for display
+	@Override
+	protected void initDispLvls() {
+		buildDispAra( mfa.getRelSongLevels(lvlMult));
+		
+		pa.outStr2Scr("Song : " + songFile.dispName + " # volume smpls  :  " + songLvls.length);		
+	}
 	
 	@Override
 	protected boolean loadAudio(Path filePath) {
-		try{
-		    //load sequence
-			File f = filePath.toFile();
-		    if(f==null) {
-		    	pa.outStr2Scr("Null File obj : file not found : " + filePath);
-		    	return false;
-		    }
-		    //format = MidiSystem.getMidiFileFormat(f);
-		    sequence = MidiSystem.getSequence(f);
-
-		    // get a disconnected sequencer. this should prevent us from hearing the general midi sounds the sequecer is automatically hooked up to.
-			sequencer = MidiSystem.getSequencer(false);
+		mfa = new myMidiFileAnalyzer(songFile, -1);
+		mfa.loadAudio();
+		mfa.analyze();
+		try {
+			sequencer= MidiSystem.getSequencer(false);
 		    sequencer.open();
-		    sequencer.setSequence(sequence);
+		    sequencer.setSequence(mfa.sequence);
 			out = minim.getLineOut();	
-		    midi_notesLvls = new float[16][];
-		    pianoNoteLvls = new float[16][];
-		    for(int i=0;i<midi_notesLvls.length;++i) {	midi_notesLvls[i] = new float[127]; pianoNoteLvls[i] = new float[88];   }//piano keys start at idx 21 lvls per key
 		    midiRec = new MidiReceiver(out, this);
 		    // hook up an instance of our Receiver to the Sequencer's Transmitter
 		    sequencer.getTransmitter().setReceiver(midiRec);		    
-			//Sequence sequence = sequencer.getSequence();
-			songLength = (int) (sequence.getMicrosecondLength()/1000);
-			songTickLen = sequence.getTickLength();
-			ticksPerMillis = songTickLen/(1.0f*songLength);		}
+		    midi_notesLvls = new float[16][];
+		    pianoNoteLvls = new float[16][];
+		    for(int i=0;i<midi_notesLvls.length;++i) {	midi_notesLvls[i] = new float[127]; pianoNoteLvls[i] = new float[88];   }//piano keys start at idx 21 lvls per key
+			songLength = (int) (mfa.sequence.getMicrosecondLength()/1000);
+			songTickLen = mfa.midiSong.tickLen;
+			ticksPerMillis = songTickLen/(1.0f*songLength);			
+		}
 		catch( MidiUnavailableException ex ){ System.out.println( "No default sequencer." );return false;}
 		catch( InvalidMidiDataException ex ){System.out.println( "The midi file was not a midi file." );return false;}
-		catch( IOException ex ) { System.out.println( "Had a problem accessing the midi file." );return false;}
 		return true;
 	}//loadAudio	
+	
 	
 	@Override
 	protected void stepAudio() {

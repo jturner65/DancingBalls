@@ -47,7 +47,7 @@ public class DancingBallWin extends myDispWindow {
 		gIDX_DFTCalcType	= 13,		//list of possible calculation types
 		gIDX_winSel 		= 14;
 	//initial values - need one per object
-	public float[] uiVals = new float[]{
+	protected float[] uiVals = new float[]{
 			deltaT,
 			ballNumVerts,
 			ballRadius,

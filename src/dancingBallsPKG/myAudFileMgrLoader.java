@@ -100,7 +100,7 @@ class myMidiFileProcessor implements Callable<Boolean>{
 		case 0 :{//load
 			ArrayList<myMidiFileAnalyzer> tmpMfAnalyzer = new ArrayList<myMidiFileAnalyzer>();
 			for (int i=0;i<midiFiles.size();++i) {
-				myMidiFileAnalyzer tmp = new myMidiFileAnalyzer(mgr, midiFiles.get(i), idx);
+				myMidiFileAnalyzer tmp = new myMidiFileAnalyzer( midiFiles.get(i), idx);
 				boolean res = tmp.loadAudio();
 				if(res) {	tmpMfAnalyzer.add(tmp);   } else {++failedLoad;}
 			}	
@@ -112,7 +112,7 @@ class myMidiFileProcessor implements Callable<Boolean>{
 			numTtlTracks = 0;
 			for (int i=0;i<mfAnalyzerAra.length;++i) {
 				mfAnalyzerAra[i].analyze();
-				numTtlTracks += mfAnalyzerAra[i].numTracks;
+				numTtlTracks += mfAnalyzerAra[i].midiSong.numTracks;
 			}
 			mfaState = 2;			
 			break;}
