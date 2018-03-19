@@ -128,7 +128,7 @@ public class myAudioManager {
 	
 	
 	//current index of fft windowing function, from ui
-	public int curWindowIDX = 0;	
+	public static int curWindowIDX = 0;	
 	public WindowFunction[] windowList = new WindowFunction[]{FFT.NONE, FFT.BARTLETT, FFT.BARTLETTHANN, FFT.BLACKMAN, FFT.COSINE, FFT.GAUSS, FFT.HAMMING, FFT.HANN, FFT.LANCZOS, FFT.TRIANGULAR};	
 	//beat interaction
 	public myBeat[] tapBeats, audioBeats;
@@ -139,6 +139,10 @@ public class myAudioManager {
 	private int[] lastLoudestNote = new int[] {-1,-1};	
 	//number of top signal level notes to show per display result (either globally or within thread results). set by UI
 	public static int numNotesToShow = 1;	
+	
+	//display variables
+	public static final int maxBinSize = 1000;
+	public static int curBinSize = 10;
 	
 	public myAudioManager(DancingBalls _pa,DancingBallWin _win) {
 		pa=_pa; win=_win;dispPiano = win.dispPiano;
@@ -205,9 +209,9 @@ public class myAudioManager {
 					midiFProcMap = new myMidiFileProcMapper(this);					
 				}
 				break;}
-		}
-		
+		}		
 	}//setFlags
+	
 
 	//fire off the midi proc call - do this after setting what command should exec
 	private void runMidiProc() {
@@ -713,7 +717,8 @@ public class myAudioManager {
 			pa.translate(win.rectDim[2] * .5f - offset,  win.rectDim[3] * .9f);
 			pa.pushMatrix();pa.pushStyle();
 			pa.translate(-(now-lastKey), 0);
-			pa.sphere(10);
+			pa.setColorValStroke(pa.gui_Red);
+			pa.sphere(2.0f);
 			pa.popStyle();pa.popMatrix();
 			Integer oldKey = lastKey - 5;
 			float len;
@@ -723,7 +728,8 @@ public class myAudioManager {
 				len = (k- oldKey)/10.0f;
 				if(null != n) {
 					n.drawMe(len);
-				}	else {
+				}	
+				else {
 					pa.outStr2Scr("Null note interval for key : " + k);
 				}
 				pa.translate(len, 0, 0);
@@ -767,38 +773,34 @@ public class myAudioManager {
 		pa.popStyle();pa.popMatrix();	
 	}//drawDetectedBeats	
 	
+	//display song levels 
+	private void dispSongLvls(mySongHandler song, float stX) {
+		pa.pushMatrix(); pa.pushStyle();
+		pa.translate(stX,win.rectDim[3]-100, 0);
+		// drawSongLvls(int maxNumSmpls, int binSize, float barHt)
+		song.drawSongLvls((int)(win.rectDim[2]-stX), curBinSize, 200);
+		
+		pa.popStyle();pa.popMatrix();
+		
+	}
+	
 	//get appropriate beat array
 	public myBeat[] getBeats() {	return win.getPrivFlags(DancingBallWin.useHumanTapBeats) ? tapBeats : audioBeats;}
 	//draw all results
 	public void drawScreenData(float modAmtMillis) {
-		pa.hint(PConstants.DISABLE_DEPTH_TEST);
-		float bandResHeight = 10.0f;
-		boolean showBeats = win.getPrivFlags(DancingBallWin.showTapBeats),
-				showPianoNotes = win.getPrivFlags(DancingBallWin.showPianoKbd),
-				showFreqlbls = win.getPrivFlags(DancingBallWin.showFreqLbls),
-				showDFTRes = win.getPrivFlags(DancingBallWin.calcSingleFreq),
-				showAllBandRes = win.getPrivFlags(DancingBallWin.showAllBandRes);
-		int ftIDX = (showDFTRes ? 0 : 1);
-		if(showPianoNotes) {
-			boolean showMelodyTrail = win.getPrivFlags(DancingBallWin.showMelodyTrail);
-
-			if(getFlags(audioLoadedIDX)) {
+		if(getFlags(audioLoadedIDX)) {
+			pa.hint(PConstants.DISABLE_DEPTH_TEST);
+			float bandResHeight = 10.0f;
+			boolean showBeats = win.getPrivFlags(DancingBallWin.showTapBeats),
+					showPianoNotes = win.getPrivFlags(DancingBallWin.showPianoKbd),
+					showFreqlbls = win.getPrivFlags(DancingBallWin.showFreqLbls),
+					showDFTRes = win.getPrivFlags(DancingBallWin.calcSingleFreq),
+					showAllBandRes = win.getPrivFlags(DancingBallWin.showAllBandRes);
+			int ftIDX = (showDFTRes ? 0 : 1);
+			mySongHandler song = getCurrentClip();
+			if(showPianoNotes) {
+				boolean showMelodyTrail = win.getPrivFlags(DancingBallWin.showMelodyTrail);
 				int barWidth = 400;
-				//draw band Res
-				mySongHandler song = getCurrentClip();
-				
-				//TODO clean this up
-				if(song.isMidi) {
-					pa.pushMatrix(); pa.pushStyle();
-					pa.translate(100,win.rectDim[3]-100, 0);
-					pa.sphere(10.0f);
-					song.drawSongLvls(0,900);
-					
-					pa.popStyle();pa.popMatrix();
-				}
-				
-				
-				
 				//need scale factor for bars so they don't go off screen, should be max level seen so far in song
 				float scaleFactor = song.barDispMaxLvl[ftIDX], maxLvl = lvlsPerPKey[ftIDX].size() == 0 ? 0 : lvlsPerPKey[ftIDX].firstKey();
 				//TODO need to find appropriate way to consume this - when loud sections of song kick in, overpowers higher frequency parts
@@ -835,22 +837,26 @@ public class myAudioManager {
 						} 				
 					}//use FFT mechanism
 				}//if((maxLvl >= pa.epsValCalc) && !(showAllBandRes)) 
-			}//if(getFlags(audioLoadedIDX)) 
-		}//if(showPianoNotes)		
-		if (showAllBandRes) {//if showing all bands, displace by piano keys' width
-			if(showPianoNotes) {//if showing piano notes, displace by piano keys' width
-				pa.pushMatrix();pa.pushStyle();
-				pa.translate(dispPiano.whiteKeyWidth,0,0);		
+				
+			}//if(showPianoNotes)		
+			if (showAllBandRes) {//if showing all bands, displace by piano keys' width
+				if(showPianoNotes) {//if showing piano notes, displace by piano keys' width
+					pa.pushMatrix();pa.pushStyle();
+					pa.translate(dispPiano.whiteKeyWidth,0,0);		
+				}
+				drawFreqBands(allBandsRes, allBandFreqs, 1.0f, pa.gui_TransRed, showBeats,showFreqlbls);
 			}
-			drawFreqBands(allBandsRes, allBandFreqs, 1.0f, pa.gui_TransRed, showBeats,showFreqlbls);
-		}
-		else if(win.getPrivFlags(DancingBallWin.showZoneBandRes)) {drawFreqBands(bandRes, bandFreqs, bandResHeight, pa.gui_Blue, showBeats, showFreqlbls);}
-		else if(win.getPrivFlags(DancingBallWin.showIntrvls)) {		drawIntervalVis(ftIDX, bandResHeight, nowTime);}
-		if(showAllBandRes && showPianoNotes) {	pa.popStyle();pa.popMatrix();	}							//undo piano translation		
-		if(showBeats) {	drawDetectedBeats(beatDetRes, lastBeatDetRes, getBeats(),  bandResHeight);}			//show beats if detecting them
+			else if(win.getPrivFlags(DancingBallWin.showZoneBandRes)) {drawFreqBands(bandRes, bandFreqs, bandResHeight, pa.gui_Blue, showBeats, showFreqlbls);}
+			else if(win.getPrivFlags(DancingBallWin.showIntrvls)) {		drawIntervalVis(ftIDX, bandResHeight, nowTime);}
+			else if(win.getPrivFlags(DancingBallWin.showVolLvls)) {		dispSongLvls(song,100);}
+			
+			if(showAllBandRes && showPianoNotes) {	pa.popStyle();pa.popMatrix();	}							//undo piano translation		
+			if(showBeats) {	drawDetectedBeats(beatDetRes, lastBeatDetRes, getBeats(),  bandResHeight);}			//show beats if detecting them
 		
 
-		pa.hint(PConstants.ENABLE_DEPTH_TEST);		
+			pa.hint(PConstants.ENABLE_DEPTH_TEST);		
+		}//if(getFlags(audioLoadedIDX)) 
+
 	}//drawScreenData
 	
 }//class myAudioAnalyzer

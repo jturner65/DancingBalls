@@ -22,6 +22,8 @@ public class myNoteIntervalTuple {
 	public int[] transTuple;
 	//refs to next and previous tuples in 
 	public myNoteIntervalTuple prev, next;
+	//height to display
+	private int dispHeight;
 
 	public myNoteIntervalTuple(myAudioManager _mgr, int _stTime,int _initnote, myNoteIntervalTuple _last) {	
 		mgr=_mgr;ID = idBase++;stTime = _stTime; pa = mgr.pa;
@@ -39,6 +41,7 @@ public class myNoteIntervalTuple {
 		notes[1] = _note;
 		transTuple[0] = notes[1]-notes[0];
 		transTuple[1] = dur[0];
+		dispHeight = -(transTuple[0]%12)*10;
 		return this;
 	}
 	
@@ -61,7 +64,7 @@ public class myNoteIntervalTuple {
 		pa.pushMatrix();pa.pushStyle();
 		//draw vector-type object inferring direction and magnitude of interval
 		pa.strokeWeight(1.0f);
-		pa.rect(new float[] {0,0,len,-(transTuple[0]%12)*5} );
+		pa.rect(new float[] {0,0,len,dispHeight} );
 		//pa.line(new myPointf(0,0,0), new myPointf(0,-transTuple[0]*5,0));
 		
 		pa.popStyle();pa.popMatrix();	

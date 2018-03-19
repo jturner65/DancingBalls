@@ -25,6 +25,8 @@ public class myMidiSongData {
 			"Tinkle Bell","Agogo","Steel Drums", "Woodblock","Taiko Drum","Melodic Tom","Synth Drum","Reverse Cymbal","Guitar Fret Noise",
 			"Breath Noise","Seashore","Bird Tweet","Telephone Ring","Helicopter","Applause","Gunshot"}; 
 	
+	//whether to use full not value or just not start value for rhythm histogram
+	private static final boolean useFullNoteVol = false;
 	
 	public myMidiFileAnalyzer mfa;
 	//length of sequence in time
@@ -51,7 +53,8 @@ public class myMidiSongData {
 	//this song has been processed
 	public boolean procDone;
 	//map of all note volumes throughout song, for rhythm analysis
-	public ConcurrentSkipListMap<Long,Integer> noteHistogram;
+	public ConcurrentSkipListMap<Long,Float> noteHistogram;
+	private float maxNoteLvl;
 	
 	public myMidiSongData (myMidiFileAnalyzer _mfa, MidiFileFormat _fmt, Sequence _seq) {
 		mfa=_mfa;
@@ -67,7 +70,9 @@ public class myMidiSongData {
 		Track[] tracks = _seq.getTracks();
 		numTracks = tracks.length;	
 		midiTracks = new myMidiTrackData[numTracks];
-		noteHistogram = new ConcurrentSkipListMap<Long, Integer>();
+		noteHistogram = new ConcurrentSkipListMap<Long, Float>();
+		//used to monitor min and max lvl of notes
+		maxNoteLvl = -1;
 		
 		procDone = false;
 		
@@ -83,7 +88,7 @@ public class myMidiSongData {
 			midiTracks[i] = new myMidiTrackData(this, state, midiChans, tracks[i], i);
 			midiTracks[i].procEvents();
 		}
-		procDone = true;
+		finalizeSong();
 	}//ctor	
 	
 	//used to build message from bytes in midi messages
@@ -108,19 +113,41 @@ public class myMidiSongData {
 	
 	//build a volume histogram of all the notes in this song, so that the rhythm can be inferred
 	public void addToRhythmHist(midiNoteData _note) {
+		if (useFullNoteVol)  {addFullNoteToRhythmHist(_note); } else { addNoteStToRhythmHist(_note); }
+	}//	addToRhythmHist
+	
+	//this will add the note's level for the duration of the note to the rhythm histogram
+	private void addFullNoteToRhythmHist(midiNoteData _note) {
 		//this will hold a record of all note volumes that have changed and when they change.  
 		ConcurrentSkipListMap<Integer, Integer> volVals = _note.getAllNoteVols();
 		//key is relative time from start of note; value is note volume at that location if it is different.  
 		for(int i=0;i<_note.noteDur; ++i) {
 			Long noteAbsLoc = i + _note.stTime;					//time in song
-			Integer oldVol = noteHistogram.get(noteAbsLoc);		//existing volume at this location in song
-			if(null == oldVol) {		oldVol = 0;	}			//if null set to 0
-			int vol = volVals.floorEntry(i).getValue() ;				//note's volume at this location
-			noteHistogram.put(noteAbsLoc, oldVol + vol);			
+			Float oldVol = noteHistogram.get(noteAbsLoc);		//existing volume at this location in song
+			if(null == oldVol) {		oldVol = 0.0f;	}			//if null set to 0
+			float vol = oldVol + volVals.floorEntry(i).getValue() ;				//note's volume at this location
+			maxNoteLvl = vol > maxNoteLvl ? vol : maxNoteLvl;
+			noteHistogram.put(noteAbsLoc, vol);			
 		}
 	}//	addToRhythmHist
 	
+	//this will add the note's initial level only to the rhythm histogram
+	private void addNoteStToRhythmHist(midiNoteData _note) {
+		Float oldVol = noteHistogram.get(_note.stTime);				//existing volume at this location in song
+		if(null == oldVol) {		oldVol = 0.0f;	}						//if null set to 0
+		float vol = oldVol + _note.getNoteStVol() ;						//note's volume at this location
+		maxNoteLvl = vol > maxNoteLvl ? vol : maxNoteLvl;
+		noteHistogram.put(_note.stTime, vol);	
+	}//	addToRhythmHist
 	
+	//finalize the processing of this song
+	public void finalizeSong() {
+		procDone = true;
+		if(maxNoteLvl <= 1) {return;}//lvls in notes are ints, so <=1 means no notes in song
+		//normalize all recorded note levels in note histogram - divide lvls by maxNoteLvl
+		for(Long key : noteHistogram.keySet()) {noteHistogram.put(key,noteHistogram.get(key)/maxNoteLvl);}
+		
+	}
 	
 	//save all the song data in the appropriate format
 	public void saveData() {//TODO

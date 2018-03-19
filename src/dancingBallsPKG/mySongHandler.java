@@ -32,13 +32,11 @@ public abstract class mySongHandler {
 	
 	public boolean isMidi;
 	
-	//array to hold scaled levels of entire song - use this to display lvl 
-	protected float[] songLvls;
 	//level multiplier to facilitate display of volume histogram
 	protected float lvlMult = 200.0f;
 	//sample resolution - # of samples to be averaged for each value in songlvls
 	protected int lvlSampleRes = 10;
-	
+
 	public mySongHandler(DancingBalls _pa,Minim _minim, AudioFile _songFile, int _sbufSize) {
 		pa=_pa;minim=_minim; songFile = _songFile;		
 		songBufSize=_sbufSize;
@@ -52,26 +50,7 @@ public abstract class mySongHandler {
 			boolean songLoaded=loadAudio(filePath);
 			if(!songLoaded) {		pa.outStr2Scr("WARNING in mySongHandler : Failed to load Audio File : " + songFile);}
 		}
-		initDispLvls();
-		isMidi = false;
 	}//ctor
-	
-	//build the array to display the lvl values for the song - takes all samples and averages each contiguous window of  lvlSampleRes samples.
-	protected void buildDispAra(float[] tmpAra) {
-		pa.outStr2Scr("Song : " + songFile.dispName + " has "+ tmpAra.length+" samples.");
-		songLvls = new float[(int)(tmpAra.length/(1.0f*lvlSampleRes)) + 1];
-		int stIdx = 0, endIdx = lvlSampleRes;
-		float numSamples = lvlSampleRes;
-		for(int i=0;i<songLvls.length;++i) {
-			float tmpSum = 0;
-			for(int j=stIdx; j<endIdx; ++j) {tmpSum +=tmpAra[j];}
-			tmpSum /= numSamples;
-			songLvls[i] = tmpSum;			
-			stIdx = endIdx;
-			endIdx = (endIdx + lvlSampleRes > tmpAra.length ? tmpAra.length : endIdx + lvlSampleRes);
-			numSamples = endIdx - stIdx;
-		}		
-	}
 	
 	public void setForwardVals(WindowFunction win, int fftMinBandwidth, int _numZones) {
 		numZones = _numZones;//number of zones for dancing ball (6)
@@ -149,15 +128,19 @@ public abstract class mySongHandler {
 			insertAt = 0;
 		}
 	}//
-
-	public void drawSongLvls(int stIdx, int numSmpls) {
-		if((stIdx < 0) || (stIdx >= songLvls.length)){return;}
-		float curPos = getPlayPos()/10.0f;
-		System.out.println("curPos : " + curPos +"|"+ songLvls.length);
-		int endIdx = pa.min(stIdx + numSmpls,songLvls.length-1);
+	
+	//draws a window of samples of numSmpls in length, 
+	//starting at stTime, avging over consecutive values of binSize
+	//binsize acts like a resolution parameter
+	public void drawSongLvls(int maxNumSmpls, int binSize, float barHt) {
+		if(binSize < 1) {return;}
+		long curTicks = getPlayTicks(), stTime = (curTicks - ((maxNumSmpls*binSize)/2));//backpedal st time to be half maxNumSmpls behind current time
+		if (stTime < 0) {stTime = 0;}
+		float[] songlvls = getLvlAraWindow(stTime, maxNumSmpls, binSize);
+		long curPos = (curTicks - stTime)/binSize;
 		pa.pushMatrix();pa.pushStyle();
 		pa.strokeWeight(1.0f);
-		for(int i=stIdx;i<endIdx;++i) {
+		for(int i=0;i<songlvls.length;++i) {
 			if(i>curPos) {
 			pa.setColorValFill(pa.gui_Red);
 			pa.setColorValStroke(pa.gui_Red);
@@ -166,13 +149,12 @@ public abstract class mySongHandler {
 			pa.setColorValFill(pa.gui_White);
 			pa.setColorValStroke(pa.gui_White);
 			}
-			pa.line(0,0,0,0,-songLvls[i],0);
+			pa.line(0,0,0,0,-songlvls[i]*barHt,0);
 			pa.translate(1.0f, 0, 0);
 		}	
 		pa.popStyle(); pa.popMatrix();
 	}//drawSongLvls
 	
-	protected abstract void initDispLvls();
 	
 	//check this to see if beat has been detected
 	public boolean[] beatDetectZones() {
@@ -192,6 +174,9 @@ public abstract class mySongHandler {
 	protected abstract void setupFreqArasIndiv();
 	protected abstract void setForwardValsIndiv(WindowFunction win);
 	
+	//get array of song volume levels at passed values, to be used for lvl display during playback
+	protected abstract float[] getLvlAraWindow(Long stTime, int numSmpls, int binSize);
+	
 	public abstract boolean isPlaying();
 	//song control
 	public abstract void play();
@@ -206,6 +191,9 @@ public abstract class mySongHandler {
 	public abstract boolean donePlaying();
 	//get position in current song
 	public abstract int getPlayPos();
+	
+	//get position in ticks in current song - for audio this is TBD, for midi it is self explanatory
+	public abstract long getPlayTicks();
 	
 	//analysis results
 	public abstract float[][] getFwdBandsFromAudio();
@@ -237,15 +225,8 @@ class myMP3SongHandler extends mySongHandler{
 		insertAt = 0;
 		sensitivity = 10;	
 		sampleRate = playMe.sampleRate();
+		isMidi = false;
 		//System.out.println("Song: " + dispName + " sample rate : " + playMe.sampleRate());
-	}
-	//set up array holding song levels for display
-	@Override
-	protected void initDispLvls() {
-		//TODO this isn't working properly - need entire file in memory to build array
-		buildDispAra(playMe.mix.toArray());
-		
-		//pa.outStr2Scr("Song : " + songFile.dispName + " smp size : " + smp. + " # volume smpls  :  " + songLvls.length);		
 	}
 
 	@Override
@@ -281,6 +262,14 @@ class myMP3SongHandler extends mySongHandler{
 //		//first analyze all levels in entire song
 //		//next group frequencies
 //	}
+	@Override
+	//get array of song volume levels at passed values, to be used for lvl display during playback
+	protected float[] getLvlAraWindow(Long stTime, int numSmpls, int binSize) {
+		//TODO
+		return new float[numSmpls];
+	}
+
+	
 	
 	//call every frame before any fft analysis - steps fft forward over a single batch of samples
 	@Override
@@ -371,6 +360,9 @@ class myMP3SongHandler extends mySongHandler{
 	//get position in current song
 	@Override
 	public int getPlayPos() {return playMe.position();}
+	//for mp3 this is same as getPlayPos, used for lvl display during playback
+	@Override
+	public long getPlayTicks() {return playMe.position();}
 
 }//myMP3SongHandler
 
@@ -403,13 +395,10 @@ class myMidiSongHandler extends mySongHandler{
 		isMidi = true;
 		
 	}//myMidiSongHandler
-	//set up array holding song levels for display
-	@Override
-	protected void initDispLvls() {
-		buildDispAra( mfa.getRelSongLevels(lvlMult));
 		
-		pa.outStr2Scr("Song : " + songFile.dispName + " # volume smpls  :  " + songLvls.length);		
-	}
+	@Override
+	//get array of song volume levels at passed values, to be used for lvl display during playback
+	protected float[] getLvlAraWindow(Long stTime, int numSmpls, int binSize) {		return mfa.getRelSongLevelsWin(stTime, numSmpls, binSize);	}
 	
 	@Override
 	protected boolean loadAudio(Path filePath) {
@@ -481,6 +470,9 @@ class myMidiSongHandler extends mySongHandler{
 		long curPos = sequencer.getTickPosition();
 		return ((curPos >= songTickLen-1) || (!sequencer.isRunning()));
 	}
+	
+	@Override 
+	public long getPlayTicks() {return sequencer.getTickPosition();}
 
 	@Override
 	public int getPlayPos() {	return (int) (sequencer.getTickPosition()/ticksPerMillis);	}

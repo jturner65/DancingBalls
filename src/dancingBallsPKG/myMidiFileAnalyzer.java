@@ -55,19 +55,52 @@ public class myMidiFileAnalyzer {
 		midiSong =  new myMidiSongData(this,format, sequence);	
 	}//analyze	
 	
-	
-	//returns a map  of relative volume for every tick in this song - 0->lvlMult
-	public float[] getRelSongLevels(float lvlMult){
-		float[] songLvls;
-		Integer[] intSongLvls = midiSong.noteHistogram.values().toArray(new Integer[0]);
-		int minLvl = 100000000, maxLvl = -1;
-		for(int i=0;i<intSongLvls.length;++i) {
-			if(intSongLvls[i]>maxLvl) {maxLvl = intSongLvls[i];} else if(intSongLvls[i]<minLvl) {minLvl = intSongLvls[i];}
-		}
-		songLvls = new float[intSongLvls.length];
-		for(int i=0;i<intSongLvls.length;++i) {	songLvls[i]=lvlMult*(intSongLvls[i]-minLvl)/(1.0f*maxLvl);}
+	//return a snapshot of winWidth values of song note levels starting at stTime, avged over bins of binSize
+	public float[] getRelSongLevelsWin(long stTime, int winWidth, int binSize) {
+		float[] songLvls = new float[winWidth];
+		long endTime = stTime + (winWidth * binSize);
+		int destIdx = 0;
+		if(binSize == 1) {
+			for (long i=stTime; i<endTime; ++i) {
+				Float lvl = midiSong.noteHistogram.get(i);
+				if(null==lvl) {++destIdx;continue;}
+				songLvls[destIdx++] = lvl;
+			}					
+		} else {
+			long i= stTime, winEnd;
+			//avg lvls over bins - might not have winWidth bins, remaining ones are 0
+			while(i<endTime) {
+				if (i + binSize >= endTime) { 		winEnd = endTime;	} 
+				else {								winEnd = i+binSize;	}
+				float lvl = 0.0f, count = 0.0f;
+				//average over individual bin windows
+				for(long j=i;j<winEnd;++j) {
+					Float lvltmp = midiSong.noteHistogram.get(j);
+					if(null==lvltmp) {continue;}
+					lvl+= lvltmp;
+					++count;
+				}
+				songLvls[destIdx++] = count==0? 0 : lvl/count;
+				i=winEnd;
+			}		
+		}		
 		return songLvls;
-	}//getRelSongLevels
+	}//getRelSongLevelsWin
+	
+	
+	
+//	//returns a map  of relative volume for every tick in this song - 0->lvlMult
+//	public float[] getRelSongLevels(float lvlMult){
+//		float[] songLvls;
+//		Integer[] intSongLvls = midiSong.noteHistogram.values().toArray(new Integer[0]);
+//		int minLvl = 100000000, maxLvl = -1;
+//		for(int i=0;i<intSongLvls.length;++i) {
+//			if(intSongLvls[i]>maxLvl) {maxLvl = intSongLvls[i];} else if(intSongLvls[i]<minLvl) {minLvl = intSongLvls[i];}
+//		}
+//		songLvls = new float[intSongLvls.length];
+//		for(int i=0;i<intSongLvls.length;++i) {	songLvls[i]=lvlMult*(intSongLvls[i]-minLvl)/(1.0f*maxLvl);}
+//		return songLvls;
+//	}//getRelSongLevels
 	
 	//write the results of the audio processing
 	public void saveProcMidi() {
