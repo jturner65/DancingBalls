@@ -41,10 +41,10 @@ public class myMidiFileAnalyzer {
 		    loadedSeq = true;
 		}
 		catch( InvalidMidiDataException ex ){
-			//mgr.pa.outStr2Scr( "This file is not a valid midi file : "+ fileListing.filePath+":\t"+ex.getMessage() );
+			System.out.println( "This file is not a valid midi file : "+ fileListing.filePath+": format : " + format + "\t | msg : "+ex.getMessage() );
 			return false;}
 		catch( IOException ex ) { 
-			//mgr.pa.outStr2Scr( "Had a problem accessing this midi file : "+ fileListing.filePath+":\t"+ex.getMessage() );
+			System.out.println( "Had a problem accessing this midi file : "+ fileListing.filePath+":\t"+ex.getMessage() );
 			return false;}
 		return true;
 	}//loadAudio

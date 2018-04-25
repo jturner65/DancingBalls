@@ -72,14 +72,14 @@ class myMidiFileProcessor implements Callable<Boolean>{
 	//audioCmd : what to do on call : 0==load audio, 1==process audio, 2==save audio
 	private int audioCmd;
 	public myMidiFileAnalyzer[] mfAnalyzerAra;
-	//index in thread ara
-	int idx;
+	//index in thread ara (i.e. thread idx)
+	int thIdx;
 	
 	//# of files failed to load
 	public int failedLoad;
 	
-	public myMidiFileProcessor(myAudioManager _mgr, ArrayList<AudioFile> _midiFiles, int _idx) {
-		mgr = _mgr; idx=_idx;
+	public myMidiFileProcessor(myAudioManager _mgr, ArrayList<AudioFile> _midiFiles, int _thIdx) {
+		mgr = _mgr; thIdx=_thIdx;
 		midiFiles = _midiFiles;
 		mfaState = 0;
 		audioCmd = 0;
@@ -100,9 +100,9 @@ class myMidiFileProcessor implements Callable<Boolean>{
 		case 0 :{//load
 			ArrayList<myMidiFileAnalyzer> tmpMfAnalyzer = new ArrayList<myMidiFileAnalyzer>();
 			for (int i=0;i<midiFiles.size();++i) {
-				myMidiFileAnalyzer tmp = new myMidiFileAnalyzer( midiFiles.get(i), idx);
+				myMidiFileAnalyzer tmp = new myMidiFileAnalyzer( midiFiles.get(i), thIdx);
 				boolean res = tmp.loadAudio();
-				if(res) {	tmpMfAnalyzer.add(tmp);   } else {++failedLoad;}
+				if(res) {	tmpMfAnalyzer.add(tmp);   } else {++failedLoad; tmp=null;}
 			}	
 			mfAnalyzerAra = tmpMfAnalyzer.toArray(new myMidiFileAnalyzer[0]);
 			mfaState = 1;

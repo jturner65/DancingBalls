@@ -11,6 +11,7 @@ import ddf.minim.ugens.*;
 //to handle midi communication
 import javax.sound.midi.*;
 
+//songs managed and analyzed via UI
 public abstract class mySongHandler {
 	public DancingBalls pa;
 	protected Minim minim;
@@ -36,7 +37,7 @@ public abstract class mySongHandler {
 	protected float lvlMult = 200.0f;
 	//sample resolution - # of samples to be averaged for each value in songlvls
 	protected int lvlSampleRes = 10;
-
+	
 	public mySongHandler(DancingBalls _pa,Minim _minim, AudioFile _songFile, int _sbufSize) {
 		pa=_pa;minim=_minim; songFile = _songFile;		
 		songBufSize=_sbufSize;
@@ -403,26 +404,29 @@ class myMidiSongHandler extends mySongHandler{
 	@Override
 	protected boolean loadAudio(Path filePath) {
 		mfa = new myMidiFileAnalyzer(songFile, -1);
-		mfa.loadAudio();
-		mfa.analyze();
-		try {
-			sequencer= MidiSystem.getSequencer(false);
-		    sequencer.open();
-		    sequencer.setSequence(mfa.sequence);
-			out = minim.getLineOut();	
-		    midiRec = new MidiReceiver(out, this);
-		    // hook up an instance of our Receiver to the Sequencer's Transmitter
-		    sequencer.getTransmitter().setReceiver(midiRec);		    
-		    midi_notesLvls = new float[16][];
-		    pianoNoteLvls = new float[16][];
-		    for(int i=0;i<midi_notesLvls.length;++i) {	midi_notesLvls[i] = new float[127]; pianoNoteLvls[i] = new float[88];   }//piano keys start at idx 21 lvls per key
-			songLength = (int) (mfa.sequence.getMicrosecondLength()/1000);
-			songTickLen = mfa.midiSong.tickLen;
-			ticksPerMillis = songTickLen/(1.0f*songLength);			
+		if (mfa.loadAudio()) {
+			mfa.analyze();
+			try {
+				sequencer= MidiSystem.getSequencer(false);
+			    sequencer.open();
+			    sequencer.setSequence(mfa.sequence);
+				out = minim.getLineOut();	
+			    midiRec = new MidiReceiver(out, this);
+			    // hook up an instance of our Receiver to the Sequencer's Transmitter
+			    sequencer.getTransmitter().setReceiver(midiRec);		    
+			    midi_notesLvls = new float[16][];
+			    pianoNoteLvls = new float[16][];
+			    for(int i=0;i<midi_notesLvls.length;++i) {	midi_notesLvls[i] = new float[127]; pianoNoteLvls[i] = new float[88];   }//piano keys start at idx 21 lvls per key
+				songLength = (int) (mfa.sequence.getMicrosecondLength()/1000);
+				songTickLen = mfa.midiSong.tickLen;
+				ticksPerMillis = songTickLen/(1.0f*songLength);			
+			}
+			catch( MidiUnavailableException ex ){ System.out.println( "No default sequencer." );return false;}
+			catch( InvalidMidiDataException ex ){System.out.println( "The mid file was not a midi file." );return false;}
+			return true;
+		} else {
+			return false;
 		}
-		catch( MidiUnavailableException ex ){ System.out.println( "No default sequencer." );return false;}
-		catch( InvalidMidiDataException ex ){System.out.println( "The midi file was not a midi file." );return false;}
-		return true;
 	}//loadAudio	
 	
 	

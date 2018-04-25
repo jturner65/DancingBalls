@@ -624,7 +624,7 @@ class myMidiTrackData {
 					chans[curChan].setInstName(stTime, btsAsChar);
 					String trkInst = tInstName[curChan].put(stTime, btsAsChar);
 					if((null!= trkInst) && !(trkInst.trim().equals(btsAsChar.trim()))) {
-						System.out.println("Song : " + song.title + " | trkIDX :"+trIDX + " stTime : " + stTime + " | Remapping track instrument name : "+ trkInst + " to " + btsAsChar);
+						System.out.println("Song : " + song.title + " | trkIDX :"+trIDX + " stTime : " + stTime + " | Remapping track instrument at this time from : "+ trkInst + " to " + btsAsChar);
 					}
 					break;} 
 				case Lyric 			:{

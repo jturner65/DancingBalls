@@ -900,8 +900,53 @@ class planeCollider extends myCollider{
 	}
 }//planeCollider
 
+//ENUMS
 
-//an object to hold the information about a collision 
+enum ForceType {
+	F_NONE(0), S_SCALAR(1), S_VECTOR(2), ATTR(3), REPL(4), DAMPSPRING(5), DSPR_THETABAR(6);		
+	private int value; 
+	private static Map<Integer, ForceType> map = new HashMap<Integer, ForceType>(); 
+	static { for (ForceType enumV : ForceType.values()) { map.put(enumV.value, enumV);}}
+	private ForceType(int _val){value = _val;} 
+	public int getVal(){return value;} 	
+	public static ForceType getVal(int idx){return map.get(idx);}
+	public static int getNumVals(){return map.size();}						//get # of values in enum	
+};
+enum ConstraintType {
+	C_NONE(0), C_Circular(1);
+	private int value; 
+	private static Map<Integer, ConstraintType> map = new HashMap<Integer, ConstraintType>(); 
+	static { for (ConstraintType enumV : ConstraintType.values()) { map.put(enumV.value, enumV);}}
+	private ConstraintType(int _val){value = _val;} 
+	public int getVal(){return value;} 	
+	public static ConstraintType getVal(int idx){return map.get(idx);}
+	public static int getNumVals(){return map.size();}
+};
+
+enum CollisionType {
+	CL_NONE(0), FLAT(1), PARTICLE(2), SPHERE(3), BOX(4);
+	private int value; 
+	private static Map<Integer, CollisionType> map = new HashMap<Integer, CollisionType>(); 
+	static { for (CollisionType enumV : CollisionType.values()) { map.put(enumV.value, enumV);}}
+	private CollisionType(int _val){value = _val;} 
+	public int getVal(){return value;} 	
+	public static CollisionType getVal(int idx){return map.get(idx);}
+	public static int getNumVals(){return map.size();}						//get # of values in enum	
+};
+
+enum SolverType {
+	GROUND(0), EXP_E(1), MIDPOINT(2), RK3(3), RK4(4), IMP_E(5), TRAP(6), VERLET(7), RK4_G(8);
+	private int value; 
+	private static Map<Integer, SolverType> map = new HashMap<Integer, SolverType>(); 
+	static { for (SolverType enumV : SolverType.values()) { map.put(enumV.value, enumV);}}
+	private SolverType(int _val){value = _val;} 
+	public int getVal(){return value;} 	
+	public static SolverType getVal(int idx){return map.get(idx);}
+	public static int getNumVals(){return map.size();}						//get # of values in enum			
+};
+
+
+//TODO an object to hold the information about a collision 
 class collisionEvent{
 	
 	

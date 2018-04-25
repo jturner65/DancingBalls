@@ -70,8 +70,8 @@ public class DancingBallWin extends myDispWindow {
 	
 	/////////
 	//ui button names -empty will do nothing
-	public String[] menuDbgBtnNames = new String[] {};//must have literals for every button or ignored
-	public String[] menuFuncBtnNames = new String[] {"Init AudIO","Load Midi", "Proc Midi", "Func 3", "Func 4"};//must have literals for every button or ignored
+	public String[] menuDbgBtnNames = new String[] {"Ball Debug", "Dbg 2", "Dbg 3", "Dbg 4"};//must have literals for every button or ignored
+	public String[] menuFuncBtnNames = new String[] {"Init AudIO","Load Midi", "Proc Midi", "Save MIDI", "Check Memory"};//must have literals for every button or ignored
 	
 	
 	public String[] dftResTypeToShow = new String[] {"Global","Per Zone","Per Thread"};
@@ -654,24 +654,19 @@ public class DancingBallWin extends myDispWindow {
 	//if launching threads for custom functions, need to remove clearFuncBtnState call in function below and call clearFuncBtnState when thread ends
 	private void custFunc0(){
 		audMgr.buildAudioFileIO();		
-		//clearFuncBtnState(0);
 	}			
 	private void custFunc1(){
 		audMgr.loadMidiData();	
-		//clearFuncBtnState(1);
 	}	
 	
 	private void custFunc2(){	
 		audMgr.preprocMidiData();	
-		//custom function code here
-		clearFuncBtnState(2,false);
 	}			
 	private void custFunc3(){	
 		audMgr.saveProcMidiData();	
-		//custom function code here
-		clearFuncBtnState(3,false);
 	}			
 	private void custFunc4(){	
+		pa.checkMemorySetup();
 		//custom function code here
 		clearFuncBtnState(4,false);
 	}		
@@ -759,50 +754,7 @@ public class DancingBallWin extends myDispWindow {
 	protected void resizeMe(float scale) {		dispPiano.updateGridXandY( rectDim);		}
 
 }//DancingBallWin
-//ENUMS
 
-enum ForceType {
-	F_NONE(0), S_SCALAR(1), S_VECTOR(2), ATTR(3), REPL(4), DAMPSPRING(5), DSPR_THETABAR(6);		
-	private int value; 
-	private static Map<Integer, ForceType> map = new HashMap<Integer, ForceType>(); 
-	static { for (ForceType enumV : ForceType.values()) { map.put(enumV.value, enumV);}}
-	private ForceType(int _val){value = _val;} 
-	public int getVal(){return value;} 	
-	public static ForceType getVal(int idx){return map.get(idx);}
-	public static int getNumVals(){return map.size();}						//get # of values in enum	
-};
-enum ConstraintType {
-	C_NONE(0), C_Circular(1);
-	private int value; 
-	private static Map<Integer, ConstraintType> map = new HashMap<Integer, ConstraintType>(); 
-	static { for (ConstraintType enumV : ConstraintType.values()) { map.put(enumV.value, enumV);}}
-	private ConstraintType(int _val){value = _val;} 
-	public int getVal(){return value;} 	
-	public static ConstraintType getVal(int idx){return map.get(idx);}
-	public static int getNumVals(){return map.size();}
-};
-
-enum CollisionType {
-	CL_NONE(0), FLAT(1), PARTICLE(2), SPHERE(3), BOX(4);
-	private int value; 
-	private static Map<Integer, CollisionType> map = new HashMap<Integer, CollisionType>(); 
-	static { for (CollisionType enumV : CollisionType.values()) { map.put(enumV.value, enumV);}}
-	private CollisionType(int _val){value = _val;} 
-	public int getVal(){return value;} 	
-	public static CollisionType getVal(int idx){return map.get(idx);}
-	public static int getNumVals(){return map.size();}						//get # of values in enum	
-};
-
-enum SolverType {
-	GROUND(0), EXP_E(1), MIDPOINT(2), RK3(3), RK4(4), IMP_E(5), TRAP(6), VERLET(7), RK4_G(8);
-	private int value; 
-	private static Map<Integer, SolverType> map = new HashMap<Integer, SolverType>(); 
-	static { for (SolverType enumV : SolverType.values()) { map.put(enumV.value, enumV);}}
-	private SolverType(int _val){value = _val;} 
-	public int getVal(){return value;} 	
-	public static SolverType getVal(int idx){return map.get(idx);}
-	public static int getNumVals(){return map.size();}						//get # of values in enum			
-};
 
 //note and key value
 enum nValType {

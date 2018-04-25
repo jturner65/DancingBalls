@@ -195,36 +195,53 @@ public class DancingBalls extends PApplet{
 		drawAxes(100,3, new myPoint(-c.viewDimW/2.0f+40,0.0f,0.0f), 200, false); 		
 	}//draw3D_solve3D
 	
-	//if should show problem # i
-	public boolean isShowingWindow(int i){return flags[(i+this.showUIMenu)];}//showUIMenu is first flag of window showing flags
-	public void drawUI(float modAmtMillis){					
-		//for(int i =1; i<numDispWins; ++i){if ( !(dispWinFrames[i].dispFlags[myDispWindow.is3DWin])){dispWinFrames[i].draw(sceneCtrVals[sceneIDX]);}}
-		//dispWinFrames[0].draw(sceneCtrVals[sceneIDX]);
-		for(int i =1; i<numDispWins; ++i){dispWinFrames[i].drawHeader(modAmtMillis);}
-		//menu always idx 0
-		dispWinFrames[0].draw2D(modAmtMillis);
-		dispWinFrames[0].drawHeader(modAmtMillis);
-		drawOnScreenData();				//debug and on-screen data
-	}//drawUI	
+	
+	//display the current memory setup
+	public void checkMemorySetup() {
+		Runtime runtime = Runtime.getRuntime();  
+	
+		long maxMem = runtime.maxMemory(), allocMem = runtime.totalMemory(), freeMem = runtime.freeMemory();  
+	
+		outStr2Scr("Free memory: " + freeMem / 1024);  
+		outStr2Scr("Allocated memory: " + allocMem / 1024);  
+		outStr2Scr("Max memory: " + maxMem /1024);  
+		outStr2Scr("Total free memory: " +  (freeMem + (maxMem - allocMem)) / 1024);   
+	
+	}//checkMemorySetup
+	
 
-	//keyVal is actual value of key (screen character as int)
-	//keyPressed is actual key pressed (shift-1 gives keyVal 33 ('!') but keyPressed 49 ('1')) 
-	//need to subtract 48 to get actual number
-	private void handleNumberKeyPress(int keyVal, int keyPressed) {
-		int num = keyPressed - 48;
-		//this.outStr2Scr("key: -'"+key+"'- int key : "+(int)keyVal+" keycode : "+ keyPressed + " number : " + num);
-		if (key == '0') {
-			setFlags(showUIMenu,true);
-		} else if((curFocusWin == disp1stWinIDX) && (keyVal == keyPressed)) {//only pass if shift/alt/cntl all not pressed			
-			((DancingBallWin) dispWinFrames[disp1stWinIDX]).saveTapBeat(num - 1);			
-		}
-		
-	}//handleNumberKeyPress
 
 //////////////////////////////////////////////////////
 /// user interaction
 //////////////////////////////////////////////////////	
-	//key is key pressed
+	//if should show problem # i
+		public boolean isShowingWindow(int i){return flags[(i+this.showUIMenu)];}//showUIMenu is first flag of window showing flags
+		public void drawUI(float modAmtMillis){					
+			//for(int i =1; i<numDispWins; ++i){if ( !(dispWinFrames[i].dispFlags[myDispWindow.is3DWin])){dispWinFrames[i].draw(sceneCtrVals[sceneIDX]);}}
+			//dispWinFrames[0].draw(sceneCtrVals[sceneIDX]);
+			for(int i =1; i<numDispWins; ++i){dispWinFrames[i].drawHeader(modAmtMillis);}
+			//menu always idx 0
+			dispWinFrames[0].draw2D(modAmtMillis);
+			dispWinFrames[0].drawHeader(modAmtMillis);
+			drawOnScreenData();				//debug and on-screen data
+		}//drawUI	
+
+		//keyVal is actual value of key (screen character as int)
+		//keyPressed is actual key pressed (shift-1 gives keyVal 33 ('!') but keyPressed 49 ('1')) 
+		//need to subtract 48 to get actual number
+		private void handleNumberKeyPress(int keyVal, int keyPressed) {
+			int num = keyPressed - 48;
+			//this.outStr2Scr("key: -'"+key+"'- int key : "+(int)keyVal+" keycode : "+ keyPressed + " number : " + num);
+			if (key == '0') {
+				setFlags(showUIMenu,true);
+			} else if((curFocusWin == disp1stWinIDX) && (keyVal == keyPressed)) {//only pass if shift/alt/cntl all not pressed			
+				((DancingBallWin) dispWinFrames[disp1stWinIDX]).saveTapBeat(num - 1);			
+			}
+			
+		}//handleNumberKeyPress
+		
+		
+		//key is key pressed
 	//keycode is actual physical key pressed == key if shift/alt/cntl not pressed.,so shift-1 gives key 33 ('!') but keycode 49 ('1')
 	public void keyPressed(){
 		if(key==CODED) {

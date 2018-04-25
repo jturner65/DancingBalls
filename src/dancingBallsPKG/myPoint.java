@@ -10,7 +10,7 @@ public class myPoint {
 	
 	myPoint(myPoint A, double s, myPoint B) {this(A.x+s*(B.x-A.x),A.y+s*(B.y-A.y),A.z+s*(B.z-A.z)); };		//builds a point somewhere in between a and b
 	myPoint(){ this(0,0,0);}                                                                                                                               //constructor 0 args
-	
+	public void clear() {this.x = 0; this.y = 0; this.z = 0;}	
 	public void set(double _x, double _y, double _z){ this.x = _x;  this.y = _y;  this.z = _z; }                                               //set 3 args 
 	public myPoint set(myPoint p){ this.x = p.x; this.y = p.y; this.z = p.z; return this;}                                                                   //set 1 args
 	public void set(double _x, double _y, double _z, double _sqMagn){ this.x = _x;  this.y = _y;  this.z = _z; }                                                                     //set 3 args 
@@ -85,7 +85,7 @@ class myPointf {
 	
 	myPointf(myPointf A, float s, myPointf B) {this(A.x+s*(B.x-A.x),A.y+s*(B.y-A.y),A.z+s*(B.z-A.z)); };		//builds a point somewhere in between a and b
 	myPointf(){ this(0,0,0);}                                                                                                                               //constructor 0 args
-	
+	public void clear() {this.x = 0; this.y = 0; this.z = 0;}
 	public void set(float _x, float _y, float _z){ this.x = _x;  this.y = _y;  this.z = _z; }                                               //set 3 args 
 	public myPointf set(myPointf p){ this.x = p.x; this.y = p.y; this.z = p.z; return this;}                                                                   //set 1 args
 	public void set(float _x, float _y, float _z, float _sqMagn){ this.x = _x;  this.y = _y;  this.z = _z; }                                                                     //set 3 args 
@@ -167,6 +167,7 @@ class myVector extends myPoint{
 	myVector(myPoint a){this(a.x,a.y,a.z);}			//vector from 0->a
 	
 	myVector(myVector a, double _y, myVector b) {super(a,_y,b);this._mag();	}//interp cnstrctr
+	public void clear() {this.x = 0; this.y = 0; this.z = 0;this.magn = 0; this.sqMagn=0;}
 	public void set(double _x, double _y, double _z){ super.set(_x, _y, _z); this._mag(); }                                               //set 3 args 
 	public void set(myVector p){ this.x = p.x; this.y = p.y; this.z = p.z;  this._mag();}                                                                   //set 1 args
 	public void set(myPoint p, myPoint q){ this.x = q.x - p.x; this.y = q.y - p.y; this.z = q.z - p.z;  this._mag();}                                                                   //set 1 args
@@ -294,6 +295,7 @@ class myVectorf extends myPointf{
 	myVectorf(myPointf a){this(a.x,a.y,a.z);}			//vector from 0->a
 	
 	myVectorf(myVectorf a, float _y, myVectorf b) {super(a,_y,b);this._mag();	}//interp cnstrctr
+	public void clear() {this.x = 0; this.y = 0; this.z = 0;this.magn = 0; this.sqMagn=0;}
 	public void set(float _x, float _y, float _z){ super.set(_x, _y, _z); this._mag(); }                                               //set 3 args 
 	public void set(double _x, double _y, double _z){ this.set((float)_x,(float)_y,(float)_z); }                                               //set 3 args 
 	public void set(myVectorf p){ this.x = p.x; this.y = p.y; this.z = p.z;  this._mag();}                                                                   //set 1 args
