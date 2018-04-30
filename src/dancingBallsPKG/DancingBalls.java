@@ -10,6 +10,7 @@ import processing.opengl.*;
 
 import ddf.minim.*;
 import ddf.minim.ugens.*;
+
 /**
  * Dancing Balls - a ball moves and deforms to the music
  * @author john turner

@@ -150,7 +150,10 @@ public abstract class mySongHandler {
 			pa.setColorValFill(pa.gui_White);
 			pa.setColorValStroke(pa.gui_White);
 			}
-			pa.line(0,0,0,0,-songlvls[i]*barHt,0);
+			//pa.line(0,0,0,0,-songlvls[i]*barHt,0);
+			//pa.line(0,0,0,-songlvls[i]*barHt);
+			pa.rect(0,0,binSize/2.0f,-songlvls[i]*barHt);
+			
 			pa.translate(1.0f, 0, 0);
 		}	
 		pa.popStyle(); pa.popMatrix();
@@ -206,6 +209,7 @@ public abstract class mySongHandler {
 
 //handles an mp3 song, along with transport control
 class myMP3SongHandler extends mySongHandler{	
+	//audio player - made in loadAudio, called from super ctor
 	private AudioPlayer playMe;	
 	
 	public FFT fft;
@@ -367,15 +371,12 @@ class myMP3SongHandler extends mySongHandler{
 
 }//myMP3SongHandler
 
-
 //analyse midi songs 
 class myMidiSongHandler extends mySongHandler{
 	// what we need from JavaSound for sequence playback
 	private Sequencer sequencer;
-	// holds the actual midi data
-	//private Sequence sequence;
-	// output pipe
-	public AudioOutput out;
+	// output pipe - made in loadAudio, called from super ctor
+	private AudioOutput out;
 	private Long songTickLen, startTickLoc;
 	private float ticksPerMillis;
 	//most recent start of this sequence, used to subtract current time to find...
@@ -391,6 +392,7 @@ class myMidiSongHandler extends mySongHandler{
 	
 	public myMidiSongHandler(DancingBalls _pa,Minim _minim, AudioFile _songFile, int _sbufSize) {
 		super(_pa,_minim,_songFile, _sbufSize);
+		//out made in loadAudio, called by super ctor
 		sampleRate = out.sampleRate();
 		ticksPerMillis = 1;
 		isMidi = true;
@@ -520,6 +522,158 @@ class myMidiSongHandler extends mySongHandler{
 
 }//myMidiSongHandler
 
+
+////analyse midi songs -old
+//class myMidiSongHandlerOld extends mySongHandler{
+//	// what we need from JavaSound for sequence playback
+//	private Sequencer sequencer;
+//	// output pipe - made in loadAudio, called from super ctor
+//	private AudioOutput out;
+//	private Long songTickLen, startTickLoc;
+//	private float ticksPerMillis;
+//	//most recent start of this sequence, used to subtract current time to find...
+//	private int startTime;
+//	//midi receiver manages 
+//	private MidiReceiver midiRec;
+//	
+//	//up to 16 channels of up to 127 notes playing - need to block on this ?
+//	public float[][] midi_notesLvls, pianoNoteLvls;
+//	
+//	public myMidiFileAnalyzer mfa;
+//	
+//	
+//	public myMidiSongHandlerOld(DancingBalls _pa,Minim _minim, AudioFile _songFile, int _sbufSize) {
+//		super(_pa,_minim,_songFile, _sbufSize);
+//		//out made in loadAudio, called by super ctor
+//		sampleRate = out.sampleRate();
+//		ticksPerMillis = 1;
+//		isMidi = true;
+//		
+//	}//myMidiSongHandler
+//		
+//	@Override
+//	//get array of song volume levels at passed values, to be used for lvl display during playback
+//	protected float[] getLvlAraWindow(Long stTime, int numSmpls, int binSize) {		return mfa.getRelSongLevelsWin(stTime, numSmpls, binSize);	}
+//	
+//	@Override
+//	protected boolean loadAudio(Path filePath) {
+//		mfa = new myMidiFileAnalyzer(songFile, -1);
+//		if (mfa.loadAudio()) {
+//			mfa.analyze();
+//			try {
+//				sequencer= MidiSystem.getSequencer(false);
+//			    sequencer.open();
+//			    sequencer.setSequence(mfa.sequence);
+//				out = minim.getLineOut();	
+//			    midiRec = new MidiReceiver(out, this);
+//			    // hook up an instance of our Receiver to the Sequencer's Transmitter
+//			    sequencer.getTransmitter().setReceiver(midiRec);		    
+//			    midi_notesLvls = new float[16][];
+//			    pianoNoteLvls = new float[16][];
+//			    for(int i=0;i<midi_notesLvls.length;++i) {	midi_notesLvls[i] = new float[127]; pianoNoteLvls[i] = new float[88];   }//piano keys start at idx 21 lvls per key
+//				songLength = (int) (mfa.sequence.getMicrosecondLength()/1000);
+//				songTickLen = mfa.midiSong.tickLen;
+//				ticksPerMillis = songTickLen/(1.0f*songLength);			
+//			}
+//			catch( MidiUnavailableException ex ){ System.out.println( "No default sequencer." );return false;}
+//			catch( InvalidMidiDataException ex ){System.out.println( "The mid file was not a midi file." );return false;}
+//			return true;
+//		} else {
+//			return false;
+//		}
+//	}//loadAudio	
+//	
+//	
+//	@Override
+//	protected void stepAudio() {
+//		//get currently playing notes on all channels in midi receiver - might have to block on midi_notesLvls since possibly running in separate thread(?)
+//		for(int i=0;i<midi_notesLvls.length; ++i) {
+//			System.arraycopy(midi_notesLvls[i], 20, pianoNoteLvls[i], 0, pianoNoteLvls[i].length);
+//		}
+//	}
+//
+//	@Override
+//	public boolean isPlaying() {return sequencer.isRunning();}
+//	@Override
+//	public void play() {sequencer.start();}
+//	@Override
+//	public void play(int millis) {//set play start position, in millis from beginning
+//		sequencer.setLoopStartPoint((long) (ticksPerMillis * millis));
+//		sequencer.start();
+//	}
+//
+//	@Override
+//	public void pause() {
+//		sequencer.stop();
+//	}
+//
+//	@Override
+//	public void rewind() {sequencer.setLoopStartPoint(0);	}
+//	@Override //uses audio output from minim output stream
+//	public float[] mixBuffer() {
+//		return out.mix.toArray();
+//	}
+//
+//	@Override
+//	public void modPlayLoc(float modAmt) {
+//		long curPos = sequencer.getTickPosition();
+//		int dispSize = songLength/20;
+//		long newPos = (long) (curPos + (dispSize * modAmt));
+//		if(newPos < 0) { newPos = 0;} else if (newPos > songLength-1){newPos = songLength-1;}
+//		sequencer.setLoopStartPoint(newPos);
+//	}
+//
+//	@Override
+//	public boolean donePlaying() {
+//		long curPos = sequencer.getTickPosition();
+//		return ((curPos >= songTickLen-1) || (!sequencer.isRunning()));
+//	}
+//	
+//	@Override 
+//	public long getPlayTicks() {return sequencer.getTickPosition();}
+//
+//	@Override
+//	public int getPlayPos() {	return (int) (sequencer.getTickPosition()/ticksPerMillis);	}
+//
+//	@Override
+//	public float[][] getFwdBandsFromAudio() {//all audio bands from fft
+//		// TODO Auto-generated method stub
+//		return new float[2][0];
+//	}
+//
+//	@Override
+//	public float[][] getFwdZoneBandsFromAudio() {//all zone bands from fft
+//		// TODO Auto-generated method stub
+//		return new float[2][0];
+//	}
+//
+//	@Override //provides levels from midi commands
+//	public void getFwdFreqLevelsInHarmonicBands(float[][] keyMinAra, ConcurrentSkipListMap<Float, Integer> res1, ConcurrentSkipListMap<Integer, Float[]> res2, int curIdx, int instIDX) {
+//		float[] keyLoudness = new float[keyMinAra.length-1];		
+//		//either consider all channels together, or specify a channel instChans
+//		//for (int chnIDX = 0;chnIDX<instChans.length;++chnIDX) {
+//			for (int key=0;key<keyLoudness.length; ++key) {keyLoudness[key] += pianoNoteLvls[instIDX][key];}			
+//		//}
+//		for (int key=0;key<keyLoudness.length; ++key) {
+//			float freqLvl = keyLoudness[key];
+//			res1.put(freqLvl, key);
+//			Float[] tmp = res2.get(key);
+//			tmp[tmp.length-1] = freqLvl;			
+//			Float oldVal = tmp[curIdx];
+//			tmp[curIdx] = freqLvl;
+//			tmp[tmp.length-2] = tmp[tmp.length-2] - oldVal + freqLvl; 				
+//		}	
+//	
+//		float maxLvl = res1.firstKey();		
+//		barDispMaxLvl[1] = (barDispMaxLvl[1] < maxLvl ? maxLvl : barDispMaxLvl[1]);
+//	}	
+//	@Override
+//	protected void setupFreqArasIndiv() {}
+//	@Override
+//	protected void setForwardValsIndiv(WindowFunction win) {}
+//
+//}//myMidiSongHandler
+
 //need JavaSound interface receiver in order to send midi messages from the Sequencer.
 //we then set an instance of this class as the Receiver
 //for one of the Sequencer's Trasmitters.
@@ -556,14 +710,16 @@ class MidiReceiver implements Receiver{
 					int vel  = sm.getData2();		// velocity, between 1 and 127 (if 0 means note off)
 					instrNotes[chan][note-1].setAmplitude(vel);
 					hndl.midi_notesLvls[chan][note-1] = instrNotes[chan][note-1].getTtlAmplitude();
-					out.playNote(0, 100.0f, instrNotes[chan][note-1]); 
+					out.playNote(0, 10.0f, instrNotes[chan][note-1]); 
+					
 					break;}
 				case ShortMessage.NOTE_OFF :{
 					// note number, between 1 and 127
 					int note = sm.getData1();
-					int vel  = sm.getData2();		
+					int vel  = sm.getData2();	
 					// velocity, between 1 and 127
-					instrNotes[chan][note-1].setAmplitude(vel);
+					//instrNotes[chan][note-1].setAmplitude(vel);
+					instrNotes[chan][note-1].setAmplitudeOff();
 					hndl.midi_notesLvls[chan][note-1] = 0;
 					instrNotes[chan][note-1].noteOff();
 					break;}
@@ -589,30 +745,32 @@ class Synth implements ddf.minim.ugens.Instrument{
 	public Synth(AudioOutput _out, int note, int velocity ){
 		out=_out;noteNumber = note;
 		float freq = Frequency.ofMidiNote(noteNumber).asHz();
-		waves = new Oscil[8];
+		waves = new Oscil[2];
 		ampAra = new float[waves.length];
 		setBaseAmplitude(velocity);
 		sum = new Summer();		
 		// Damp arguments are: attack time, damp time, and max amplitude
-		env = new Damp( 0.001f, 1.0f, 1.0f );
+		env = new Damp( 0.001f, 1.0f, .25f );
 		for(int i=0;i<waves.length;++i) {
-			waves[i]=new Oscil(freq*(i+1), ampAra[i], Waves.SINE);
+			waves[i]=new Oscil(freq*(i+1), ampAra[i], Waves.TRIANGLE);
 			waves[i].patch(sum);
 		}
 		//waves[0].patch(sum);
 //		//tie waves generator into envelope
 		sum.patch(env);
+		
 	}//ctor
 	
 	//set array of per-waveform amplitudes
 	protected void setBaseAmplitude(int velocity) {
-		float div = 1.0f, baseAmpl = (float)(velocity-1) / 126.0f;
+		float div = 1.0f, baseAmpl = velocity / 255.0f;
 		ttlAmp = 0;
 		for(int i=0;i<ampAra.length; ++i) {
 			ampAra[i] = baseAmpl/div;
 			div *= divMult;	
 			ttlAmp += ampAra[i];
 		}	
+		//System.out.println("ttlamp : " + ttlAmp);
 	}//setBaseAmplitude
 	
 	public void setAmplitude(int velocity) {
@@ -620,18 +778,340 @@ class Synth implements ddf.minim.ugens.Instrument{
 		for(int i=0;i<waves.length;++i) {waves[i].setAmplitude(ampAra[i]);}
 	}
 	
+	public void setAmplitudeOff() {
+		setBaseAmplitude(0);
+		for(int i=0;i<waves.length;++i) {waves[i].setAmplitude(ampAra[i]);}
+	}
+	
 	public float getTtlAmplitude() {return ttlAmp;	}
 	
 	public void noteOn(float dur ){
 		//make sound
-		env.setDampTime(1.0f);
+		env.setDampTimeFromDuration(dur);
 		env.activate();
 		env.patch(out);
 	}
 	
 	public void noteOff(){
 		//stop sound - remove envelope from output
-		env.setDampTime(0.1f);
+		env.setDampTime(0.0f);
+		
 		env.unpatchAfterDamp(out);
 	}
 }
+
+//package gameEngine;
+//
+//import javax.sound.midi.*;
+//import java.io.File;
+//import java.io.IOException;
+//import java.net.URL;
+//
+///**
+//* MidiPlayer
+//* author: Stephen Lindberg
+//* Last modified: Oct 14, 2011
+//* 
+//* A class that allows midi files to be loaded and played.
+//**/
+//
+//public class MidiPlayer
+//{
+//   private Sequence seq;
+//   private Sequencer seqr;
+//   private Synthesizer synth;
+//   private Receiver receiver;
+//   private File midiFile;
+//   private String midiID;
+//   private boolean loaded;
+//   private boolean usingHardwareSoundbank;
+//   private float defaultTempo;
+//
+//   // CONSTRUCTORS
+//
+//   public MidiPlayer()
+//   {
+//      loaded = false;
+//      try
+//      {
+//         seqr = MidiSystem.getSequencer();
+//         synth = MidiSystem.getSynthesizer();
+//
+//         // print the user's midi device info
+//         System.out.println("Setting up Midi Player...");
+//         System.out.println("MidiDeviceInfo: ");
+//         for(MidiDevice.Info info : MidiSystem.getMidiDeviceInfo())
+//         {
+//            System.out.println("\t" + info.getName() + ": " +info.getDescription());
+//         }
+//         System.out.println();
+//
+//         // obtain the receiver. This will be used for changing volume.
+//
+//         Soundbank soundbank = synth.getDefaultSoundbank();
+//         if(soundbank == null)
+//         {
+//            receiver = MidiSystem.getReceiver();
+//            usingHardwareSoundbank = true;
+//            System.out.println("using hardware soundbank");
+//         }
+//         else
+//         {
+//            synth.loadAllInstruments(soundbank);
+//            receiver = synth.getReceiver();
+//            usingHardwareSoundbank = false;
+//            System.out.println("using default software soundbank:" + soundbank);
+//         }
+//         seqr.getTransmitter().setReceiver(receiver);
+//
+//      }
+//      catch(Exception e)
+//      {
+//         System.out.println("MIDI error: It appears your system doesn't have a MIDI device or your device is not working.");
+//      }
+//   }
+//
+//   /**
+//   *  MidiPlayer(String fileName)
+//   *  Constructor that also loads an initial midi file.
+//   *  Preconditions: fileName is the name of the midi file to be loaded. 
+//   *  Postconditions: The MidiPlayer is created and loaded with the midi specified by fileName.
+//   **/
+//
+//   public MidiPlayer(String fileName)
+//   {
+//      this();
+//      load(fileName);
+//   }
+//
+//
+//   // DATA METHODS
+//
+//   /**
+//   *  load(String fileName)
+//   *  loads a midi file into this MidiPlayer.
+//   *  Preconditions: fileName is the name of the midi file to be loaded.
+//   *  Postconditions: fileName is loaded and is ready to be played.
+//   **/
+//
+//   public void load(String fileName)
+//   {
+//      this.unload();
+//      try
+//      {
+//         URL midiURL =  getClass().getClassLoader().getResource(fileName);
+//         seq = MidiSystem.getSequence(midiURL);
+//
+//         seqr.open();
+//         synth.open();
+//
+//         // load our sequence into the sequencer.
+//
+//         seqr.setSequence(seq);
+//         loaded = true;
+//         defaultTempo = seqr.getTempoInBPM();
+//      }
+//      catch(IOException ioe)
+//      {
+//         System.out.println("MIDI error: Problem occured while reading " + midiFile.getName() + ".");
+//      }
+//      catch(InvalidMidiDataException imde)
+//      {
+//         System.out.println("MIDI error: " + midiFile.getName() + " is not a valid MIDI file or is unreadable.");
+//      }
+//      catch(Exception e)
+//      {
+//         System.out.println("MIDI error: Unexplained error occured while loading midi.");
+//      }
+//   }
+//
+//   /**
+//   *  unload()
+//   *  Unloads the current midi from the MidiPlayer and releases its resources from memory.
+//   **/
+//
+//   public void unload()
+//   {
+//      this.stop();
+//      seqr.close();
+//      synth.close();
+//      midiFile = null;
+//      loaded = false;
+//   }
+//
+//   // OTHER METHODS
+//
+//   /**
+//   *  setMidiID(String id)
+//   *  associates a String ID with the current midi.
+//   *  Preconditions: id is the ID we are associating with the current midi.
+//   **/
+//
+//   public void setMidiID(String id)
+//   {
+//      midiID = id;
+//   }
+//
+//   /**
+//   *  getMidiID(String id)
+//   *
+//   **/
+//
+//   public String getMidiID()
+//   {
+//      return new String(midiID);
+//   }
+//
+//   /**
+//   *  play(boolean reset)
+//   *  plays the currently loaded midi.
+//   *  Preconditions: reset tells our midi whether or nor to begin playing from the start of the midi file's current loop start point.
+//   *  Postconditions: If reset is true, then the loaded midi begins playing from its loop start point (default 0). 
+//   *      If reset is false, then the loaded midi resumes playing from its current position.
+//   **/
+//
+//   public void play(boolean reset)
+//   {
+//      if(reset)
+//         seqr.setTickPosition(seqr.getLoopStartPoint());
+//      seqr.start();
+//   }
+//
+//   /**
+//   *  stop()
+//   *  Pauses the current midi if it was playing.
+//   **/
+//
+//   public void stop()
+//   {
+//      if(seqr.isOpen())
+//         seqr.stop();
+//   }
+//
+//   /**
+//   *  isRunning()
+//   *  Returns true if the current midi is playing. Returns false otherwise.
+//   **/
+//
+//   public boolean isRunning()
+//   {
+//      return seqr.isRunning();
+//   }
+//
+//
+//
+//   /**
+//   *  getTempo()
+//   *  Returns the current tempo of the MidiPlayer in BPM (Beats per Minute).
+//   **/
+//
+//   public float getTempo()
+//   {
+//      return seqr.getTempoInBPM();
+//   }
+//
+//   /**
+//   *  loop(int times)
+//   *  Sets the current midi to loop from start to finish a specific number of times.
+//   *  Preconditions: times is the number of times we want our midi to loop.
+//   *  Postconditions: The current midi is set to loop times times. 
+//   *      If times = -1, the current midi will be set to loop infinitely.
+//   **/
+//
+//   public void loop(int times)
+//   {
+//      loop(times,0,-1);
+//   }
+//
+//   /**
+//   *  loop(int times)
+//   *  Sets the current midi to loop from a specified start point to a specified end point a specific number of times.
+//   *  Preconditions: times is the number of times we want our midi to loop.
+//   *      start is our loop's start point in ticks.
+//   *      end is our loop's end point in ticks.
+//   *  Postconditions: The current midi is set to loop from tick start to tick end times times. 
+//   *      If times = -1, the current midi will be set to loop infinitely.
+//   **/
+//
+//   public void loop(int times, long start, long end)
+//   {
+//      if(start < 0)
+//         start = 0;
+//      if(end > seqr.getSequence().getTickLength() || end <= 0)
+//         end = seqr.getSequence().getTickLength();
+//
+//      if(start >= end && end != -1)
+//         start = end-1;
+//
+//      seqr.setLoopStartPoint(start);
+//      seqr.setLoopEndPoint(end);
+//
+//      if(times == -1)
+//         seqr.setLoopCount(Sequencer.LOOP_CONTINUOUSLY);
+//      else
+//         seqr.setLoopCount(times);
+//
+//   }
+//
+//   /**
+//   *  resetTempo()
+//   *  Resets the MidiPlayer's tempo the the initial tempo of its current midi.
+//   **/
+//
+//   public void resetTempo()
+//   {
+//      this.changeTempo(this.defaultTempo);
+//   }
+//
+//   /**
+//   *  changeTempo(float bpm)
+//   *  Changes the MidiPlayer's current tempo.
+//   *  Preconditions: bpm is the MidiPlayer's new tempo in BPM (Beats per Minute).
+//   *  Postconditions: The MidiPlayer's current tempo is set to bpm BPM.
+//   **/
+//
+//   public void changeTempo(float bpm)
+//   {
+//      double lengthCoeff = bpm/seqr.getTempoInBPM();
+//
+//      seqr.setLoopStartPoint((long) (seqr.getLoopStartPoint()*lengthCoeff));
+//      seqr.setLoopEndPoint((long) (seqr.getLoopEndPoint()*lengthCoeff));
+//
+//      seqr.setTempoInBPM(bpm);
+//   }
+//
+//
+//   public void setVolume(double vol)
+//   {
+//      System.out.println("Midi volume change request: " + vol);
+//
+//      try 
+//      {
+//         if(usingHardwareSoundbank)
+//         {
+//            ShortMessage volumeMessage = new ShortMessage();
+//            for ( int i = 0; i < 16; i++ ) 
+//            {
+//               volumeMessage.setMessage( ShortMessage.CONTROL_CHANGE, i, 7, (int)(vol*127) );
+//               receiver.send( volumeMessage, -1 );
+//            }
+//         }
+//         else
+//         {
+//            MidiChannel[] channels = synth.getChannels();
+//
+//            for( int c = 0; c < channels.length; c++ )
+//            {
+//               if(channels[c] != null) {
+//                  channels[c].controlChange( 7, (int)( vol*127) );
+//               }
+//            }
+//         }
+//      } 
+//      catch ( Exception e ) 
+//      {
+//         e.printStackTrace();
+//      }
+//   }
+//
+//}

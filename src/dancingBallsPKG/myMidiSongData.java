@@ -26,8 +26,9 @@ public class myMidiSongData {
 			"Breath Noise","Seashore","Bird Tweet","Telephone Ring","Helicopter","Applause","Gunshot"}; 
 	
 	//whether to use full not value or just not start value for rhythm histogram
+	//change manually for now
 	private static final boolean useFullNoteVol = false;
-	
+	//file analyzer owning this midisong data object
 	public myMidiFileAnalyzer mfa;
 	//length of sequence in time
 	public final long tickLen;
@@ -81,15 +82,19 @@ public class myMidiSongData {
 		state = new songState(this, midiChans);
 		for(int i=0; i<midiChans.length;++i) {	midiChans[i] = new myMidiChannel(this, state, i);	}
 		//when state is updated, it should update midiChans
-//		if(3== mfa.thdIDX) {
-//		System.out.println("Thd IDX : " + mfa.thdIDX + " | Composer : " +composer + "\tSong Name : " + title +"\tFormat info : byte len : " + byteLen+" | midi type : " + type + " | # of tracks  : "+ numTracks);
-//		}
 		for(int i=0;i<numTracks;++i) {
 			midiTracks[i] = new myMidiTrackData(this, state, midiChans, tracks[i], i);
+			//midiTracks[i].procEvents();
+		}
+		//finalizeSong();
+	}//ctor	
+	
+	public void procMidiSongData() {
+		for(int i=0;i<numTracks;++i) {
 			midiTracks[i].procEvents();
 		}
 		finalizeSong();
-	}//ctor	
+	}
 	
 	//used to build message from bytes in midi messages
 	public String buildStrFromByteAra(byte[] msgBytes, int stIdx) {
@@ -149,7 +154,7 @@ public class myMidiSongData {
 		
 	}
 	
-	//save all the song data in the appropriate format
+	//save all the song data in the appropriate formats for the ML process
 	public void saveData() {//TODO
 		
 		
@@ -215,6 +220,7 @@ class myMidiChannel{
 //		if(oldInst != null) {
 //			System.out.println("Remapping channel instrument name @ time " + _t);
 //		}
+		
 	}
 	
 	
@@ -233,13 +239,11 @@ class myChanEvt{
 	
 }//myChanEvt
 
-
-
 //class to hold all data for a single track from a midi file - format this data to save as features
 //tracks are mapped to 1 of 16 channels for playback. use channel mapping to correlate instrument - each channel will correspond to a single instrument 
 
 class myMidiTrackData {
-	//owning analyzer
+	//owning song
 	myMidiSongData song;
 	//# of events, index in track listing of this track
 	int numEvents, trIDX;
@@ -254,7 +258,7 @@ class myMidiTrackData {
 	
 	//channel this track is mapping to - if changes, need to monitor
 	private ConcurrentSkipListMap<Long,Integer> curChanMap;
-	
+	//all channels that this track maps to
 	private ConcurrentSkipListMap<Integer,Boolean> chansMapped;
 	
 	//these might hold useful info about instrument(s) playing part
@@ -433,7 +437,7 @@ class myMidiTrackData {
 							//The value 8192 indicates no pitch bend; 0 the lowest pitch bend, and 16383 the highest. 
 							//The actual change in pitch these values produce is unspecified. 
 							
-							//for our purposes ignore we ignore pitch bend
+							//for our purposes we ignore pitch bend
 							break;}
 						default : {}
 					}//switch on non-note channel commands					
@@ -602,7 +606,7 @@ class myMidiTrackData {
 					//type 0 MIDI file, or in the first track of a type 1 file gives the name of the work. 
 					//Subsequent Title meta-events in other tracks give the names of those tracks. 
 					
-					btsAsChar = "Track Title : " + btsAsChar;
+					//btsAsChar = btsAsChar;
 					String trkTtl = trkTitle.put(stTime, btsAsChar);
 					if((null!= trkTtl) && !(trkTtl.trim().equals(btsAsChar.trim()))) {//build compound track title if title already exists
 						trkTtl += "|"+btsAsChar;

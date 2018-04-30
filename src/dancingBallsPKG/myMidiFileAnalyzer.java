@@ -9,7 +9,7 @@ import javax.sound.midi.*;
 public class myMidiFileAnalyzer {
 	//private myAudioManager mgr;
 	//ref to info about file from audioFileManager
-	public AudioFile fileListing;
+	public dancingBallsPKG.AudioFile fileListing;
 	public Sequence sequence;
 	public MidiFileFormat format;
 	public String composer;
@@ -39,6 +39,7 @@ public class myMidiFileAnalyzer {
 		    format = MidiSystem.getMidiFileFormat(f);
 		    sequence = MidiSystem.getSequence(f);
 		    loadedSeq = true;
+		    midiSong =  new myMidiSongData(this,format, sequence);				
 		}
 		catch( InvalidMidiDataException ex ){
 			System.out.println( "This file is not a valid midi file : "+ fileListing.filePath+": format : " + format + "\t | msg : "+ex.getMessage() );
@@ -52,7 +53,8 @@ public class myMidiFileAnalyzer {
 	//have everything in ticks - maybe should use location in ticks to define training examples	
 	public void analyze() {
 		if(!loadedSeq) {return;}
-		midiSong =  new myMidiSongData(this,format, sequence);	
+		//midiSong =  new myMidiSongData(this,format, sequence);	
+		midiSong.procMidiSongData();
 	}//analyze	
 	
 	//return a snapshot of winWidth values of song note levels starting at stTime, avged over bins of binSize

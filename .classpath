@@ -19,7 +19,7 @@
 	<classpathentry kind="lib" path="jogl-all-natives-windows-amd64.jar"/>
 	<classpathentry kind="lib" path="jogl-all-natives-windows-i586.jar"/>
 	<classpathentry kind="lib" path="jogl-all.jar"/>
-	<classpathentry kind="lib" path="minim.jar"/>
+	<classpathentry kind="lib" path="minim.jar" sourcepath="D:/minim/Minim/library/minim.jar"/>
 	<classpathentry kind="lib" path="jsminim.jar"/>
 	<classpathentry kind="lib" path="mp3spi1.9.5.jar"/>
 	<classpathentry kind="lib" path="tritonus_aos.jar"/>

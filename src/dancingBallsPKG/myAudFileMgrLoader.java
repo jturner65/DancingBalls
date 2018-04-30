@@ -64,6 +64,8 @@ class mySongLoadMapper implements Runnable{
 	
 }//mySongLoadMapper
 
+
+//per-thread midi file analyzer launcher
 class myMidiFileProcessor implements Callable<Boolean>{
 	myAudioManager mgr;
 	ArrayList<AudioFile> midiFiles;
@@ -77,6 +79,15 @@ class myMidiFileProcessor implements Callable<Boolean>{
 	
 	//# of files failed to load
 	public int failedLoad;
+	
+	
+	//mgr will manage saving all these data points into single file
+	
+	//construct to hold all class info for this thread's midi data, to be passed to mgr
+	//construct to hold all ftr info for this thread's midi data, to be passed to mgr
+	
+	
+	
 	
 	public myMidiFileProcessor(myAudioManager _mgr, ArrayList<AudioFile> _midiFiles, int _thIdx) {
 		mgr = _mgr; thIdx=_thIdx;
@@ -105,6 +116,7 @@ class myMidiFileProcessor implements Callable<Boolean>{
 				if(res) {	tmpMfAnalyzer.add(tmp);   } else {++failedLoad; tmp=null;}
 			}	
 			mfAnalyzerAra = tmpMfAnalyzer.toArray(new myMidiFileAnalyzer[0]);
+			//mgr.pa.outStr2Scr("thdIDX : " + this.thIdx + " | mfAnalyzerAra size : "+ mfAnalyzerAra.length);
 			mfaState = 1;
 			break;}
 		case 1 :{//process

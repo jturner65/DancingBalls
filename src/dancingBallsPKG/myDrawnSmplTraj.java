@@ -1,6 +1,7 @@
 package dancingBallsPKG;
 
 import java.util.*;
+
 import processing.core.*;
 
 //class holds trajctory and 4 macro cntl points, and handling for them

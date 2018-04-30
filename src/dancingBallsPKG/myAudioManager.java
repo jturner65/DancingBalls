@@ -7,6 +7,7 @@ import ddf.minim.analysis.*;
 import processing.core.PConstants;
 
 //class to hold all audio and audio analysis - moved from window class
+//owned by window
 public class myAudioManager {
 	public DancingBalls pa;
 	public DancingBallWin win;
@@ -96,7 +97,7 @@ public class myAudioManager {
 	public static String[][] songBanks = new String[][] {{"Midi"},{"Piano Scales","Piano Songs", "Misc Songs", "Bach Cello", "Piano Notes"}};
 	//list of song names
 	public static String[][][] songList = new String[][][]{
-		{{"Fugue0 Midi","Fugue1 Midi","Fugue 2 Midi","Fugue 3 Midi"}},
+		{{"Fugue0 Midi","4 Seasons Spring 1","Fugue1 Midi","Fugue 2 Midi","Fugue 3 Midi"}},
 		{{"Chromatic F#","Ab","A","Bb","B","C#","C","D","Eb","E","F#","F","G","Pentatonic F#","WholeTone C#","WholeTone C"},		
 		{"WellTmprdClav CMaj","Sati-Gnoss1","Sati-Gymn1","Fur Elise"},
 		{"PurpleHaze","UNATCO","Hunting","SavanaDance","Karelia","Choir"},
@@ -113,7 +114,7 @@ public class myAudioManager {
 	//0==mp3, 1==midi, used to determine display strings for some UI features
 	public int [][][] songTypes;
 	public String[][][] songFilenames = new String[][][]{
-		{{"fugue0.mid","fugue1.mid","fugue2.mid","fugue3.mid"}},
+		{{"fugue0.mid","4SeasonsSpring1.mid","fugue1.mid","fugue2.mid","fugue3.mid"}},
 		{{"scales_ChromaticF Sharp.mp3","scales_A Flat.mp3","scales_A.mp3",
 		"scales_B Flat.mp3","scales_B.mp3","scales_C Sharp.mp3","scales_C.mp3","scales_D.mp3","scales_E Flat.mp3","scales_E.mp3",
 		"scales_F Sharp.mp3","scales_F.mp3","scales_G.mp3","scales_Pentatonic on F Sharp.mp3","scales_WholeToneC Sharp.mp3","scales_WholeToneC.mp3"},
@@ -125,6 +126,18 @@ public class myAudioManager {
 	
 	//New structs to hold current songs, current banks, and current audio file types
 	public String[] curSongList, curBankList,curTypeList;
+	
+	//structures holding data from audio processing to save for ML process
+	//two structures, "feature" data and "class" data.  
+	//class data would be used in supervised learning as a class, and in generative learning as a feature to be fed to generator
+	//feature data would be used in SL as a feature and GAN as a generated data target, to be compared by discriminator to generated data
+	
+	//the progress bar object is a 10 element float array used as continuous 1-hot encoding relative location 
+	//format of class data record : composer, key, # of instruments, sliding window size/song length, current sliding window center beat strength (0-1), sliding window progress bar entire song 
+	
+	
+	//format of generated feature data : 
+	
 	
 	
 	//current index of fft windowing function, from ui
