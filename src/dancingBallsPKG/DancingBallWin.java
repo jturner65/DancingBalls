@@ -70,8 +70,8 @@ public class DancingBallWin extends myDispWindow {
 	
 	/////////
 	//ui button names -empty will do nothing
-	public String[] menuDbgBtnNames = new String[] {"Ball Debug", "Dbg 2", "Dbg 3", "Dbg 4"};//must have literals for every button or ignored
-	public String[] menuFuncBtnNames = new String[] {"Init AudIO","Load Midi", "Proc Midi", "Save MIDI", "Check Memory"};//must have literals for every button or ignored
+	public String[] menuDbgBtnNames = new String[] {"Ball Debug", "Check Memory", "Dbg 3", "Dbg 4"};//must have literals for every button or ignored
+	public String[] menuFuncBtnNames = new String[] {"Init AudIO","Load Midi", "Proc/Save Midi", "Cust Func 3", "Cust Func 4"};//must have literals for every button or ignored
 	
 	
 	public String[] dftResTypeToShow = new String[] {"Global","Per Zone","Per Thread"};
@@ -660,13 +660,12 @@ public class DancingBallWin extends myDispWindow {
 	}	
 	
 	private void custFunc2(){	
-		audMgr.preprocMidiData();	
+		audMgr.procSaveMidiData();	
 	}			
 	private void custFunc3(){	
-		audMgr.saveProcMidiData();	
+		clearFuncBtnState(3,false);
 	}			
 	private void custFunc4(){	
-		pa.checkMemorySetup();
 		//custom function code here
 		clearFuncBtnState(4,false);
 	}		
@@ -690,7 +689,8 @@ public class DancingBallWin extends myDispWindow {
 
 		clearDBGBtnState(0,false);
 	}	
-	private void dbgFunc1(){		
+	private void dbgFunc1(){	
+		pa.checkMemorySetup();
 		//dbg code here
 		clearDBGBtnState(1,false);
 	}	

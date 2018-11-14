@@ -7,17 +7,20 @@ import javax.sound.midi.*;
 
 //a class that provides functionality to load a midi file and save analysis data
 public class myMidiFileAnalyzer {
-	//private myAudioManager mgr;
 	//ref to info about file from audioFileManager
-	public dancingBallsPKG.AudioFile fileListing;
+	public AudioFile fileListing;
 	public Sequence sequence;
 	public MidiFileFormat format;
 	public String composer;
 	public int thdIDX;
 	
 	public boolean loadedSeq;
+	private ConcurrentSkipListMap<Long,Float> noteHistogram;
+	public int numTracks;
+	public long tickLen;
 	
-	public myMidiSongData midiSong;
+	
+	private myMidiSongData midiSong;
 	
 	public int midiFileType; //either 0, 1, or 2
 	//pass audio manager, file listing for midi song, and thread idx (if used, otherwise use 0) and this will build a midi song encoding of the midi data
@@ -26,6 +29,7 @@ public class myMidiFileAnalyzer {
 		thdIDX = _thIdx;
 		fileListing = _fileListing;
 		composer = (fileListing.composerDir == null ? "Unknown Composer" : fileListing.composerDir.dispName);
+		//System.out.println("composer : " + composer);
 		loadedSeq = false;
 	}
 
@@ -36,16 +40,24 @@ public class myMidiFileAnalyzer {
 		    	System.out.println("Null File obj : file not found : " + fileListing.filePath);
 		    	return false;
 		    }
-		    format = MidiSystem.getMidiFileFormat(f);
 		    sequence = MidiSystem.getSequence(f);
+		    format = MidiSystem.getMidiFileFormat(f);
 		    loadedSeq = true;
 		    midiSong =  new myMidiSongData(this,format, sequence);				
 		}
 		catch( InvalidMidiDataException ex ){
 			System.out.println( "This file is not a valid midi file : "+ fileListing.filePath+": format : " + format + "\t | msg : "+ex.getMessage() );
+		    sequence = null;
+		    format  = null;
+		    loadedSeq = false;
+		    midiSong = null;				
 			return false;}
 		catch( IOException ex ) { 
 			System.out.println( "Had a problem accessing this midi file : "+ fileListing.filePath+":\t"+ex.getMessage() );
+		    sequence = null;
+		    format  = null;
+		    loadedSeq = false;
+		    midiSong = null;				
 			return false;}
 		return true;
 	}//loadAudio
@@ -55,6 +67,10 @@ public class myMidiFileAnalyzer {
 		if(!loadedSeq) {return;}
 		//midiSong =  new myMidiSongData(this,format, sequence);	
 		midiSong.procMidiSongData();
+		noteHistogram = midiSong.getNoteHistogram();
+		tickLen = midiSong.tickLen;
+		numTracks = midiSong.numTracks;
+		
 	}//analyze	
 	
 	//return a snapshot of winWidth values of song note levels starting at stTime, avged over bins of binSize
@@ -64,7 +80,7 @@ public class myMidiFileAnalyzer {
 		int destIdx = 0;
 		if(binSize == 1) {
 			for (long i=stTime; i<endTime; ++i) {
-				Float lvl = midiSong.noteHistogram.get(i);
+				Float lvl = noteHistogram.get(i);
 				if(null==lvl) {++destIdx;continue;}
 				songLvls[destIdx++] = lvl;
 			}					
@@ -77,7 +93,7 @@ public class myMidiFileAnalyzer {
 				float lvl = 0.0f, count = 0.0f;
 				//average over individual bin windows
 				for(long j=i;j<winEnd;++j) {
-					Float lvltmp = midiSong.noteHistogram.get(j);
+					Float lvltmp = noteHistogram.get(j);
 					if(null==lvltmp) {continue;}
 					lvl+= lvltmp;
 					++count;
@@ -89,26 +105,16 @@ public class myMidiFileAnalyzer {
 		return songLvls;
 	}//getRelSongLevelsWin
 	
-	
-	
-//	//returns a map  of relative volume for every tick in this song - 0->lvlMult
-//	public float[] getRelSongLevels(float lvlMult){
-//		float[] songLvls;
-//		Integer[] intSongLvls = midiSong.noteHistogram.values().toArray(new Integer[0]);
-//		int minLvl = 100000000, maxLvl = -1;
-//		for(int i=0;i<intSongLvls.length;++i) {
-//			if(intSongLvls[i]>maxLvl) {maxLvl = intSongLvls[i];} else if(intSongLvls[i]<minLvl) {minLvl = intSongLvls[i];}
-//		}
-//		songLvls = new float[intSongLvls.length];
-//		for(int i=0;i<intSongLvls.length;++i) {	songLvls[i]=lvlMult*(intSongLvls[i]-minLvl)/(1.0f*maxLvl);}
-//		return songLvls;
-//	}//getRelSongLevels
+
 	
 	//write the results of the audio processing
 	public void saveProcMidi() {
 		if(!loadedSeq) {return;}
 		if(!midiSong.procDone) {System.out.println("Midi Song processing not complete : " + midiSong.title + " not processed so cannot save;"); return;	}
-		midiSong.saveData();		
+		midiSong.saveData();	
+		
+		//testing - this also alleviates memory issues
+		midiSong = null;
 	}//saveProcMidi	
 	
 }//myMidiFileAnalyzer

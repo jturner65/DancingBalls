@@ -28,7 +28,7 @@ public class myAudioFileManager {
 
 	public myAudioFileManager(myAudioManager _mgr, Minim _minim, Path _rootDirPath) {
 		mgr=_mgr;minim=_minim;
-		midiFiles = new ArrayList[mgr.pa.numThreadsAvail-1];
+		midiFiles = new ArrayList[mgr.pa.numThreadsAvail-2];
 		midiFileAraCount = new int[midiFiles.length];
 		for(int i=0;i<midiFiles.length;++i) {				
 			midiFiles[i] = new ArrayList<AudioFile>();

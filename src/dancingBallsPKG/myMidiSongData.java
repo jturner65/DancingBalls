@@ -1,5 +1,6 @@
 package dancingBallsPKG;
 
+import java.util.*;
 import java.util.concurrent.*;
 
 import javax.sound.midi.*;
@@ -44,7 +45,7 @@ public class myMidiSongData {
 	//title
 	public final String title;
 	//all trackdata objects for this song
-	public myMidiTrackData[] midiTracks;
+	private myMidiTrackData[] midiTracks;
 	
 	//want to store all data per channel
 	public myMidiChannel[] midiChans;
@@ -54,7 +55,7 @@ public class myMidiSongData {
 	//this song has been processed
 	public boolean procDone;
 	//map of all note volumes throughout song, for rhythm analysis
-	public ConcurrentSkipListMap<Long,Float> noteHistogram;
+	private ConcurrentSkipListMap<Long,Float> noteHistogram;
 	private float maxNoteLvl;
 	
 	public myMidiSongData (myMidiFileAnalyzer _mfa, MidiFileFormat _fmt, Sequence _seq) {
@@ -79,40 +80,47 @@ public class myMidiSongData {
 		
 		midiChans = new myMidiChannel[16];//never more than 16 channels
 		//add ref to array, but array needs to be made with state ref
-		state = new songState(this, midiChans);
+		state = new songState();//(this, midiChans);
 		for(int i=0; i<midiChans.length;++i) {	midiChans[i] = new myMidiChannel(this, state, i);	}
 		//when state is updated, it should update midiChans
 		for(int i=0;i<numTracks;++i) {
 			midiTracks[i] = new myMidiTrackData(this, state, midiChans, tracks[i], i);
-			//midiTracks[i].procEvents();
 		}
-		//finalizeSong();
 	}//ctor	
+	
+	public ConcurrentSkipListMap<Long,Float> getNoteHistogram(){return noteHistogram;}
 	
 	public void procMidiSongData() {
 		for(int i=0;i<numTracks;++i) {
 			midiTracks[i].procEvents();
 		}
 		finalizeSong();
-	}
+		
+		
+	}//procMidiSongData
+	
+	private StringBuilder sb = new StringBuilder(256);
 	
 	//used to build message from bytes in midi messages
 	public String buildStrFromByteAra(byte[] msgBytes, int stIdx) {
-		//stIdx might need to be 1 less?
-		String res = "";
-		if(stIdx >= msgBytes.length) {return res;} 
-		res += "\"";
+		if(stIdx >= msgBytes.length) {return "";} 
+		sb.setLength(msgBytes.length);
+		sb.append("\"");
 		for(int b=stIdx;b<msgBytes.length;++b) {
 			Character c = (char)(msgBytes[b]& 0xFF);
+			//only to properly encode escape chars
 			String add = "";
-	        if ((c < ' ') || ((c > '~') && (c <= 160))) {	add += '\\'+ c;} 
-	        else {
-	            if (c == '"') {	add += '"';} else if (c == '\\') {	add +='\\';}
+	        if ((c < ' ') || ((c > '~') && (c <= 160))) {add += '\\'+ c;} 
+	        else {         
+	        	if (c == '"') {add += '"';} else if (c == '\\') {	add +='\\';}
 				add += c;
 			}			
-	        res += c;
+			sb.append(add);//sb.append(c);
 		}	
-		res += "\"";
+		sb.append("\"");
+		
+		String res = sb.toString().trim();
+		sb.setLength(0);
 		return res;
 	}//buildStrFromByteAra
 	
@@ -151,11 +159,17 @@ public class myMidiSongData {
 		if(maxNoteLvl <= 1) {return;}//lvls in notes are ints, so <=1 means no notes in song
 		//normalize all recorded note levels in note histogram - divide lvls by maxNoteLvl
 		for(Long key : noteHistogram.keySet()) {noteHistogram.put(key,noteHistogram.get(key)/maxNoteLvl);}
-		
+	
 	}
 	
+	
 	//save all the song data in the appropriate formats for the ML process
+	//construct and return an array of arrays of Strings of data pertaining to song window information
 	public void saveData() {//TODO
+		//call at every time stamp - returns list of strings :
+		//state.getCurSongStateData(timeStamp);
+		//
+		
 		
 		
 		
@@ -177,20 +191,25 @@ class myMidiChannel{
 	//ref to song state
 	public songState state;
 	
+	//multiple notes may start or stop at same time
+	
 	//sorted by timestamp of note starting, and note stopping, for all notes in this channel
-	private ConcurrentSkipListMap<Long,midiNoteData> notesOn, notesOff;
+	private ConcurrentSkipListMap<Long,ConcurrentSkipListMap<midiNoteData, Boolean>> notesOn, notesOff;
 	//channel-specific events - program change - these are enabled until they are overwritten by other program changes
-	private ConcurrentSkipListMap<Long,myChanEvt> progChange;
+	private ConcurrentSkipListMap<Long,ArrayList<myChanEvt>> progChange;
 	//this might hold useful info about instrument(s) playing part
 	//instrument name used in this channel - might change over time
-	private ConcurrentSkipListMap<Long,String> chInstName;		
+	private ConcurrentSkipListMap<Long,ConcurrentSkipListMap<String, Boolean>> chInstName;		
 	
 	public myMidiChannel(myMidiSongData _sng,songState _st, int _ch) {
 		song=_sng; state=_st; chan=_ch;
-		notesOn = new ConcurrentSkipListMap<Long,midiNoteData>();
-		notesOff = new ConcurrentSkipListMap<Long,midiNoteData>();
-		progChange = new ConcurrentSkipListMap<Long,myChanEvt>();
-		chInstName = new ConcurrentSkipListMap<Long,String>();
+		//support chords
+		notesOn = new ConcurrentSkipListMap<Long,ConcurrentSkipListMap<midiNoteData, Boolean>>();
+		notesOff = new ConcurrentSkipListMap<Long,ConcurrentSkipListMap<midiNoteData, Boolean>>();
+		
+		//suport multiple program changes
+		progChange = new ConcurrentSkipListMap<Long,ArrayList<myChanEvt>>();
+		chInstName = new ConcurrentSkipListMap<Long,ConcurrentSkipListMap<String, Boolean>>();
 	}
 
 	
@@ -198,46 +217,53 @@ class myMidiChannel{
 	public void addNote(midiNoteData _note) {
 		//add note's volumes to rhythm histogram
 		song.addToRhythmHist(_note);
-		notesOn.put(_note.stTime, _note);
-		notesOff.put(_note.endTime, _note);		
+		putNoteInMap(notesOn, _note.stTime, _note);
+		putNoteInMap(notesOff, _note.endTime, _note);
 	}
 	
+	private void putNoteInMap(ConcurrentSkipListMap<Long,ConcurrentSkipListMap<midiNoteData, Boolean>> _map, Long _time, midiNoteData _note) {
+		ConcurrentSkipListMap<midiNoteData, Boolean> mapLoc = _map.get(_time);
+		if (mapLoc == null) {//no entry in map at specified time - make new set			
+			mapLoc = new ConcurrentSkipListMap<midiNoteData, Boolean>();
+		}
+		mapLoc.put(_note, true);
+		_map.put(_time, mapLoc);		
+	}
+		
 	//check if note already exists in channel
 	public boolean chanHasNote(int mididat1, Long endTime) {
-		midiNoteData _note = notesOff.get(endTime);
+		if(notesOff.size() == 0)  {return false;}
+		ConcurrentSkipListMap<midiNoteData, Boolean> noteSet = notesOff.get(endTime);
+		if(noteSet.size() == 0)  {return false;}
+		midiNoteData _note = noteSet.firstKey();
 		if(null==_note) {return false;}
 		return (_note.midiData == mididat1);//if note has identical midi data and start time then note is in channel already		
 	}
 	
 	//set/change instrument in this channel - uses general midi specification to describe instrument
 	public void addProgramChange(long _t, byte[] _info) {
+		ArrayList<myChanEvt> mapLoc = progChange.get(_t);
+		if (mapLoc == null) {//no entry in map at specified time - make new set			
+			mapLoc = new ArrayList<myChanEvt>();
+		}
+		
 		int idx = (int)(_info[1]);
-		progChange.put(_t, new myChanEvt(MidiCommand.ProgChange, myMidiSongData.GMPatches[idx], chan, _info));
+		mapLoc.add(new myChanEvt(MidiCommand.ProgChange, myMidiSongData.GMPatches[idx], chan, _info));	
+		progChange.put(_t, mapLoc);
 	}
 
 	public void setInstName(long _t, String _name) {
-		String oldInst = chInstName.put(_t, _name);
-//		if(oldInst != null) {
-//			System.out.println("Remapping channel instrument name @ time " + _t);
-//		}
-		
-	}
+		ConcurrentSkipListMap<String, Boolean> mapLoc = chInstName.get(_t);
+		if (mapLoc == null) {//no entry in map at specified time - make new set		
+			mapLoc = new ConcurrentSkipListMap<String, Boolean>();
+		}
+		mapLoc.put(_name, true);
+		chInstName.put(_t, mapLoc);	
+	}//setInstName
 	
 	
 }//class myMidiChannel
 
-//non-note channel events
-class myChanEvt{
-	public final String name;
-	//non-note channel-specific command
-	public final MidiCommand cmd;
-	//channel
-	public final int ch;
-	//info bytes
-	public final byte[] info;
-	public myChanEvt(MidiCommand _cmd,String _name, int _ch,byte[] _info) {cmd=_cmd;name=_name;ch=_ch;info=_info;}
-	
-}//myChanEvt
 
 //class to hold all data for a single track from a midi file - format this data to save as features
 //tracks are mapped to 1 of 16 channels for playback. use channel mapping to correlate instrument - each channel will correspond to a single instrument 
@@ -249,8 +275,8 @@ class myMidiTrackData {
 	int numEvents, trIDX;
 	//midi track that informs this object
 	Track trk;
-	//array of events in the track that informs this object
-	MidiEvent[] events;
+	//array of events in the track that informs this object - unnecessary ? 
+	//MidiEvent[] events;
 	
 	//informational data to build features with
 	//reference to all channels in song
@@ -265,7 +291,10 @@ class myMidiTrackData {
 	//title(s) of this track (might change over time) - might hold useful info about instrument playing part
 	private ConcurrentSkipListMap<Long,String> trkTitle;
 	//instrument name used in this track, per channel - might change over time
-	private ConcurrentSkipListMap<Long,String>[] tInstName;	
+	//private ConcurrentSkipListMap<Long,String>[] tInstName;	
+	
+	//map of all meta events in this track, saved as strings
+	private ConcurrentSkipListMap<Long,ArrayList<String>> trkMetaEvents;
 	
 	//ref to song state that holds all globally(across all channels)-applicable variables, such as tempo or key sig
 	songState state;
@@ -276,20 +305,36 @@ class myMidiTrackData {
 		state = _st;
 		trk = _trk;
 		numEvents = trk.size();
-		events = new MidiEvent[numEvents];
+		//events = new MidiEvent[numEvents];
 		trIDX = idx;
 		chans = _chns;
+
+		initTrack();
+	}
+	
+	public void initTrack() {
 		curChanMap = new ConcurrentSkipListMap<Long,Integer>();
 		//always assumes channel 0 is mapped
 		curChanMap.put(0L, 0);		
 		chansMapped = new ConcurrentSkipListMap<Integer,Boolean>();
 		chansMapped.put(0, true);
 		trkTitle = new ConcurrentSkipListMap<Long,String>();
-		tInstName = new ConcurrentSkipListMap[16];
-		for(int i=0;i<tInstName.length;++i) {
-			tInstName[i]=new ConcurrentSkipListMap<Long,String>();
-		}
+//		tInstName = new ConcurrentSkipListMap[16];
+//		for(int i=0;i<tInstName.length;++i) {
+//			tInstName[i]=new ConcurrentSkipListMap<Long,String>();
+//		}
+		
+		//meta events string data
+		trkMetaEvents = new ConcurrentSkipListMap<Long,ArrayList<String>> ();		
+	}
 	
+	private void addMetaEventString(long _t, String _s) {
+		ArrayList<String> _strAra = trkMetaEvents.get(_t);
+		if(_strAra == null) {
+			_strAra = new ArrayList<String>();
+		}
+		_strAra.add(_s);
+		trkMetaEvents.put(_t, _strAra);
 	}
 	
 	//function processes all midi events 
@@ -299,20 +344,18 @@ class myMidiTrackData {
 		for(int i=0;i<lastOnNote.length;++i) {
 			lastOnNote[i] = new midiNoteData[128];
 		}
+		MidiMessage msg;
+		byte[] msgBytes;
 		boolean hasChanEvt = false;
 		for(int e=0;e<numEvents;++e) {
 			MidiEvent ev = trk.get(e);
-			events[e]=ev;
+			//events[e]=ev;
 			//event has start time and message, in midi ticks
 			long stTime = ev.getTick();
-			MidiMessage msg = ev.getMessage();
+			msg = ev.getMessage();
 			//message has length, message bytes array and status byte
-			byte[] msgBytes = msg.getMessage();//(int)(byte & 0xFF)
+			msgBytes = msg.getMessage();//(int)(byte & 0xFF)
 			//build string of bytes
-			String msgStr = ""+String.format("0x%02X", (int)(msgBytes[0]& 0xFF));
-			for(int b=1;b<msgBytes.length;++b) {
-				msgStr +=","+String.format("0x%02X", (int)(msgBytes[b]& 0xFF));
-			}			
 					
 			//encodes command and channel - first byte of message
 			int status = (int)(msgBytes[0] & 0xFF);//same as get status
@@ -350,7 +393,7 @@ class myMidiTrackData {
 //					}
 					if((cmd == MidiCommand.NoteOff) || ((cmd == MidiCommand.NoteOn) && (dat2 == 0))) {//if turning off a note, or if noteOn + vol==0
 						midiNoteData note = lastOnNote[chan][dat1];
-						if(note == null) {//no note to turn off in array - happens because double notes at same timestamp, just ignore extra off command (errors in midi files)
+						if(note == null) {//no note to turn off in array - happens because double notes at same timestamp, just ignore ext
 //							if((1== song.mfa.thdIDX) && (trIDX == 3)) {
 //								if (!chans[chan].chanHasNote(dat1, stTime)) {
 //									System.out.println("th : " + song.mfa.thdIDX + " | Track "+trIDX+"!!!Ara is null for midi note : " + dat1 + " | chan : " + chan+"| end time : " +stTime + "| orig cmd : " + cmd +"| dat2 : " + dat2);													
@@ -392,7 +435,7 @@ class myMidiTrackData {
 //						System.out.println("Track "+trIDX+"| time : " +stTime + " | status : "+ String.format("0x%02X",status) + 
 //						" channel : " + chan + " command : "+ cmd+" | " + str1 + " : " + dat1+" | note : " + note  + " octave : " + octave + " | " + str2 + " : " +dat2+ " | bytes : [ "+msgStr + " ]");					
 					}
-				} else {
+				} else {//not note on or note off
 					switch(cmd) {
 						case PolyKeyTouch : {
 							break;}
@@ -449,16 +492,27 @@ class myMidiTrackData {
 //					System.out.println("ch event exception : " +_e.getMessage());
 //				}
 				
-			} else {		//sysex or file meta event - across all channels.  ignore sysex ?
+			} else {		//sysex or file meta event - across all channels.  ignore all?
 				command = status;	
 				MidiCommand cmd = MidiCommand.getVal(command);
 				if(cmd == MidiCommand.FileMetaEvent) {
-					procMetaEvents(msgBytes, command, stTime, msgStr);
+					//String res = 
+							procMetaEvents(msgBytes, command, stTime);
+					//this ends up being too big 
+					//this.addMetaEventString(stTime, res);
+					
 				} else {//sysex - probably irrelevant for our purposes 
 					//procSysex(stTime, msgBytes, msgStr);					
 				}				
-			}			
-		}		
+			}
+			msgBytes = null;
+		}
+		
+		//at the end of processing track, dispose of  unnecessary refs
+		this.trk=null;
+		this.curChanMap = null;
+		this.chansMapped = null;
+		
 		//check if multiple channels in this track, or if no channels specified - shouldn't happen, but might
 //		if(chansMapped.size() != 1) {
 //			if(chansMapped.size() > 1) {//multiple channels are mapped by this track.
@@ -559,11 +613,16 @@ class myMidiTrackData {
 		return len;
 	}//getTrackLen
 	
+	private String getBtsAsChar(byte[] msgBytes, int msgLength, int msgStIdx) {
+
+		String btsAsChar = song.buildStrFromByteAra(msgBytes, msgStIdx);
+		return btsAsChar;
+	}
 			
 	//idx 0 will be FF, idx 1 will be type of meta event,  idx 2+ will be relevant data
 	//these will always span all channels
 	//put all data in state
-	private void procMetaEvents(byte[] msgBytes, int command, long stTime, String msgStr) {
+	private String procMetaEvents(byte[] msgBytes, int command, long stTime) {
 		//used for string data encoded in midi msg
 		int typeByte = (int)(msgBytes[1] & 0xFF);
 		MidiMeta type = MidiMeta.getVal(typeByte);
@@ -575,12 +634,13 @@ class myMidiTrackData {
 			//for(byte m : msgBytes) {
 			//	System.out.println("\t Thd IDX : " + mfa.thdIDX + " | byte : " + String.format("%02X ", m));
 			//}
+			return "Null Type Meta Event";
 		} else {//known midi meta event
 			//message length is encoded in bytes 2+ - some messages can be very long, so may require more than 1 byte to encode
 			int msgLength = getTrackLen(msgBytes);
-			//idx 2 is start of message length byte(s)
+//			//idx 2 is start of message length byte(s)
 			int msgStIdx = msgBytes.length - msgLength;
-			String btsAsChar = song.buildStrFromByteAra(msgBytes, msgStIdx);
+			String btsAsChar =  "";
 			switch(type) {
 				case SeqNumber 		:{
 					//This meta-event specifies a sequence Number between 0 and 65535, used to arrange multiple 
@@ -594,11 +654,11 @@ class myMidiTrackData {
 					//The Text specifies the title of the track or sequence. The first Title meta-event in a 
 					//type 0 MIDI file, or in the first track of a type 1 file gives the name of the work. 
 					//Subsequent Title meta-events in other tracks give the names of those tracks. 
-					btsAsChar = "Text : " + btsAsChar;
+					btsAsChar = "Text : " + getBtsAsChar(msgBytes, msgLength, msgStIdx);
 					break;} 
 				case Copyright 		:{
 					//ignore for our purposes
-					btsAsChar = "Copyright : " + btsAsChar;
+					btsAsChar = "Copyright : " + getBtsAsChar(msgBytes, msgLength, msgStIdx);
 					break;} 
 				case TrackTitle 	:{				
 					//track 0 track titles are song-related,wheras other tracks will possibly have instrument related info
@@ -606,7 +666,7 @@ class myMidiTrackData {
 					//type 0 MIDI file, or in the first track of a type 1 file gives the name of the work. 
 					//Subsequent Title meta-events in other tracks give the names of those tracks. 
 					
-					//btsAsChar = btsAsChar;
+					btsAsChar = getBtsAsChar(msgBytes, msgLength, msgStIdx);
 					String trkTtl = trkTitle.put(stTime, btsAsChar);
 					if((null!= trkTtl) && !(trkTtl.trim().equals(btsAsChar.trim()))) {//build compound track title if title already exists
 						trkTtl += "|"+btsAsChar;
@@ -621,18 +681,18 @@ class myMidiTrackData {
 					//MIDI patch set, as it documents the intended instrument for the track when the sequence is 
 					//used on a synthesiser with a different patch set.
 					//instrument name to use for current channel, current track
-					
-					btsAsChar = "Instrument name : " + btsAsChar;
+					String instName = getBtsAsChar(msgBytes, msgLength, msgStIdx);
+					btsAsChar = "Instrument name : " + instName;
 					
 					int curChan = curChanMap.lastEntry().getValue();
-					chans[curChan].setInstName(stTime, btsAsChar);
-					String trkInst = tInstName[curChan].put(stTime, btsAsChar);
-					if((null!= trkInst) && !(trkInst.trim().equals(btsAsChar.trim()))) {
-						System.out.println("Song : " + song.title + " | trkIDX :"+trIDX + " stTime : " + stTime + " | Remapping track instrument at this time from : "+ trkInst + " to " + btsAsChar);
-					}
+					chans[curChan].setInstName(stTime, instName);
+//					String trkInst = tInstName[curChan].put(stTime, btsAsChar);
+//					if((null!= trkInst) && !(trkInst.trim().equals(btsAsChar.trim()))) {
+//						System.out.println("Song : " + song.title + " | trkIDX :"+trIDX + " stTime : " + stTime + " | Remapping track instrument at this time from : "+ trkInst + " to " + btsAsChar);
+//					}
 					break;} 
 				case Lyric 			:{
-					btsAsChar = "Lyric : " + btsAsChar;
+					btsAsChar = "Lyric : " + getBtsAsChar(msgBytes, msgLength, msgStIdx);
 					//System.out.println("Lyrics : " + btsAsChar);
 					break;} 
 				case Marker 		:{
@@ -677,7 +737,7 @@ class myMidiTrackData {
 				case SMPTEOffset 	:{
 					//This meta-event, which must occur with a zero Time at the start of a track, 
 					//specifies the SMPTE time code at which it should start playing. The FracFrame field gives the fractional frame time (0 to 99). 
-					btsAsChar = "SMPTE Offset Hr:" + (int)(msgBytes[msgStIdx] & 0xFF)+"|Min:"+ (int)(msgBytes[msgStIdx+1] & 0xFF)+"|Sec:"+ (int)(msgBytes[msgStIdx+2] & 0xFF)+"|Fr:"+ (int)(msgBytes[msgStIdx+3] & 0xFF)+":"+ (int)(msgBytes[msgStIdx+4] & 0xFF);
+					//btsAsChar = "SMPTE Offset Hr:" + (int)(msgBytes[msgStIdx] & 0xFF)+"|Min:"+ (int)(msgBytes[msgStIdx+1] & 0xFF)+"|Sec:"+ (int)(msgBytes[msgStIdx+2] & 0xFF)+"|Fr:"+ (int)(msgBytes[msgStIdx+3] & 0xFF)+":"+ (int)(msgBytes[msgStIdx+4] & 0xFF);
 					break;} 
 				case TimeSig 		:{//Num, Denom, Click, NotesQ
 //	//				The time signature, metronome click rate, and number of 32nd notes per MIDI quarter note (24 MIDI clock ticks) 
@@ -720,12 +780,12 @@ class myMidiTrackData {
 					//Sequencer_specific records may be very long; programs which process MIDI CSV files should be careful to protect against buffer overflows and truncation of these records. 
 					break;} 
 				default  :{	}						
-			}//switch	
-		if((trIDX==0) && (song.title.contains("K622 Clarinet Concerto"))) {
-			System.out.println("\tTrack "+trIDX+"| time : " +stTime + " | status : "+ String.format("0x%02X",command) + 
-			" command : "+ MidiCommand.FileMetaEvent+" | type : " +String.format("0x%02X",typeByte) + " | type : " +type + " | bytes : [ "+msgStr + " ] | msg Length : " + msgLength + " | msg as text/data : "+ btsAsChar);
+			}//switch
 			
-		}
+			if((trIDX==0) && (song.title.contains("K622 Clarinet Concerto"))) {
+				dispDbgMsg(msgBytes, type, typeByte, command, stTime,  msgLength, btsAsChar);
+				
+			}
 			//if (trIDX!=0) {
 //				if (msgLength >= 16) {
 //					System.out.println("\tTrack "+trIDX+"| time : " +stTime + " | status : "+ String.format("0x%02X",command) + 
@@ -736,8 +796,22 @@ class myMidiTrackData {
 //					
 //				}
 			//} 
-		}
+			return btsAsChar;			
+		}//if not null type meta event
 	}//procMetaEvents
+	
+	//display a debug message only if requested
+	private void dispDbgMsg(byte[] msgBytes, MidiMeta type, int typeByte, int command, long stTime, int msgLength, String btsAsChar) {
+		String msgStr = ""+String.format("0x%02X", (int)(msgBytes[0]& 0xFF));
+		for(int b=1;b<msgBytes.length;++b) {msgStr +=","+String.format("0x%02X", (int)(msgBytes[b]& 0xFF));}								
+
+		
+		System.out.println("\tTrack "+trIDX+"| time : " +stTime + " | status : "+ String.format("0x%02X",command) + 
+		" command : "+ MidiCommand.FileMetaEvent+" | type : " +String.format("0x%02X",typeByte) + " | type : " +type + " | bytes : [ "+msgStr + " ] | msg Length : " + msgLength + " | msg as text/data : "+ btsAsChar);
+
+		
+		
+	}//dispDbgMsg
 	
 	public String getStringRep() {
 		String res = "";
@@ -754,37 +828,60 @@ class myMidiTrackData {
 //indexed by start time
 class songState {
 	//owning song for the song state
-	public final myMidiSongData song;
+	//private final myMidiSongData song;
 	//refs to all channels in this song
-	public myMidiChannel[] midiChans;
+	//private myMidiChannel[] midiChans;
 	//global variables indexed by start time
 	//song total length
-	private final long songLen;
-	
+	//private final long songLen;
 	//time sig map of this song
-	private ConcurrentSkipListMap<Long,timeSig> timeSigMap;
-	//metronome click rate map of this song - the number of MIDI clocks per metronome click
-	private ConcurrentSkipListMap<Long,Integer> nomeClickMap;
-	//gives # of 32 notes in the nominal MIDI quarter note time of 24 clicks (8 for default midi qtr note def)
-	private ConcurrentSkipListMap<Long,Integer> thrtyScndNotesPerMidiQtr;
+//	private ConcurrentSkipListMap<Long,timeSig> timeSigMap;
+//	//metronome click rate map of this song - the number of MIDI clocks per metronome click
+//	private ConcurrentSkipListMap<Long,Integer> nomeClickMap;
+//	//gives # of 32 notes in the nominal MIDI quarter note time of 24 clicks (8 for default midi qtr note def)
+//	private ConcurrentSkipListMap<Long,Integer> thrtyScndNotesPerMidiQtr;	
+//	//key sig map of this song
+//	private ConcurrentSkipListMap<Long, Integer> keySigMap;	
+//	//tempo map of this song
+//	private ConcurrentSkipListMap<Long,Float> tempoMap;	
+	//structure holding all changes to song state
+	private ConcurrentSkipListMap<Long,Integer[]> songStateUpdate;
+
 	
-	//key sig map of this song
-	private ConcurrentSkipListMap<Long, keySigVals> keySigMap;
+	//output format of data from this song state object
+	public static final String dataFormat = "TimeStamp,KeySig,TimeSigNum,TimeSigDenom,NomeClick,32ndPerMidiQtr,Tempo,";
 	
-	//tempo map of this song
-	private ConcurrentSkipListMap<Long,Float> tempoMap;
-	
-	
-	public songState(myMidiSongData _song, myMidiChannel[] _mc) {
-		song=_song;
-		midiChans = _mc;
-		songLen = song.tickLen;
-		timeSigMap = new ConcurrentSkipListMap<Long,timeSig>();
-		nomeClickMap = new ConcurrentSkipListMap<Long, Integer>();
-		thrtyScndNotesPerMidiQtr = new ConcurrentSkipListMap<Long,Integer>();	
-		tempoMap = new ConcurrentSkipListMap<Long,Float>();
-		keySigMap = new ConcurrentSkipListMap<Long, keySigVals>();
+	public songState() {//myMidiSongData _song, myMidiChannel[] _mc) {
+		//song=_song;
+		//midiChans = _mc;
+		//songLen = song.tickLen;
+//		timeSigMap = new ConcurrentSkipListMap<Long,timeSig>();
+//		nomeClickMap = new ConcurrentSkipListMap<Long, Integer>();
+//		thrtyScndNotesPerMidiQtr = new ConcurrentSkipListMap<Long,Integer>();	
+//		tempoMap = new ConcurrentSkipListMap<Long,Float>();
+//		keySigMap = new ConcurrentSkipListMap<Long, Integer>();
+		songStateUpdate = new ConcurrentSkipListMap<Long,Integer[]>();
+		songStateUpdate.put(0L, new Integer[6]);
+
 	}//ctor
+	
+	//will build map of data changes in song
+	private void addToSongStateUpdate(long stTime, int stIdx, Integer[] data) {
+		Integer[] oldData;
+		//datakey will never be null
+		Long dataKey = songStateUpdate.floorKey(stTime);
+		//if  dataKey != stTime then no record for this time exists - copy existing record, if one exists, and add data values
+		if(dataKey != stTime) {//no record for stTime exists - bring forward most recent record's data
+			Integer[] oldData2 = songStateUpdate.get(dataKey);
+			oldData=new Integer[oldData2.length];
+			for(int i=0;i<oldData.length;++i) {oldData[i]=oldData2[i];}			
+		} else {oldData = songStateUpdate.get(stTime);}
+		//oldData holds data to be put in map at stTime
+		int idx = 0;
+		//copy over oldData with data starting at stIdx
+		for(int i=stIdx;i<(stIdx + data.length);++i) {oldData[i]=data[idx++];}			
+		songStateUpdate.put(stTime, oldData);
+	}//
 	
 	//set global time signature
 	public void setTimeSig(long stTime, byte[] msgBytes, int msgStIdx) {
@@ -793,9 +890,19 @@ class songState {
 //		Denom specifies the denominator as a negative power of two, for example 2 for a quarter note, 3 for an eighth note, etc. 
 //		Click gives the number of MIDI clocks per metronome click, and NotesQ the number of 32nd notes in the nominal MIDI quarter 
 //		note time of 24 clocks (8 for the default MIDI quarter note definition).
-		timeSigMap.put(stTime, new timeSig((int)(msgBytes[msgStIdx] & 0xFF), nDurType.getVal((int)(msgBytes[msgStIdx+1] & 0xFF))));
-		nomeClickMap.put(stTime, (int)(msgBytes[msgStIdx+2] & 0xFF));//Click gives the number of MIDI clocks per metronome click
-		thrtyScndNotesPerMidiQtr.put(stTime, (int)(msgBytes[msgStIdx+3] & 0xFF));
+		Integer[] vals = new Integer[] {(int)(msgBytes[msgStIdx] & 0xFF),
+								(int)(msgBytes[msgStIdx+1] & 0xFF),
+								(int)(msgBytes[msgStIdx+2] & 0xFF),
+								(int)(msgBytes[msgStIdx+3] & 0xFF)};
+		
+		
+		addToSongStateUpdate(stTime, 1,vals);
+		
+//		timeSig ts = new timeSig(vals[0], nDurType.getVal(vals[1]));
+//		timeSigMap.put(stTime, ts);
+//		
+//		nomeClickMap.put(stTime, vals[2]);//Click gives the number of MIDI clocks per metronome click
+//		thrtyScndNotesPerMidiQtr.put(stTime, vals[3]);
 		
 	}//setTimeSig
 	
@@ -809,19 +916,27 @@ class songState {
 			ksByteVal = (((((int)(msgBytes[msgStIdx])) +17) % 12)-5);
 		}
 		catch(Exception e) {ksByteVal = 0;}//error in encoded key sig - assume c maj
-		keySigMap.put(stTime, keySigVals.getVal(ksByteVal));		
+//		keySigMap.put(stTime, keySigVals.getVal(ksByteVal));	
+		
+		addToSongStateUpdate(stTime, 0,new Integer[] {ksByteVal});
+		
+//		keySigMap.put(stTime, ksByteVal);		
 	}//setKeySig
 	
 	public void setTempo(long stTime, byte[] msgBytes, int msgStIdx) {
-		//The tempo is specified as the Number of microseconds per quarter note, between 1 and 16777215. A value of
+		//The tempo is specified as the Number of microseconds per quarter note, between 1 and 16777215. A value of 500,000
 		//corresponds to 120 bpm. To convert beats per minute to a Tempo value, divide 60,000,000 by the beats per minute. 
 		int val = (((int)(msgBytes[msgStIdx] & 0xFF) << 16) | ((int)(msgBytes[msgStIdx+1] & 0xFF) << 8) | (int)((msgBytes[msgStIdx+2] & 0xFF)));
 		float tmpo = (60000000.0f/val);//in beats per min
-		tempoMap.put(stTime, tmpo);
+		
+		addToSongStateUpdate(stTime, 5,new Integer[] {(int)tmpo});
+		
+//		tempoMap.put(stTime, tmpo);
 
 	}//setTempo
 	
-	
+	//for given time, return most recent song state
+	public Integer[] getCurSongStateData(long _timeNow) {return songStateUpdate.floorEntry(_timeNow).getValue();}
 	
 	
 }//class songState
@@ -831,11 +946,25 @@ class timeSig {
 	public final int num;
 	public final nDurType denom;
 	timeSig(int _num, nDurType _dnm){num=_num;denom=_dnm;}	
+	public String toString() {return ""+num+","+denom+",";}
 }
 
 
+//non-note channel events
+//compare on start time
+class myChanEvt {
+	public final String name;
+	//non-note channel-specific command
+	public final MidiCommand cmd;
+	//channel
+	public final int ch;
+	//info bytes
+	public final byte[] info;
+	public myChanEvt(MidiCommand _cmd,String _name, int _ch,byte[] _info) {cmd=_cmd;name=_name;ch=_ch;info=_info;}
+}//myChanEvt
 
 //object to hold midi note data.  is comparable for keying notes by start time
+//SHOULD ONLY BE COMPARED TO NOTES IN SAME CHANNEL
 class midiNoteData implements Comparable<midiNoteData>{
 	public final long stTime;
 	public long endTime;
@@ -886,8 +1015,7 @@ class midiNoteData implements Comparable<midiNoteData>{
 	
 	@Override
 	public int compareTo(midiNoteData otr) {//sort first by start time, then note value, if they start at the same time
-		if(this.stTime==otr.stTime) {
-			if(this.midiData==otr.midiData) {return 0;}else {return (this.midiData > otr.midiData)? 1 : -1;}}
+		if(this.stTime==otr.stTime) {if(this.midiData==otr.midiData) {return 0;} else {return (this.midiData > otr.midiData)? 1 : -1;}}
 		return (this.stTime > otr.stTime)? 1 : -1;
 	}//compareTo
 	

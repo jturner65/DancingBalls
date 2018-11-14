@@ -73,6 +73,9 @@ class myMidiFileProcessor implements Callable<Boolean>{
 	public int mfaState;
 	//audioCmd : what to do on call : 0==load audio, 1==process audio, 2==save audio
 	private int audioCmd;
+	
+	public ArrayList<myMidiFileAnalyzer> tmpMfAnalyzer;
+	
 	public myMidiFileAnalyzer[] mfAnalyzerAra;
 	//index in thread ara (i.e. thread idx)
 	int thIdx;
@@ -80,14 +83,7 @@ class myMidiFileProcessor implements Callable<Boolean>{
 	//# of files failed to load
 	public int failedLoad;
 	
-	
-	//mgr will manage saving all these data points into single file
-	
-	//construct to hold all class info for this thread's midi data, to be passed to mgr
-	//construct to hold all ftr info for this thread's midi data, to be passed to mgr
-	
-	
-	
+	public int procStIdx = 0,procEndIdx=0;
 	
 	public myMidiFileProcessor(myAudioManager _mgr, ArrayList<AudioFile> _midiFiles, int _thIdx) {
 		mgr = _mgr; thIdx=_thIdx;
@@ -102,6 +98,18 @@ class myMidiFileProcessor implements Callable<Boolean>{
 	public void setToProcAudio() {audioCmd=1;}
 	public void setToSaveProcAudio() {audioCmd=2;}
 	
+	public void setMFAnalyzerAra(List<myMidiFileAnalyzer> _mfAnalyzerAra) {	
+		mfAnalyzerAra = _mfAnalyzerAra.toArray(new myMidiFileAnalyzer[0]);
+		//System.out.println("thread index : " + thIdx +" has " + mfAnalyzerAra.length+ " midi file analyzers");
+		procStIdx = 0;
+		procEndIdx=mfAnalyzerAra.length;
+		tmpMfAnalyzer = null;//for GC
+	}//
+	
+	public void setStepAndSizeProc(int stIdx, int procSize) {
+		procStIdx = stIdx;
+		procEndIdx=(stIdx + procSize > mfAnalyzerAra.length ?   mfAnalyzerAra.length : stIdx + procSize);		
+	}
 	
 	//either load audio, or process audio - separate 
 	@Override
@@ -109,31 +117,46 @@ class myMidiFileProcessor implements Callable<Boolean>{
 		//build midi analyzer array and load files
 		switch (audioCmd){
 		case 0 :{//load
-			ArrayList<myMidiFileAnalyzer> tmpMfAnalyzer = new ArrayList<myMidiFileAnalyzer>();
+			tmpMfAnalyzer = new ArrayList<myMidiFileAnalyzer>();
 			for (int i=0;i<midiFiles.size();++i) {
 				myMidiFileAnalyzer tmp = new myMidiFileAnalyzer( midiFiles.get(i), thIdx);
 				boolean res = tmp.loadAudio();
-				if(res) {	tmpMfAnalyzer.add(tmp);   } else {++failedLoad; tmp=null;}
+				if(res) {	
+					//tmp.initMidiSong();
+					tmpMfAnalyzer.add(tmp);   				
+				} else {++failedLoad; tmp=null;}
 			}	
-			mfAnalyzerAra = tmpMfAnalyzer.toArray(new myMidiFileAnalyzer[0]);
+			//mfAnalyzerAra = tmpMfAnalyzer.toArray(new myMidiFileAnalyzer[0]);
 			//mgr.pa.outStr2Scr("thdIDX : " + this.thIdx + " | mfAnalyzerAra size : "+ mfAnalyzerAra.length);
 			mfaState = 1;
 			break;}
 		case 1 :{//process
 			//now analyze each file
+			//need to build a structure for each thread that holds processed results
+			//that will then be aggregated when all threads are finished
 			numTtlTracks = 0;
-			for (int i=0;i<mfAnalyzerAra.length;++i) {
+			for (int i=procStIdx;i<procEndIdx;++i) {
 				mfAnalyzerAra[i].analyze();
-				numTtlTracks += mfAnalyzerAra[i].midiSong.numTracks;
-			}
-			mfaState = 2;			
-			break;}
-		case 2 :{//save proc'ed data
-			for (int i=0;i<mfAnalyzerAra.length;++i) {
+				numTtlTracks += mfAnalyzerAra[i].numTracks;		
+				//save results
 				mfAnalyzerAra[i].saveProcMidi();
-			}			
-			mfaState = 3;
+				
+				//temp to test memory - this addresses memory overflow
+				//mfAnalyzerAra[i] = null;
+			}
+			System.out.println("ThdIDX : " + this.thIdx + " Done with tracks");
+			//mfaState = 2;			
 			break;}
+//		case 2 :{//save proc'ed data			
+//			//need to build a structure for each thread that holds processed results
+//			//that will then be aggregated when all threads are finished
+//			//results are going to be in "class" and "feature" files, csvs
+//			
+//			for (int i=0;i<mfAnalyzerAra.length;++i) {
+//				mfAnalyzerAra[i].saveProcMidi();
+//			}			
+//			mfaState = 3;
+//			break;}
 		}
 		return true;
 	}//call
@@ -167,26 +190,46 @@ class myMidiFileProcMapper implements Runnable{
 		taskToDo = "loading all";
 	}
 	public boolean setToLoadAudio() {audioCmd=0; taskToDo = "loading all";return true;}
-	public boolean setToProcAudio() {if(curMidState >=1) {audioCmd=1;taskToDo = "analysis of all"; return true;}return false;}
-	public boolean setToSaveProcAudio() {if(curMidState >=2) {audioCmd=2; taskToDo = "saving all processed";return true;}return false;}
+	public boolean setToProcAudio() {if(curMidState >=1) {audioCmd=1;taskToDo = "analysis and saving of all"; return true;}return false;}
 	
 	private void loadAudio() {
  		for (int i=0;i<callMidiProcessors.size();++i) {callMidiProcessors.get(i).setToLoadAudio();}
-		try {callMidiProcFtrs = mgr.pa.th_exec.invokeAll(callMidiProcessors);for(Future<Boolean> f: callMidiProcFtrs) { f.get(); }} catch (Exception e) { e.printStackTrace(); }		
+		try {callMidiProcFtrs = mgr.pa.th_exec.invokeAll(callMidiProcessors);for(Future<Boolean> f: callMidiProcFtrs) { f.get(); }} catch (Exception e) { e.printStackTrace(); }
+		//once finished, get all MFA arraylists, aggregate and then parse into arrays and send back to each callMidiProcessor
+		ArrayList<myMidiFileAnalyzer> tmpMfAnalyzerTTL= new ArrayList<myMidiFileAnalyzer>();
+		
+		for (int i=0;i<callMidiProcessors.size();++i) {tmpMfAnalyzerTTL.addAll(callMidiProcessors.get(i).tmpMfAnalyzer);}
+		int numMFA = tmpMfAnalyzerTTL.size();
+		//send equal # of mfa's to each thread (1 + (numObjs - 1)/numThds)
+		int stIDX=0, araSize = 1 +(numMFA - 1)/callMidiProcessors.size(), endIDX = araSize;		
+		for (int i=0;i<callMidiProcessors.size();++i) {
+			callMidiProcessors.get(i).setMFAnalyzerAra(tmpMfAnalyzerTTL.subList(stIDX, endIDX));
+			stIDX = endIDX;
+			endIDX = (endIDX + araSize > numMFA ? numMFA : endIDX + araSize);			
+		}		
 		mgr.win.clearFuncBtnSt_BuildMidiData();
 	}//loadAudio
 	
 	private void procAudio() {
  		for (int i=0;i<callMidiProcessors.size();++i) {callMidiProcessors.get(i).setToProcAudio();}
-		try {callMidiProcFtrs = mgr.pa.th_exec.invokeAll(callMidiProcessors);for(Future<Boolean> f: callMidiProcFtrs) { f.get(); }} catch (Exception e) { e.printStackTrace(); }				
+ 		int numIters = 40;
+ 		int numMFAperThread = callMidiProcessors.get(0).mfAnalyzerAra.length;
+ 		int stIdx = 0, numPerIter = 1 + (numMFAperThread-1)/numIters;
+ 		for(int iter = 0;iter<numIters;++iter) {
+	 		for (int i=0;i<callMidiProcessors.size();++i) {callMidiProcessors.get(i).setStepAndSizeProc(stIdx,numPerIter);}
+ 			try {callMidiProcFtrs = mgr.pa.th_exec.invokeAll(callMidiProcessors);for(Future<Boolean> f: callMidiProcFtrs) { f.get(); }} catch (Exception e) { e.printStackTrace(); }				
+ 			System.out.println("Done for all threads with idxs : " + stIdx + " to " + (stIdx + numPerIter));
+ 			stIdx += numPerIter;
+ 		}
+ 		for (int i=0;i<callMidiProcessors.size();++i) {callMidiProcessors.get(i).mfaState = 2;}
 		mgr.win.clearFuncBtnSt_ProcMidiData();
 	}//procAudio
 	
-	private void saveAudio() {
- 		for (int i=0;i<callMidiProcessors.size();++i) {callMidiProcessors.get(i).setToSaveProcAudio();}
-		try {callMidiProcFtrs = mgr.pa.th_exec.invokeAll(callMidiProcessors);for(Future<Boolean> f: callMidiProcFtrs) { f.get(); }} catch (Exception e) { e.printStackTrace(); }				
-		mgr.win.clearFuncBtnSt_SaveMidiData();
-	}//saveAudio
+//	private void saveAudio() {
+// 		for (int i=0;i<callMidiProcessors.size();++i) {callMidiProcessors.get(i).setToSaveProcAudio();}
+//		try {callMidiProcFtrs = mgr.pa.th_exec.invokeAll(callMidiProcessors);for(Future<Boolean> f: callMidiProcFtrs) { f.get(); }} catch (Exception e) { e.printStackTrace(); }				
+//		mgr.win.clearFuncBtnSt_SaveMidiData();
+//	}//saveAudio
 	
 	@Override
 	public void run() {
@@ -194,11 +237,11 @@ class myMidiFileProcMapper implements Runnable{
 		switch(audioCmd) {
 		case 0 :{	loadAudio();	break;}
 		case 1 :{	procAudio();	break;}
-		case 2 :{	saveAudio();	break;}
+		//case 2 :{	saveAudio();	break;}
 		}
 		curMidState = audioCmd + 1;
 		mgr.pa.outStr2Scr("End " +taskToDo+ " midi files at  : "+ mgr.pa.timeSinceStart());
-
+		System.gc( );
 	}//run
 	
 }//myMidiFileProcessor

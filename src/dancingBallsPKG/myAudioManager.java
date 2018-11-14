@@ -230,6 +230,7 @@ public class myAudioManager {
 	private void runMidiProc() {
 		//fire and forget midi processing		
 		pa.th_exec.execute(midiFProcMap);		
+
 	}	
 	//load all the midi data into memory, so preprocessing can continue
 	public void loadMidiData() {
@@ -239,19 +240,12 @@ public class myAudioManager {
 		runMidiProc();
 	}//loadMidiData	
 	//launch preprocessing of midi data
-	public void preprocMidiData() {
-		if (!getFlags(audFMgrLoadedIDX)) {	pa.outStr2Scr("Audio File IO Manager must be loaded before Midi Data can be processed");return;}//if audiofilemanager is not loaded, then just ignore this request
+	public void procSaveMidiData() {
+		if (!getFlags(audFMgrLoadedIDX)) {	pa.outStr2Scr("Audio File IO Manager must be loaded before Midi Data can be processed and saved");return;}//if audiofilemanager is not loaded, then just ignore this request
 		boolean rdyCheck = midiFProcMap.setToProcAudio();
-		if(!rdyCheck) {pa.outStr2Scr("Unable to process midi data - midi data not loaded."); return;}
+		if(!rdyCheck) {pa.outStr2Scr("Unable to process/save midi data - midi data not loaded."); return;}
 		runMidiProc();
 	}//preprocMidiData
-	//save results of processed midi data
-	public void saveProcMidiData() {
-		if (!getFlags(audFMgrLoadedIDX)) {	pa.outStr2Scr("Audio File IO Manager must be loaded before Midi Data can be loaded");return;}//if audiofilemanager is not loaded, then just ignore this request
-		boolean rdyCheck = midiFProcMap.setToSaveProcAudio();
-		if(!rdyCheck) {pa.outStr2Scr("Unable to save processed midi data - midi data either not loaded or not processed."); return;}
-		runMidiProc();		
-	}//saveProcMidiData
 	
 	
 	//initialize array of mybeat to hold results of tapped beat data
