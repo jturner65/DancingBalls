@@ -51,8 +51,6 @@ public abstract class myDancer {
 	//called at end of initialization
 	protected abstract void finalInit();
 	
-	
-	
 	protected void initFlags() {flags = new boolean[numFlags];for(int i=0;i<numFlags;++i) {flags[i]=false;}}
 	public void setFlags(int idx, boolean val) {
 		flags[idx] = val;
