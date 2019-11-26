@@ -155,7 +155,7 @@ class myDancingBall extends myDancer {
 	public float scaleZVal;//change to make an ellipsoid along z axis - set in init/	
 	
 	//thread runner for vertex mapper
-	private myDanceBallMapper vertMapper;
+	private myDanceBallBuilder vertMapper;
 	
 	
 	public myDancingBall(DancingBalls _p, DancingBallWin _win, String _name, myVectorf _ctrStart,float _rad, float _scaleZVal) {
@@ -174,7 +174,7 @@ class myDancingBall extends myDancer {
 		buildZonePoints();	
 		//build vertMapper callable to map sphere verts to zones
 		//NOTE vertMapper needs to be rebuilt if numZones should change
-		vertMapper = new myDanceBallMapper(this);
+		vertMapper = new myDanceBallBuilder(this);
 	}//beginInit
 	
 	//remake ball if need to change # of zones
