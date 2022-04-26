@@ -1,6 +1,5 @@
 package dancingBallsPKG;
 
-import java.io.*;
 import java.nio.file.Path;
 import java.util.concurrent.ConcurrentSkipListMap;
 
@@ -46,10 +45,10 @@ public abstract class mySongHandler {
 		sampleRate=0;
 		Path filePath = songFile.getFilePathForLoad(this);
 		if(filePath == null) {
-			pa.outStr2Scr("WARNING in mySongHandler : Attempted to load file classified as directory : " + filePath.toString());
+			pa.outStr2Scr("WARNING in mySongHandler : Attempted to load file classified as directory : " + songFile.filePath.toString());
 		} else {
 			boolean songLoaded=loadAudio(filePath);
-			if(!songLoaded) {		pa.outStr2Scr("WARNING in mySongHandler : Failed to load Audio File : " + songFile);}
+			if(!songLoaded) {		pa.outStr2Scr("WARNING in mySongHandler : Failed to load Audio File : " + songFile.dispName);}
 		}
 	}//ctor
 	

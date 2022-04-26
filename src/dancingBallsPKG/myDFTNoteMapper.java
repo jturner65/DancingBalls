@@ -42,12 +42,18 @@ public class myDFTNoteMapper implements Callable<Boolean>{
 	//which function to use to calculate levels - set when song changed
 	int funcToUse = 0;
 	//arrays hold subset of key freqs this thread will execute
+	/**
+	 * This mapper will manage a subset of notes having their DFT calculated
+	 * @param _mgr
+	 * @param _stIdx Inclusive Index to start at
+	 * @param _endIdx Exclusive Index to end at
+	 */
 	public myDFTNoteMapper(myAudioManager _mgr,int _stIdx, int _endIdx ) {
 		mgr=_mgr;
 		ID = count++;
 		stKey = _stIdx;
 		endKey = _endIdx;
-		numValsToProcess=_endIdx - _stIdx + 1;
+		numValsToProcess=_endIdx - _stIdx;
 		buffer = new float[1024];
 		pianoFreqsHarmonics = new float[numValsToProcess][];
 		pianoMinFreqsHarmonics = new float[numValsToProcess+1][];
@@ -147,8 +153,9 @@ public class myDFTNoteMapper implements Callable<Boolean>{
 	}
 	
 	private void setValues(int absKey, double cosSum, double sinSum, float freq) {
-		//float A = (float) Math.sqrt(freq *((cosSum * cosSum) + (sinSum * sinSum)));///normVal;// (float) Math.sqrt(((cosSum * cosSum) + (sinSum * sinSum))/normVal);
-		float A =  (float) Math.sqrt( ((cosSum * cosSum) + (sinSum * sinSum)));///normVal;// (float) Math.sqrt(((cosSum * cosSum) + (sinSum * sinSum))/normVal);
+		//float A = (float) Math.sqrt(freq *((cosSum * cosSum) + (sinSum * sinSum)));
+		///normVal;// (float) Math.sqrt(((cosSum * cosSum) + (sinSum * sinSum))/normVal);
+		float A =  (float) Math.sqrt( ((cosSum * cosSum) + (sinSum * sinSum)));
 		lvlsPerPKey.put(A, absKey);	
 		//perPKeyLvls.put(absKey, A);
 		lvlsPerKeyInRange.put(A, absKey);	

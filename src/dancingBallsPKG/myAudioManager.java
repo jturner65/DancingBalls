@@ -182,7 +182,7 @@ public class myAudioManager {
 		//pa.th_exec.execute(new myTrigPrecalc(this, allFreqsUsed) );
 		//build DFT threads and precalc local cos/sin values
 		//pa.outStr2Scr("Num threads in myAudioManager : " +pa.numThreadsAvail );
-		initDFTAnalysisThrds(pa.numThreadsAvail-2);	
+		initDFTAnalysisThrds(pa.numThreadsAvail-2);
 	
 		//changeCurrentSong(songType, songBank, songIDX);
 	}//initMe
@@ -355,8 +355,8 @@ public class myAudioManager {
 	//get song type given passed int
 	public String getSongType(int _typ) {
 		String chkStr = null;
-		if(_typ==win.midiSong) {		chkStr="midi";} 
-		else if(_typ==win.mp3Song) {	chkStr="mp3";} 
+		if(_typ==DancingBallWin.midiSong) {		chkStr="midi";} 
+		else if(_typ==DancingBallWin.mp3Song) {	chkStr="mp3";} 
 		return chkStr;
 	}
 	
@@ -364,21 +364,31 @@ public class myAudioManager {
 	public ConcurrentSkipListMap<Float, Integer> buildDescMap(){return new ConcurrentSkipListMap<Float, Integer>(new Comparator<Float>() { @Override public int compare(Float o1, Float o2) {   return o2.compareTo(o1);}});}
 	
 	//init values used by dft
+	@SuppressWarnings("unchecked")
 	public void initDFTAnalysisThrds(int numThreads) {
 		//threads first numThreads/3 are bass range (0-3 when numThreads == 10)
 		//4-6 are mid range
 		//7-9 are treble range.  perhaps use these to calculate zone behavior?
 		callDFTNoteMapper = new ArrayList<myDFTNoteMapper>();
 		callDFTMapperFtrs = new ArrayList<Future<Boolean>>();
-		int numPerThread = 1+(dispPiano.pianoFreqsHarmonics.length-1)/numThreads;
-		int stIdx = 0, endIdx = numPerThread-1;
-		for (int i =0;i<numThreads;++i) {		
+		//# of elements to add to each thread, ignoring remainder
+		int numPerThread = dispPiano.pianoFreqsHarmonics.length/numThreads;
+		//# of threads to add more than 1 to
+		int thrdsToOverload = dispPiano.pianoFreqsHarmonics.length%numThreads;
+		int stIdx = 0, endIdx;
+		//for these threads use calculated per-thread size +1, to handle remainder
+		for (int i = 0; i<thrdsToOverload;++i) {
+			endIdx = stIdx + numPerThread+1;
 			callDFTNoteMapper.add(new myDFTNoteMapper(this,stIdx,endIdx));	
-			stIdx = endIdx + 1;
-			endIdx = stIdx + numPerThread-1;
-			if(endIdx > dispPiano.pianoFreqsHarmonics.length - 1) {endIdx = dispPiano.pianoFreqsHarmonics.length-1;}
+			stIdx = endIdx;	
+		}		
+		//for these threads use calculated per-thread size
+		for (int i = thrdsToOverload; i<numThreads; ++i) {
+			endIdx = stIdx+numPerThread;	
+			callDFTNoteMapper.add(new myDFTNoteMapper(this,stIdx,endIdx));	
+			stIdx = endIdx;	
 		}
-		pa.outStr2Scr("DFT Threads configured.");
+		pa.outStr2Scr("" + numThreads + " DFT Threads configured : "+thrdsToOverload+" threads w/ "+(numPerThread+1)+" values and the rest have "+numPerThread+" values.");
 		lvlsPerPKey = new ConcurrentSkipListMap[2];
 		perKeyLvls = new ConcurrentSkipListMap[2];
 		minAudThres = new float[2];
@@ -395,7 +405,7 @@ public class myAudioManager {
 			turnOffKey[i]=new boolean[myPianoObj.numKeys];
 		}
 		
-		for(int t=0;t<dispPiano.numKeys;++t) {
+		for(int t=0;t<myPianoObj.numKeys;++t) {
 			Float[] tmp1 = new Float[keyLvlLen+2];
 			Float[] tmp2 = new Float[keyLvlLen+2];
 			for(int f=0;f<tmp1.length;++f) {tmp1[f]=0.0f;tmp2[f]=0.0f;}
@@ -411,6 +421,48 @@ public class myAudioManager {
 		melodyCandidates = new ConcurrentSkipListMap[2];
 		melodyCandidates[dftResIDX] = new ConcurrentSkipListMap<Integer, ConcurrentSkipListMap<Float, Integer>>(new Comparator<Integer>() { @Override public int compare(Integer o1, Integer o2) {   return o2.compareTo(o1);}});
 		melodyCandidates[fftResIDX] = new ConcurrentSkipListMap<Integer, ConcurrentSkipListMap<Float, Integer>>(new Comparator<Integer>() { @Override public int compare(Integer o1, Integer o2) {   return o2.compareTo(o1);}});
+		
+		//combine thread results using this mapping - perThLvlIDXs.length 'bands', with each band having 1 or more thread
+		//if fewer threads than perThLvlIDXs.length then put a thd idx in each "combination"
+		if (numThreads <= perThLvlIDXs.length) {
+			perThLvlIDXs = new int[numThreads][];
+			for (int i=0;i<numThreads;++i) {
+				int[] ara = {i};
+				perThLvlIDXs[i]=ara ;
+			}
+		} else {
+			int numThdsPerBand = numThreads/perThLvlIDXs.length;
+			int bandsToOverflow = numThreads % perThLvlIDXs.length;
+			// build per-band thd idxs
+			int idx = 0;
+			for (int i=0;i<bandsToOverflow;++i) {
+				//thd idxs for this band - 1 extra for overflow
+				int[] ara= new int[numThdsPerBand+1];
+				for (int j=0;j<ara.length;++j) {
+					ara[j] = idx++;					
+				}
+				perThLvlIDXs[i] = ara;
+			}
+			for (int i=bandsToOverflow;i<perThLvlIDXs.length;++i) {
+				//thd idxs for this band
+				int[] ara= new int[numThdsPerBand];
+				for (int j=0;j<ara.length;++j) {
+					ara[j] = idx++;					
+				}
+				perThLvlIDXs[i] = ara;
+			}			
+		}
+		//debug output		
+		String str = "\n{\n";
+		for (int i=0;i<perThLvlIDXs.length;++i) {
+			str += "{";
+			for(int j=0;j<perThLvlIDXs[i].length-1;++j) {
+				str += ""+perThLvlIDXs[i][j]+", ";
+			}			
+			str += ""+perThLvlIDXs[i][perThLvlIDXs[i].length-1]+"}\n";
+		}
+		str += "}\n";
+		pa.outStr2Scr("Constructed perThLvlIDXs : "+str);
 		
 		//per thread and per combined thread calculations
 		perThLvlPerKey = new ConcurrentSkipListMap[numThreads];
@@ -493,7 +545,7 @@ public class myAudioManager {
 		minAudThres[calcIDX] = audThreshold * lvlsPerPKey[calcIDX].firstKey();
 		ConcurrentSkipListMap<Float, Integer> tmp = buildDescMap();
 		//if noisy audio and loudest key is less than noisegate lvl, this will not process melody candidates, puts blank melody map in current position of melody candidates structure
-		if(lvlsPerPKey[calcIDX].firstKey() >= this.noiseGateLvl) {//only process if loudest is louder than threshold
+		if(lvlsPerPKey[calcIDX].firstKey() >= myAudioManager.noiseGateLvl) {//only process if loudest is louder than threshold
 			//temp map to hold all keys that have been added, as keys, to test for locality
 			ConcurrentSkipListMap<Integer, Float> tmpTestMap = new ConcurrentSkipListMap<Integer, Float>();
 			boolean useSumLvl = win.getPrivFlags(DancingBallWin.useSumLvl);
@@ -705,7 +757,7 @@ public class myAudioManager {
 				pa.setColorValFill(clr);
 			} else {//height is 1==tiny bar
 				pa.setColorValFill(clr);
-				if(i % 100 == 0) {pa.setColorValFill(pa.gui_White);}
+				if(i % 100 == 0) {pa.setColorValFill(DancingBalls.gui_White);}
 			}
 			pa.noStroke();
 			//pa.rect(0,0,wdMult * bandRes[i], height);		
@@ -724,7 +776,7 @@ public class myAudioManager {
 			pa.translate(win.rectDim[2] * .5f - offset,  win.rectDim[3] * .9f);
 			pa.pushMatrix();pa.pushStyle();
 			pa.translate(-(now-lastKey), 0);
-			pa.setColorValStroke(pa.gui_Red);
+			pa.setColorValStroke(DancingBalls.gui_Red);
 			pa.sphere(2.0f);
 			pa.popStyle();pa.popMatrix();
 			Integer oldKey = lastKey - 5;
@@ -770,11 +822,11 @@ public class myAudioManager {
 		int clr;
 		pa.translate(10 + rad,  win.rectDim[3]+transY + rad);
 		for (int i=0;i<beatState.length;++i) {		//low freq == idx 0, high freq == idx beatState.length-1
-			if (beatState[i]){	clr = pa.gui_Green; }
-			else if (lastBeatState[i]) {clr = pa.gui_Red;}
-			else {		clr=pa.gui_Gray;}//show beat on and determine if it should be turned off			
+			if (beatState[i]){	clr = DancingBalls.gui_Green; }
+			else if (lastBeatState[i]) {clr = DancingBalls.gui_Red;}
+			else {		clr=DancingBalls.gui_Gray;}//show beat on and determine if it should be turned off			
 			//pa.show(myPointf.ZEROPT,height, clr, clr, true);
-			pa.showFlat(myPointf.ZEROPT,height, clr, clr,pa.gui_White,String.format("%.4f", beats[i].getBeatFreq()));
+			pa.showFlat(myPointf.ZEROPT,height, clr, clr,DancingBalls.gui_White,String.format("%.4f", beats[i].getBeatFreq()));
 			pa.translate(0,transY);
 		}
 		pa.popStyle();pa.popMatrix();	
@@ -851,9 +903,9 @@ public class myAudioManager {
 					pa.pushMatrix();pa.pushStyle();
 					pa.translate(dispPiano.whiteKeyWidth,0,0);		
 				}
-				drawFreqBands(allBandsRes, allBandFreqs, 1.0f, pa.gui_TransRed, showBeats,showFreqlbls);
+				drawFreqBands(allBandsRes, allBandFreqs, 1.0f, DancingBalls.gui_TransRed, showBeats,showFreqlbls);
 			}
-			else if(win.getPrivFlags(DancingBallWin.showZoneBandRes)) {drawFreqBands(bandRes, bandFreqs, bandResHeight, pa.gui_Blue, showBeats, showFreqlbls);}
+			else if(win.getPrivFlags(DancingBallWin.showZoneBandRes)) {drawFreqBands(bandRes, bandFreqs, bandResHeight, DancingBalls.gui_Blue, showBeats, showFreqlbls);}
 			else if(win.getPrivFlags(DancingBallWin.showIntrvls)) {		drawIntervalVis(ftIDX, bandResHeight, nowTime);}
 			else if(win.getPrivFlags(DancingBallWin.showVolLvls)) {		dispSongLvls(song,100);}
 			
