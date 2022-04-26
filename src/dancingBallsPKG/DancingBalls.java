@@ -65,7 +65,9 @@ public class DancingBalls extends PApplet{
 	    if (passedArgs != null) {	    	PApplet.main(PApplet.concat(appletArgs, passedArgs));  } else {	    	PApplet.main(appletArgs);	    }
 	}
 	public void settings(){
-		size((int)(displayWidth*.95f), (int)(displayHeight*.92f),P3D);
+		float displayRatio = displayWidth/(1.0f*displayHeight);
+		float newWidth = (displayRatio > 1.77777778f) ?  displayWidth * 1.77777778f/displayRatio : displayWidth;	
+		size((int)(newWidth*.95f), (int)(displayHeight*.92f),P3D);		
 		noSmooth();
 	}		
 	public void setup() {
@@ -196,8 +198,9 @@ public class DancingBalls extends PApplet{
 		drawAxes(100,3, new myPoint(-c.viewDimW/2.0f+40,0.0f,0.0f), 200, false); 		
 	}//draw3D_solve3D
 	
-	
-	//display the current memory setup
+	/**
+	 * display the current memory setup
+	 */
 	public void checkMemorySetup() {
 		Runtime runtime = Runtime.getRuntime();  
 	
@@ -353,7 +356,7 @@ public class DancingBalls extends PApplet{
 	
 	//call menu from instance of dispwindow to update primary custom function button names with window-relevant entries
 	public void setMenuFuncBtnNames(String[] btnNames) {
-		((mySideBarMenu)dispWinFrames[dispMenuIDX]).setBtnNames(((mySideBarMenu)dispWinFrames[dispMenuIDX]).btnAuxFuncIdx,btnNames);
+		((mySideBarMenu)dispWinFrames[dispMenuIDX]).setBtnNames(mySideBarMenu.btnAuxFuncIdx,btnNames);
 	}
 	
 	//isSlowProc means original calling process lasted longer than mouse click release and so button state should be forced to be off
@@ -378,7 +381,7 @@ public class DancingBalls extends PApplet{
 	
 	//call menu from instance of dispwindow to update primary debug button names with window-relevant entries
 	public void setMenuDbgBtnNames(String[] btnNames) {
-		((mySideBarMenu)dispWinFrames[dispMenuIDX]).setBtnNames(((mySideBarMenu)dispWinFrames[dispMenuIDX]).btnDBGSelCmpIdx,btnNames);
+		((mySideBarMenu)dispWinFrames[dispMenuIDX]).setBtnNames(mySideBarMenu.btnDBGSelCmpIdx,btnNames);
 	}
 	//turn off specific debug button that might have been kept on during processing - btn must be in range of size of guiBtnSt[mySideBarMenu.btnDBGSelCmpIdx]
 	//isSlowProc means function this was waiting on is a slow process and escaped the click release in the window (i.e. if isSlowProc then we must force button to be off)
@@ -1231,14 +1234,14 @@ public class DancingBalls extends PApplet{
 		noFill();
 		setStroke(noteClr);
 		strokeWeight(1.5f*dims[3]);
-		arc(0,0, dims[2], dims[2], dims[0] - this.HALF_PI, dims[1] - this.HALF_PI);
+		arc(0,0, dims[2], dims[2], dims[0] - PConstants.HALF_PI, dims[1] - PConstants.HALF_PI);
 	}
 	//draw a ring segment from alphaSt in radians to alphaEnd in radians
 	void noteArc(myPoint ctr, float alphaSt, float alphaEnd, float rad, float thickness, int[] noteClr){
 		noFill();
 		setStroke(noteClr);
 		strokeWeight(thickness);
-		arc((float)ctr.x, (float)ctr.y, rad, rad, alphaSt - this.HALF_PI, alphaEnd- this.HALF_PI);
+		arc((float)ctr.x, (float)ctr.y, rad, rad, alphaSt - PConstants.HALF_PI, alphaEnd- PConstants.HALF_PI);
 	}
 	
 	

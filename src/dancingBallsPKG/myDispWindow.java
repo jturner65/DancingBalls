@@ -1274,7 +1274,7 @@ class mySideBarMenu extends myDispWindow{
 	};
 	//default names, to return to if not specified by user
 	public final String[][] defaultUIBtnNames = new String[][]{
-		new String[]{"John's Window", "Yury's Window"},							//display specific windows - multi-select/ always on if sel
+		new String[]{"John's Window", "Alt Window"},							//display specific windows - multi-select/ always on if sel
 		new String[]{"Func 1","Func 2","Func 3","Func 4","Func 5"},			//per-window user functions - momentary
 		new String[]{"Dbg 1","Dbg 2","Dbg 3","Dbg 4"},						//DEBUG - momentary
 		new String[]{"Load Txt File","Save Txt File"}							//load an existing score, save an existing score - momentary		
