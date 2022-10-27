@@ -195,14 +195,23 @@ public class myPianoObj{
 		pa.translate(0,pianoKeyCtrYLocs[pianoKeyIdx],0);
 		pa.setStroke(clr, 255);				
 		pa.line(0, 0, dispLvl,0);					
-		pa.popStyle();pa.popMatrix();							
+		pa.popStyle();pa.popMatrix();						
 		
 	}
 	
 	//private arrays of colors to display level bars - idx 7 should be dark cyan/cyan
 	//need to have numThreads different light and dark colors
-	private int[][] bkKeyBarClrs = new int[][] {{120,0,0},{120,50,0},{120,120,0},{50,120,0},{0,120,0}, {0,120,50}, {0,120,120}, {0,50,120},{0,0,120},{120,0,120}};
-	private int[][] wkKeyBarClrs = new int[][] {{255,0,0},{255,150,0},{255,255,0},{150,255,0},{0,255,0},{0,255,150},{0,255,255},{0,150,255},{0,0,255}, {255,0,255}};
+	private int[][] bkKeyBarClrs = new int[][] {
+		{120,0,0},{120,50,0},{120,120,0},{50,120,0},{0,120,0}, {0,120,50}, {0,120,120},{0,50,120},{0,0,120},
+		{180,0,0},{180,80,0},{180,180,0},{80,180,0},{0,180,0}, {0,180,80}, {0,180,180},{0,80,180},{0,0,180}};
+	private int[][] wkKeyBarClrs = new int[][] {
+		{255,0,0},{255,150,0},{255,255,0},{150,255,0},{0,255,0},{0,255,150},{0,255,255},{0,150,255},{0,0,255}, 
+		{255,0,0},{255,150,0},{255,255,0},{150,255,0},{0,255,0},{0,255,150},{0,255,255},{0,150,255},{0,0,255}};
+		
+	private int[] getBarColor(int[][]clrs, int clrIdx) {
+		return clrs[clrIdx % clrs.length];
+	}	
+		
 	//scaleFact is ratio of max level seen so far for current song, so that bars won't go off screen
 	public void drawPianoBandRes( ConcurrentSkipListMap<Float, Integer> lvlsPerPKey, float scaleFact, int barWidth, int clrIdx, int transForNums) {		
 		if((lvlsPerPKey.size() > 0) && (lvlsPerPKey.firstKey()>0)) {
@@ -214,7 +223,7 @@ public class myPianoObj{
 				if(freqLvl == 0) {break;}
 				float dispLvl = barWidth * freqLvl /scaleFact;//pa.log(freqLvl+1);//freqLvl/maxSqrtLvl;//( pa.sqrt(freqLvl)/maxSqrtLvl);			
 				int pianoKeyIdx = lvlsPerPKey.get(freqLvl);
-				dispSingleKeyLvlLine(dispLvl,pianoKeyIdx, isBlackKey(pianoKeyIdx) ? bkKeyBarClrs[clrIdx] : wkKeyBarClrs[clrIdx]);
+				dispSingleKeyLvlLine(dispLvl,pianoKeyIdx, isBlackKey(pianoKeyIdx) ? getBarColor(bkKeyBarClrs,clrIdx) : getBarColor(wkKeyBarClrs,clrIdx));
 			}				
 			pa.popStyle();pa.popMatrix();
 		}		
@@ -263,12 +272,12 @@ public class myPianoObj{
 			pa.translate(timeOffset,0,0);
 			pa.noStroke();
 			ConcurrentSkipListMap<Float, Integer> tmpMap = cands.get(time);
-			int idx = 0;
+			int clrIdx = 0;
 			for(Float lvlVal : tmpMap.keySet()) {//for each entry, draw a circle offset by timeOffset * objWidth
 				//pianoKeyIdx is key played
 				Integer pianoKeyIdx = tmpMap.get(lvlVal);
-				pa.setFill(wkKeyBarClrs[idx % wkKeyBarClrs.length],255);
-				idx++;
+				pa.setFill(getBarColor(wkKeyBarClrs,clrIdx),255);
+				clrIdx++;
 				pa.pushMatrix();pa.pushStyle();
 				pa.translate(0,pianoKeyCtrYLocs[pianoKeyIdx],0);
 				pa.ellipse(-objHWidth,objHWidth,objWidth,objWidth);
@@ -345,11 +354,11 @@ public class myPianoObj{
 	}//draw graphical rep of piano
 	
 	//str is what order note is = 0 is strongest, 1 is next strongest, etc.
-	public void drawNoteCircle(int idx, int ord, float str, float maxStr, int clr1) {
+	public void drawNoteCircle(int idx, int ord, float str, float maxStr, int clrIdx) {
 		pa.pushMatrix();pa.pushStyle();
 		if(str == maxStr) {
 			//pa.setColorValFill(clr1, 255);
-			pa.setFill(wkKeyBarClrs[clr1],255);		
+			pa.setFill(getBarColor(wkKeyBarClrs,clrIdx),255);		
 			pa.stroke(0,0,0,255);			
 		} else {
 			int mod = 255 - (20*ord);
