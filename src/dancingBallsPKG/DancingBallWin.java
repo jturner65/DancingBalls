@@ -756,54 +756,6 @@ public class DancingBallWin extends myDispWindow {
 }//DancingBallWin
 
 
-//note and key value
-enum nValType {
-	C(0),Cs(1),D(2),Ds(3),E(4),F(5),Fs(6),G(7),Gs(8),A(9),As(10),B(11);//,rest(12); 
-	private int value; 
-	private static Map<Integer, nValType> map = new HashMap<Integer, nValType>(); 
-  static { for (nValType enumV : nValType.values()) { map.put(enumV.value, enumV);}}
-	private nValType(int _val){value = _val;} 
-	public int getVal(){return value;}
-	public static nValType getVal(int idx){return map.get(idx);}
-	public static int getNumVals(){return map.size();}						//get # of values in enum
-};	
-
-//note duration types
-enum nDurType {
-	//given in midi time-sig values == 2^v
-	Whole(0),Half(1),Quarter(2),Eighth(3),Sixteenth(4),Thirtisecond(5); 
-	private int value; 
-	private static Map<Integer, nDurType> map = new HashMap<Integer, nDurType>(); 
-	static { for (nDurType enumV : nDurType.values()) { map.put(enumV.value, enumV);}}
-	private nDurType(int _val){value = _val;} 
-	public int getVal(){return value;}
-	public static nDurType getVal(int idx){return map.get(idx);}
-	public static int getNumVals(){return map.size();}						//get # of values in enum
-};	
-//key signatures - given by #
-enum keySigVals {
-	CMaj(0),GMaj(1),DMaj(2),Amaj(3),EMaj(4),BMaj(5),CbMag(-7),FsMaj(6),GfMaj(-6), CsMaj(7), DbMaj(-5), AbMaj(-4),EbMaj(-3),BbMaj(-2),Fmaj(-1); 
-	private int value; 
-	private static Map<Integer, keySigVals> map = new HashMap<Integer, keySigVals>(); 
-	static { for (keySigVals enumV : keySigVals.values()) { map.put(enumV.value, enumV);}}
-	private keySigVals(int _val){value = _val;} 
-	public int getVal(){return value;} 	
-	public static keySigVals getVal(int idx){return map.get(idx);}
-	public static int getNumVals(){return map.size();}						//get # of values in enum
-};	
-
-//desciptor of score environment variable either key signature, time signature or tempo
-enum scoreEnvVal{
-	keySig(0),timeSig(1),tempo(2);
-	private int value; 
-	private static Map<Integer, scoreEnvVal> map = new HashMap<Integer, scoreEnvVal>(); 
-	static { for (scoreEnvVal enumV : scoreEnvVal.values()) { map.put(enumV.value, enumV);}}
-	private scoreEnvVal(int _val){value = _val;} 
-	public int getVal(){return value;} 	
-	public static scoreEnvVal getVal(int idx){return map.get(idx);}
-	public static int getNumVals(){return map.size();}						//get # of values in enum
-}
-
 //Midi commands
 enum MidiCommand {
   //Channel voice messages

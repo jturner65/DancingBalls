@@ -1,5 +1,9 @@
 package dancingBallsPKG;
 
+import dancingBallsPKG.enums.keySigVals;
+import dancingBallsPKG.enums.noteValType;
+import dancingBallsPKG.enums.scoreEnvVal;
+
 //deciphered musical events (note) orderable by start time - 
 //might be result of multiple midi events (note on, note off, pitch bend, etc)
 public abstract class musicalEvent implements Comparable<musicalEvent>{
@@ -31,7 +35,7 @@ public abstract class musicalEvent implements Comparable<musicalEvent>{
 
 //event description for a musical note - should be long to a single channel
 class musicalNote extends musicalEvent{
-	public nValType note;
+	public noteValType note;
 	public int octave, midiVal;
 	
 	public int channel;//corresponds to an instrument
@@ -40,7 +44,7 @@ class musicalNote extends musicalEvent{
 		super(_stTime);
 		//_midiVal is int value of note - idx 1 in msgbytes
 		midiVal = _midiVal;
-		note = nValType.getVal((midiVal % 12));
+		note = noteValType.getVal((midiVal % 12));
 		octave = midiVal / 12 - 1;//middle C (C4) is midi val 60
 		channel = _chan;
 	}

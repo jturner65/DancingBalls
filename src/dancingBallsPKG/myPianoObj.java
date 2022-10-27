@@ -3,6 +3,8 @@ package dancingBallsPKG;
 import java.util.*;
 import java.util.concurrent.ConcurrentSkipListMap;
 
+import dancingBallsPKG.enums.noteValType;
+
 
 public class myPianoObj{
 	public static DancingBalls pa;
@@ -15,17 +17,6 @@ public class myPianoObj{
 	public NoteData[] pianoWNotes, pianoBNotes, allNotes;
 	//background color of window
 	public int[] winFillClr;
-	//descending scale from C, to build piano roll piano
-	public final nValType[] wKeyVals = new nValType[] {nValType.C, nValType.B, nValType.A, nValType.G, nValType.F,nValType.E,nValType.D},
-						bKeyVals = new nValType[] {nValType.As, nValType.Gs, nValType.Fs, nValType.Ds, nValType.Cs};
-
-	//array of naturals drecreased by a sharp in y on grid
-	public nValType[] hasSharps = new nValType[]{nValType.C, nValType.D, nValType.F,nValType.G,nValType.A};
-	//array of naturals drecreased by a flat in y on grid
-	public nValType[] hasFlats = new nValType[]{nValType.B, nValType.D, nValType.E,nValType.G,nValType.A};	
-	//array of all natural notes
-	public nValType[] isNaturalNotes = new nValType[]{nValType.A,nValType.B, nValType.C,nValType.D, nValType.E,nValType.F,nValType.G};	
-	
 	//sound analysis
 	//harmonic series for piano tuning
 	public float[][] pianoFreqsHarmonics, pianoMinFreqsHarmonics;
@@ -81,14 +72,14 @@ public class myPianoObj{
 		float halfWHi = keyY * .5f, halfBHi = bHigh * .5f;
 		for(int i =0; i < numWhiteKeys; ++i){
 			pianoWKeyDims[i] = new float[]{0,stY,whiteKeyWidth,keyY};	
-			int iMod = i % 7;
-			pianoWNotes[i] = new NoteData(pa,wKeyVals[iMod], octave, pianoWKeyDims[i]);
-			if(wKeyVals[iMod] == nValType.C){	octave--;}
+			int iMod = i % noteValType.wKeyVals.length;
+			pianoWNotes[i] = new NoteData(pa,noteValType.wKeyVals[iMod], octave, pianoWKeyDims[i]);
+			if(noteValType.wKeyVals[iMod] == noteValType.C){	octave--;}
 			allNotes[allNoteIDX--] = pianoWNotes[i];
 			pianoKeyCtrYLocs[keyIdx--] = pianoWKeyDims[i][1] +  halfWHi;
 			if((iMod != 4) && (iMod != 0) && (i != numWhiteKeys-1)&& (i != 0)){//determine which keys get black keys
 				pianoBKeyDims[blkKeyCnt] = new float[]{0,stY+(keyY-bkModY),bWide,bHigh};
-				pianoBNotes[blkKeyCnt] = new NoteData(pa,bKeyVals[blkKeyCnt%5], octave, pianoBKeyDims[blkKeyCnt]);
+				pianoBNotes[blkKeyCnt] = new NoteData(pa,noteValType.bKeyVals[blkKeyCnt%noteValType.bKeyVals.length], octave, pianoBKeyDims[blkKeyCnt]);
 				allNotes[allNoteIDX--] = pianoBNotes[blkKeyCnt];
 				pianoKeyCtrYLocs[keyIdx--] = pianoBKeyDims[blkKeyCnt][1] +  halfBHi;
 				blkKeyCnt++;
@@ -173,10 +164,7 @@ public class myPianoObj{
 		return allFreqsUsed;
 	}//initPianoFreqs
 			
-	public boolean chkHasSharps(nValType n){for(int i =0; i<hasSharps.length;++i){	if(hasSharps[i].getVal() == n.getVal()){return true;}}return false;}
-	public boolean chkHasFlats(nValType n){for(int i =0; i<hasFlats.length;++i){	if(hasFlats[i].getVal() == n.getVal()){return true;}}return false;}
-	public boolean isNaturalNote(nValType n){for(int i =0; i<isNaturalNotes.length;++i){	if(isNaturalNotes[i].getVal() == n.getVal()){return true;}}return false;}
-	public String getKeyNames(ArrayList<nValType> keyAra){String res = "";for(int i=0;i<keyAra.size();++i){res += "|i:"+i+" : val="+keyAra.get(i); }return res;}	
+	public String getKeyNames(ArrayList<noteValType> keyAra){String res = "";for(int i=0;i<keyAra.size();++i){res += "|i:"+i+" : val="+keyAra.get(i); }return res;}	
 	//checks whether keyIdx is a black key or a white key - A0 is idx 0
 	public boolean isBlackKey(int keyIdx) {
 		int k = ((keyIdx + 88 - 2) % 12);//relative position of key in octave 0..11 notes, where 1,3,6,8,10 are black
@@ -334,7 +322,7 @@ public class myPianoObj{
 			pa.noStroke();
 			pa.rect(pianoWKeyDims[i]);
 			float stXVal = 0;
-			if((chkHasSharps(pianoWNotes[i].name)) && (i > 0)){
+			if(pianoWNotes[i].name.chkHasSharps() && (i > 0)){
 				stXVal=pianoBKeyDims[0][2];//x start at beginning of black key
 			}
 			pa.setColorValStroke(DancingBalls.gui_Black);
@@ -381,11 +369,11 @@ public class myPianoObj{
 //class to hold note data for piano display
 class NoteData{
 	public static DancingBalls pa;
-	nValType name;
+	noteValType name;
 	String nameOct;
 	int octave;
 	float[] dims;
-	public NoteData(DancingBalls _pa,nValType _nType, int _octave, float[] _dims) {
+	public NoteData(DancingBalls _pa,noteValType _nType, int _octave, float[] _dims) {
 		pa = _pa;
 		name = _nType;
 		octave = _octave;

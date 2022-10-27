@@ -5,6 +5,10 @@ import java.util.concurrent.*;
 
 import javax.sound.midi.*;
 
+import dancingBallsPKG.enums.keySigVals;
+import dancingBallsPKG.enums.noteDurType;
+import dancingBallsPKG.enums.noteValType;
+
 public class myMidiSongData {
 	//general midi patch names for program change
 	public static final String[] GMPatches = new String[] {
@@ -746,7 +750,7 @@ class myMidiTrackData {
 //	//				Click gives the number of MIDI clocks per metronome click, and NotesQ the number of 32nd notes in the nominal MIDI quarter 
 //	//				note time of 24 clocks (8 for the default MIDI quarter note definition).
 					int num = (int)(msgBytes[msgStIdx] & 0xFF);
-					nDurType denom = nDurType.getVal((int)(msgBytes[msgStIdx+1] & 0xFF));
+					noteDurType denom = noteDurType.getVal((int)(msgBytes[msgStIdx+1] & 0xFF));
 					int click = (int)(msgBytes[msgStIdx+2] & 0xFF);
 					int noteQ = (int)(msgBytes[msgStIdx+3] & 0xFF);
 					btsAsChar = "Time Sig :  " + num + " beats per measure, " + denom + " gets the beat. Click : " + click + " midi clocks per click; and " + noteQ + " 32nd notes per MIDI qtr note time (24 clocks)";
@@ -944,8 +948,8 @@ class songState {
 //a class that holds a time signature
 class timeSig {
 	public final int num;
-	public final nDurType denom;
-	timeSig(int _num, nDurType _dnm){num=_num;denom=_dnm;}	
+	public final noteDurType denom;
+	timeSig(int _num, noteDurType _dnm){num=_num;denom=_dnm;}	
 	public String toString() {return ""+num+","+denom+",";}
 }
 
@@ -970,7 +974,7 @@ class midiNoteData implements Comparable<midiNoteData>{
 	public long endTime;
 	public final int octave, midiData;
 	public final int channel;
-	public final nValType note;
+	public final noteValType note;
 	
 	//map of volume for notes - "expressive" notes change volume through explicity midi commands
 	//key is offset from start of note
@@ -981,7 +985,7 @@ class midiNoteData implements Comparable<midiNoteData>{
 	
 	//_mDat is midi note value, _vol is midi volume.  
 	public midiNoteData(int _mDat,int _chan, int _vol, long _stTime) {
-		midiData=_mDat;channel=_chan;note = nValType.getVal((midiData % 12));octave = midiData / 12 -1;stTime=_stTime;
+		midiData=_mDat;channel=_chan;note = noteValType.getVal((midiData % 12));octave = midiData / 12 -1;stTime=_stTime;
 		noteVol = new ConcurrentSkipListMap<Integer, Integer>();
 		noteDur = 0;
 		noteVol.put(0,_vol);

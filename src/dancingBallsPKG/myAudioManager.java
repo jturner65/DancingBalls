@@ -100,7 +100,7 @@ public class myAudioManager {
 		{{"Fugue0 Midi","4 Seasons Spring 1","Fugue1 Midi","Fugue 2 Midi","Fugue 3 Midi"}},
 		{{"Chromatic F#","Ab","A","Bb","B","C#","C","D","Eb","E","F#","F","G","Pentatonic F#","WholeTone C#","WholeTone C"},		
 		{"WellTmprdClav CMaj","Sati-Gnoss1","Sati-Gymn1","Fur Elise"},
-		{"PurpleHaze","UNATCO","Hunting","SavanaDance","Karelia","Choir"},
+		{"PurpleHaze","UNATCO","Hunting","SavanaDance","Karelia","Choir","Stranger"},
 		{"Cello4 EbMaj","Cello5 Cmin"},
 		{"ff-029","ff-030","ff-031","ff-050","ff-051","ff-052","ff-053","ff-054"}}};
 	//song buffer size on per-bank basis
@@ -119,7 +119,7 @@ public class myAudioManager {
 		"scales_B Flat.mp3","scales_B.mp3","scales_C Sharp.mp3","scales_C.mp3","scales_D.mp3","scales_E Flat.mp3","scales_E.mp3",
 		"scales_F Sharp.mp3","scales_F.mp3","scales_G.mp3","scales_Pentatonic on F Sharp.mp3","scales_WholeToneC Sharp.mp3","scales_WholeToneC.mp3"},
 		{"WTK_Cmaj.mp3","satie_gnossienne1.mp3","satie_gymnopedie1.mp3","FurElise.mp3"},
-		{"PurpleHaze.mp3","UNATCO.mp3","Hunting.mp3","SavanaDance.mp3","karelia.mp3","choir.mp3"},
+		{"PurpleHaze.mp3","UNATCO.mp3","Hunting.mp3","SavanaDance.mp3","karelia.mp3","choir.mp3","TheStranger.mp3"},
 		{"Bach cello No. 4 in EbMaj_Prelude.mp3","Bach cello No. 5 in CMin_Prelude.mp3"},
 		{"piano-ff-029.wav","piano-ff-030.wav","piano-ff-031.wav","piano-ff-050.wav","piano-ff-051.wav","piano-ff-052.wav","piano-ff-053.wav","piano-ff-054.wav"}}
 	};
