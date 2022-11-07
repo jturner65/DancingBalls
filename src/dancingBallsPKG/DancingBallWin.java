@@ -19,8 +19,8 @@ public class DancingBallWin extends myDispWindow {
 	//ui vals
 	//sim timestep from ui
 	public float deltaT = .01f;
-	//# of verts for dancing ball, approx - divided up for snowman based on radius of snowman
-	public int ballNumVerts = 2000;
+	//# of verts for dancing ball
+	public int ballNumVerts = 10000;
 	//default radius of ball - for snowman scaled for each ball
 	public float ballRadius = 200;
 	//minimum fraction of vert count to belong in a neighborhood - if the derived # of verts for a particular zone is less than this, it will be forced to be this many
@@ -300,7 +300,7 @@ public class DancingBallWin extends myDispWindow {
 		//pa.outStr2Scr("setupGUIObjsAras start");
 		guiMinMaxModVals = new double [][]{
 			{0,1.0f,.001f},						//timestep           		gIDX_TimeStep 	
-			{200,10000,10},						//# of vertices
+			{1000,50000,10},						//# of vertices
 			{50,1000,10},						//ball at-rest radius
 			{5, 100, 5},						//min neighborhood size fraction of number of verts			
 			{0,numZones-1,1},					//zone to show if showing zones on sphere

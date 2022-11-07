@@ -145,7 +145,7 @@ public abstract class myDispWindow {
 		setFlags(canDrawTraj, _canDrawTraj);
 		setFlags(trajPointsAreFlat, _trajIsFlat);
 		//setFlags(closeable, true);
-		setFlags(drawMseEdge,true);
+		setFlags(drawMseEdge,false);
 		if(!_isMenu){
 			initUIBox();				//set up ui click region to be in sidebar menu below menu's entries - do not do here for sidebar
 		}
