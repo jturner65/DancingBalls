@@ -3,7 +3,7 @@ package dancingBallsPKG;
 import java.util.ArrayList;
 import java.util.List;
 
-public class altWindow extends myDispWindow {
+public class altWindow extends Base_DispWindow {
 
 	//piano visualization object
 	public myPianoObj dispPiano;	

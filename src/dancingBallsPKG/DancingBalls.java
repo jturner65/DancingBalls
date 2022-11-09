@@ -91,7 +91,7 @@ public class DancingBalls extends PApplet{
 		bgrndSphere.setTexture(bgrndTex);
 		bgrndSphere.rotate(HALF_PI,-1,0,0);
 		bgrndSphere.setStroke(false);	
-		//TODO move to myDispWindow
+		//TODO move to Base_DispWindow
 		background(bground[0],bground[1],bground[2],bground[3]);		
 		shape(bgrndSphere);	
 	}//setBkgndSphere
@@ -152,7 +152,7 @@ public class DancingBalls extends PApplet{
 		if(flags[runSim] ){
 			//run simulation
 			drawCount++;									//needed to stop draw update so that pausing sim retains animation positions	
-			for(int i =1; i<numDispWins; ++i){if((isShowingWindow(i)) && (dispWinFrames[i].getFlags(myDispWindow.isRunnable))){dispWinFrames[i].simulate(modAmtMillis);}}
+			for(int i =1; i<numDispWins; ++i){if((isShowingWindow(i)) && (dispWinFrames[i].getFlags(Base_DispWindow.isRunnable))){dispWinFrames[i].simulate(modAmtMillis);}}
 			if(flags[singleStep]){setFlags(runSim,false);}
 			simCycles++;
 		}		//play in current window
@@ -173,7 +173,7 @@ public class DancingBalls extends PApplet{
 			c.buildCanvas();
 			c.drawMseEdge();
 			popStyle();popMatrix(); 
-			for(int i =1; i<numDispWins; ++i){if (isShowingWindow(i) && !(dispWinFrames[i].getFlags(myDispWindow.is3DWin))){dispWinFrames[i].draw2D(modAmtMillis);}}
+			for(int i =1; i<numDispWins; ++i){if (isShowingWindow(i) && !(dispWinFrames[i].getFlags(Base_DispWindow.is3DWin))){dispWinFrames[i].draw2D(modAmtMillis);}}
 		}
 		drawUI(modAmtMillis);																	//draw UI overlay on top of rendered results			
 		if (flags[saveAnim]) {	savePic();}
@@ -189,7 +189,7 @@ public class DancingBalls extends PApplet{
 	public void draw3D_solve3D(float modAmtMillis){
 		pushMatrix();pushStyle();
 		for(int i =1; i<numDispWins; ++i){
-			if((isShowingWindow(i)) && (dispWinFrames[i].getFlags(myDispWindow.is3DWin))){
+			if((isShowingWindow(i)) && (dispWinFrames[i].getFlags(Base_DispWindow.is3DWin))){
 				dispWinFrames[i].draw3D(modAmtMillis);
 			}
 		}
@@ -221,7 +221,7 @@ public class DancingBalls extends PApplet{
 	//if should show problem # i
 		public boolean isShowingWindow(int i){return flags[(i+this.showUIMenu)];}//showUIMenu is first flag of window showing flags
 		public void drawUI(float modAmtMillis){					
-			//for(int i =1; i<numDispWins; ++i){if ( !(dispWinFrames[i].dispFlags[myDispWindow.is3DWin])){dispWinFrames[i].draw(sceneCtrVals[sceneIDX]);}}
+			//for(int i =1; i<numDispWins; ++i){if ( !(dispWinFrames[i].dispFlags[Base_DispWindow.is3DWin])){dispWinFrames[i].draw(sceneCtrVals[sceneIDX]);}}
 			//dispWinFrames[0].draw(sceneCtrVals[sceneIDX]);
 			for(int i =1; i<numDispWins; ++i){dispWinFrames[i].drawHeader(modAmtMillis);}
 			//menu always idx 0
@@ -314,7 +314,7 @@ public class DancingBalls extends PApplet{
 	}//mouseDragged()
 	//only for zooming
 	public void mouseWheel(MouseEvent event) {
-		if (dispWinFrames[curFocusWin].getFlags(myDispWindow.canChgView)) {// (canMoveView[curFocusWin]){	
+		if (dispWinFrames[curFocusWin].getFlags(Base_DispWindow.canChgView)) {// (canMoveView[curFocusWin]){	
 			float mult = (flags[shiftKeyPressed]) ? 5.0f * mouseWhlSens : mouseWhlSens;
 			dispWinFrames[curFocusWin].handleViewChange(true,(mult * event.getCount()),0);
 		}
@@ -594,7 +594,7 @@ public class DancingBalls extends PApplet{
 	public String[] winTitles = new String[]{"","3D Dancing Ball","Alternate Window"},
 			winDescr = new String[] {"", "Ball in 3D dancing to music","Alternate Window"};
 	//individual display/HUD windows for gui/user interaction
-	public myDispWindow[] dispWinFrames;
+	public Base_DispWindow[] dispWinFrames;
 	//idx's in dispWinFrames for each window
 	public static final int dispMenuIDX = 0,
 							disp1stWinIDX = 1,
@@ -602,7 +602,7 @@ public class DancingBalls extends PApplet{
 	
 	public static final int numDispWins = 3;	
 			
-	public int curFocusWin;				//which myDispWindow currently has focus 
+	public int curFocusWin;				//which Base_DispWindow currently has focus 
 	
 	//whether or not the display windows will accept a drawn trajectory
 	public boolean[] canDrawInWin = new boolean[]{false,false,false};		
@@ -716,7 +716,7 @@ public class DancingBalls extends PApplet{
 		strokeCap(SQUARE);//makes the ends of stroke lines squared off
 		
 		//display window initialization
-		dispWinFrames = new myDispWindow[numDispWins];		
+		dispWinFrames = new Base_DispWindow[numDispWins];		
 		//menu bar init
 		dispWinFrames[dispMenuIDX] = new mySideBarMenu(this, "UI Window", showUIMenu,  winFillClrs[dispMenuIDX], winStrkClrs[dispMenuIDX], winRectDimOpen[dispMenuIDX],winRectDimClose[dispMenuIDX], "User Controls",canDrawInWin[dispMenuIDX]);			
 		
@@ -764,10 +764,10 @@ public class DancingBalls extends PApplet{
 			case showRtSideMenu		: {for(int i =1; i<dispWinFrames.length;++i){dispWinFrames[i].setRtSideInfoWinSt(val);}break;}	//set value for every window - to show or not to show info window
 			//case flipDrawnTraj		: { dispWinFrames[dispPianoRollIDX].rebuildDrawnTraj();break;}						//whether or not to flip the drawn melody trajectory, width-wise
 			case flipDrawnTraj		: { for(int i =1; i<dispWinFrames.length;++i){dispWinFrames[i].rebuildAllDrawnTrajs();}break;}						//whether or not to flip the drawn melody trajectory, width-wise
-			case showUIMenu 	    : { dispWinFrames[dispMenuIDX].setFlags(myDispWindow.showIDX,val);    break;}											//whether or not to show the main ui window (sidebar)			
+			case showUIMenu 	    : { dispWinFrames[dispMenuIDX].setFlags(Base_DispWindow.showIDX,val);    break;}											//whether or not to show the main ui window (sidebar)			
 //			case showJTWin		: {
 //				if (val) {
-//					dispWinFrames[dispJTWinIDX].setFlags(myDispWindow.showIDX,true);
+//					dispWinFrames[dispJTWinIDX].setFlags(Base_DispWindow.showIDX,true);
 //					curFocusWin = dispJTWinIDX;
 //					setCamView();
 //				} else {

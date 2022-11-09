@@ -4,7 +4,7 @@ package dancingBallsPKG;
 import java.util.*;
 
 
-public class DancingBallWin extends myDispWindow {
+public class DancingBallWin extends Base_DispWindow {
 	//set # zones here
 	public static final int numZones = 6;	
 	//Dancing Ball object

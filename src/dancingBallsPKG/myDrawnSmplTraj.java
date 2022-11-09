@@ -7,7 +7,7 @@ import processing.core.*;
 //class holds trajctory and 4 macro cntl points, and handling for them
 public class myDrawnSmplTraj {
 	public DancingBalls pa;
-	public myDispWindow win;
+	public Base_DispWindow win;
 	public static int trjCnt = 0;
 	public int ID;
 
@@ -37,7 +37,7 @@ public class myDrawnSmplTraj {
 	
 	public int ctlRad;
 	
-	public myDrawnSmplTraj(DancingBalls _p, myDispWindow _win,float _topOffy, int _fillClrCnst, int _strkClrCnst, boolean _flat, boolean _smCntl){
+	public myDrawnSmplTraj(DancingBalls _p, Base_DispWindow _win,float _topOffy, int _fillClrCnst, int _strkClrCnst, boolean _flat, boolean _smCntl){
 		pa = _p;
 		fillClrCnst = _fillClrCnst; 
 		strkClrCnst = _strkClrCnst;
@@ -87,14 +87,14 @@ public class myDrawnSmplTraj {
 		drawnTraj.startDrawing();
 	}
 	public boolean startEditEndPoint(int idx){
-		editEndPt = idx; win.setFlags(myDispWindow.editingTraj, true);
+		editEndPt = idx; win.setFlags(Base_DispWindow.editingTraj, true);
 		//pa.outStr2Scr("Handle TrajClick 2 startEditEndPoint : " + name + " | Move endpoint : "+editEndPt);
 		return true;
 	}
 	//check if initiating an edit on an existing object, if so then set up edit
 	public boolean startEditObj(myPoint mse){
 		boolean doEdit = false; 
-		float chkDist = win.getFlags(myDispWindow.is3DWin) ? msClkPt3DRad : msClkPtRad;
+		float chkDist = win.getFlags(Base_DispWindow.is3DWin) ? msClkPt3DRad : msClkPtRad;
 		//first check endpoints, then check curve points
 		double[] distTocPts = new double[1];			//using array as pointer, passing by reference
 		int cntpIdx = win.findClosestPt(mse, distTocPts, edtCrvEndPts);	
@@ -106,14 +106,14 @@ public class myDrawnSmplTraj {
 			//pa.outStr2Scr("Handle TrajClick 2 startEditObj : " + name);
 			if(distToPts[0] < chkDist){//close enough to mod
 				win.setEditCueCircle(0,mse);
-				win.setFlags(myDispWindow.editingTraj, true);
+				win.setFlags(Base_DispWindow.editingTraj, true);
 				doEdit = true;
 				//pa.outStr2Scr("Handle TrajClick 3 startEditObj modPt : " + name + " : pIdx : "+ pIdx);
 				drawnTrajPickedIdx = pIdx;	
 				editEndPt = -1;
 			} else if (distToPts[0] < sqMsClkRad){//not close enough to mod but close to curve
 				win.setEditCueCircle(1,mse);
-				win.setFlags(myDispWindow.smoothTraj, true);
+				win.setFlags(Base_DispWindow.smoothTraj, true);
 			}
 		}
 		return doEdit;
@@ -121,7 +121,7 @@ public class myDrawnSmplTraj {
 	
 	//returns true if within eps of any of the points of this trajector
 	public boolean clickedMe(myPoint mse){
-		float chkDist = win.getFlags(myDispWindow.is3DWin) ? msClkPt3DRad : msClkPtRad;	
+		float chkDist = win.getFlags(Base_DispWindow.is3DWin) ? msClkPt3DRad : msClkPtRad;	
 		double[] distToPts = new double[1];			//using array as pointer, passing by reference
 		int cntpIdx = win.findClosestPt(mse, distToPts, edtCrvEndPts);	
 		if(distToPts[0] < chkDist){return true;}
@@ -155,8 +155,8 @@ public class myDrawnSmplTraj {
 	//edit the trajectory used for UI input in this window
 	public boolean editTraj(int mouseX, int mouseY,int pmouseX, int pmouseY, myPoint mouseClickIn3D, myVector mseDragInWorld){
 		boolean mod = false;
-		if((drawnTrajPickedIdx == -1) && (editEndPt == -1) && (!win.getFlags(myDispWindow.smoothTraj))){return mod;}			//neither endpoints nor drawn points have been edited, and we're not smoothing
-		myVector diff = win.getFlags(myDispWindow.is3DWin) ? mseDragInWorld : pa.V(mouseX-pmouseX, mouseY-pmouseY,0);		
+		if((drawnTrajPickedIdx == -1) && (editEndPt == -1) && (!win.getFlags(Base_DispWindow.smoothTraj))){return mod;}			//neither endpoints nor drawn points have been edited, and we're not smoothing
+		myVector diff = win.getFlags(Base_DispWindow.is3DWin) ? mseDragInWorld : pa.V(mouseX-pmouseX, mouseY-pmouseY,0);		
 		//pa.outStr2Scr("Diff in editTraj for  " + name + "  : " +diff.toStrBrf());
 		//needs to be before templateZoneY check
 		if (editEndPt != -1){//modify scale of ornament here, or modify drawn trajectory	
@@ -172,11 +172,11 @@ public class myDrawnSmplTraj {
 	
 	public void endEditObj(){
 		if((drawnTrajPickedIdx != -1) || (editEndPt != -1)
-			|| ( win.getFlags(myDispWindow.smoothTraj))){//editing curve
+			|| ( win.getFlags(Base_DispWindow.smoothTraj))){//editing curve
 			drawnTraj.remakeDrawnTraj(false);
 			rebuildDrawnTraj();		
 		}
-//		else if( win.getFlags(myDispWindow.smoothTraj)){		
+//		else if( win.getFlags(Base_DispWindow.smoothTraj)){		
 //			drawnTraj.remakeDrawnTraj(false);	
 //			rebuildDrawnTraj();	
 //		}
@@ -184,8 +184,8 @@ public class myDrawnSmplTraj {
 		win.processTrajectory(this);//dispFlags[trajDirty, true);
 		drawnTrajPickedIdx = -1;
 		editEndPt = -1;
-		win.setFlags(myDispWindow.editingTraj, false);
-		win.setFlags(myDispWindow.smoothTraj, false);
+		win.setFlags(Base_DispWindow.editingTraj, false);
+		win.setFlags(Base_DispWindow.smoothTraj, false);
 	}
 	
 	public void endDrawObj(myPoint endPoint){
@@ -203,7 +203,7 @@ public class myDrawnSmplTraj {
 		} else {
 			drawnTraj = new myVariStroke(pa, pa.V(pa.c.drawSNorm),fillClrCnst, strkClrCnst);
 		}
-		win.setFlags(myDispWindow.drawingTraj, false);
+		win.setFlags(Base_DispWindow.drawingTraj, false);
 	}//endDrawObj
 	
 	public void addPoint(myPoint mse){

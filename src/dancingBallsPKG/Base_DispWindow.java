@@ -5,7 +5,7 @@ import java.util.*;
 import processing.core.*;
 
 //abstract class to hold base code for a menu/display window (2D for gui, etc), to handle displaying and controlling the window, and calling the implementing class for the specifics
-public abstract class myDispWindow {
+public abstract class Base_DispWindow {
 	public DancingBalls pa;
 	public static int winCnt = 0;
 	public int ID;	
@@ -123,7 +123,7 @@ public abstract class myDispWindow {
 	
 	private final int[] trueBtnClr = new int[]{220,255,220,255}, falseBtnClr = new int[]{255,215,215,255};
 	
-	public myDispWindow(DancingBalls _p, String _n, int _flagIdx, int[] fc,  int[] sc, float[] rd, float[] rdClosed, String _winTxt, boolean _canDrawTraj) {
+	public Base_DispWindow(DancingBalls _p, String _n, int _flagIdx, int[] fc,  int[] sc, float[] rd, float[] rdClosed, String _winTxt, boolean _canDrawTraj) {
 		pa=_p;
 		ID = winCnt++;
 		name = _n;
@@ -757,7 +757,7 @@ public abstract class myDispWindow {
 	}//draw3D
 	
 	public void drawTraj3D(float animTimeMod,myPoint trans){
-		pa.outStr2Scr("myDispWindow.drawTraj3D() : I should be overridden in 3d instancing class", true);
+		pa.outStr2Scr("Base_DispWindow.drawTraj3D() : I should be overridden in 3d instancing class", true);
 //		pa.pushMatrix();pa.pushStyle();	
 //		if(null != tmpDrawnTraj){tmpDrawnTraj.drawMe(animTimeMod);}
 //		TreeMap<String,ArrayList<myDrawnNoteTraj>> tmpTreeMap = drwnTrajMap.get(this.curDrnTrajScrIDX);
@@ -916,8 +916,8 @@ public abstract class myDispWindow {
 		else {			rx-=delX; ry+=delY;} 		
 	}//handleViewChange()
 	
-	protected myPoint getMsePoint(myPoint pt){return getFlags(myDispWindow.is3DWin) ? getMsePtAs3DPt((int)pt.x, (int)pt.y) : pt;}
-	protected myPoint getMsePoint(int mouseX, int mouseY){return getFlags(myDispWindow.is3DWin) ? getMsePtAs3DPt(mouseX, mouseY) : pa.P(mouseX,mouseY,0);}
+	protected myPoint getMsePoint(myPoint pt){return getFlags(Base_DispWindow.is3DWin) ? getMsePtAs3DPt((int)pt.x, (int)pt.y) : pt;}
+	protected myPoint getMsePoint(int mouseX, int mouseY){return getFlags(Base_DispWindow.is3DWin) ? getMsePtAs3DPt(mouseX, mouseY) : pa.P(mouseX,mouseY,0);}
 	public boolean handleMouseMove(int mouseX, int mouseY){
 		if(!getFlags(showIDX)){return false;}
 		if((getFlags(showIDX))&& (msePtInUIRect(mouseX, mouseY))){//in clickable region for UI interaction
@@ -1198,7 +1198,7 @@ public abstract class myDispWindow {
 
 
 //displays sidebar menu of interaction and functionality
-class mySideBarMenu extends myDispWindow{
+class mySideBarMenu extends Base_DispWindow{
 	//booleans in main program - need to have labels in idx order, even if not displayed
 	public final String[] truePFlagNames = {//needs to be in order of flags
 			"Debug Mode",
@@ -1456,7 +1456,7 @@ class mySideBarMenu extends myDispWindow{
 //		//set lcl/global vals
 //		case gIDX_UIElem2List 		: {
 ////			int sel = (int)guiObjs[UIidx].getVal() % keySigs.length;
-////			if (sel != myDispWindow.glblKeySig.keyIdx){for(int i=1; i<pa.dispWinFrames.length; ++i){pa.dispWinFrames[i].setGlobalKeySigVal(sel);} pa.setFlags(pa.forceInKey,false); }			
+////			if (sel != Base_DispWindow.glblKeySig.keyIdx){for(int i=1; i<pa.dispWinFrames.length; ++i){pa.dispWinFrames[i].setGlobalKeySigVal(sel);} pa.setFlags(pa.forceInKey,false); }			
 //			break;}
 //		case gIDX_UIElem3 	: 
 //		case gIDX_UIElem3List 	: {
@@ -1647,7 +1647,7 @@ class mySideBarMenu extends myDispWindow{
 
 class myScrollBars{
 	public DancingBalls pa;
-	public myDispWindow win;
+	public Base_DispWindow win;
 	public static int scrBarCnt = 0;
 	public int ID;
 	//displacement for scrolling display - x/y location of window, x/y zoom - use scrollbars&zoomVals - displacement is translate, zoom is scale
@@ -1674,7 +1674,7 @@ class myScrollBars{
 	
 	public int[][] clrs;			//colors for thumb and up/down/left/right arrows
 	
-	public myScrollBars(DancingBalls _pa,myDispWindow _win){
+	public myScrollBars(DancingBalls _pa,Base_DispWindow _win){
 		pa = _pa;
 		win = _win;
 		ID = scrBarCnt++;
