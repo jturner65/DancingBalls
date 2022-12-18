@@ -6,7 +6,7 @@ import java.util.Map;
 
 /**
  * note and key value
- * @author 7strb
+ * @author John Turner
  *
  */
 public enum noteValType {

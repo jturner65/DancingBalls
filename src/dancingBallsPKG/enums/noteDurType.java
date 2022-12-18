@@ -5,7 +5,7 @@ import java.util.Map;
 
 /**
  * note duration types - dotted get mult by 1.5, tuples, get multiplied by (2/tuple size) -> triplets are 2/3 duration (3 in the space of 2)
- * @author 7strb
+ * @author John Turner
  *
  */
 public enum noteDurType {

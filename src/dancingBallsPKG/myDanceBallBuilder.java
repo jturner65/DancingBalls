@@ -9,7 +9,6 @@ import java.util.concurrent.*;
 public class myDanceBallBuilder implements Runnable{
 	//needs to be rebuilt if numzones should change
 	private myDancingBall d;
-	private static float PI = (float) Math.PI, TWO_PI = PI*PI;
 	List<myDanceBallBuilder_Callable> callBallBuilder;
 	List<Future<Boolean>> callBBFtrs;	
 
