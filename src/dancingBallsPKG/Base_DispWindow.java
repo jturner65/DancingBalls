@@ -4,7 +4,13 @@ import java.util.*;
 
 import processing.core.*;
 
-//abstract class to hold base code for a menu/display window (2D for gui, etc), to handle displaying and controlling the window, and calling the implementing class for the specifics
+/**
+ * abstract class to hold base code for a menu/display window (2D for gui, etc), 
+ * to handle displaying and controlling the window, and calling the implementing 
+ * class for the specifics
+ * @author john
+ *
+ */
 public abstract class Base_DispWindow {
 	public DancingBalls pa;
 	public static int winCnt = 0;

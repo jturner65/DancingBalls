@@ -5,6 +5,8 @@ import java.util.concurrent.*;
 
 import javax.sound.midi.*;
 
+import dancingBallsPKG.enums.MidiCommand;
+import dancingBallsPKG.enums.MidiMeta;
 import dancingBallsPKG.enums.keySigVals;
 import dancingBallsPKG.enums.noteDurType;
 import dancingBallsPKG.enums.noteValType;
@@ -341,7 +343,9 @@ class myMidiTrackData {
 		trkMetaEvents.put(_t, _strAra);
 	}
 	
-	//function processes all midi events 
+	/**
+	 * function processes all midi events 
+	 */
 	public void procEvents() {	
 		//array that holds most recently turned-on note of a particular pitch
 		midiNoteData[][] lastOnNote = new midiNoteData[16][128];

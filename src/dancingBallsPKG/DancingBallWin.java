@@ -181,7 +181,7 @@ public class DancingBallWin extends Base_DispWindow {
 		//scale z val == 1 is sphere, <1 is ellipsoid
 		ball = new myDancingBall(pa, this, "Ball for zone : " + name,new myVectorf(0,0,0),ballRadius, 1.0f);
 		//piano to display on size of window
-		dispPiano = new myPianoObj(pa, fillClr, rectDim);		//start with 52 white keys (full keyboard)
+		dispPiano = new myPianoObj(fillClr, rectDim);		//start with 52 white keys (full keyboard)
 		//dispPiano.updateGridXandY(false, rectDim);
 		//called once
 		initPrivFlags(numPrivFlags);
@@ -562,7 +562,7 @@ public class DancingBallWin extends Base_DispWindow {
 	protected void drawOnScreenStuffPriv(float modAmtMillis) {
 		//draw all 2d screen audio
 		if (getPrivFlags(showPianoKbd)){
-			dispPiano.drawMe(getPrivFlags(showPianoNoteNames));
+			dispPiano.drawMe(pa, getPrivFlags(showPianoNoteNames));
 		}
 		audMgr.drawScreenData(modAmtMillis);		
 	}//drawOnScreenStuff
@@ -754,47 +754,6 @@ public class DancingBallWin extends Base_DispWindow {
 	protected void resizeMe(float scale) {		dispPiano.updateGridXandY( rectDim);		}
 
 }//DancingBallWin
-
-
-//Midi commands
-enum MidiCommand {
-  //Channel voice messages
-  NoteOff(0x80), NoteOn(0x90), PolyKeyTouch(0xA0), CntrlChange(0xB0),ProgChange(0xC0),ChanTouch(0xD0), PitchBend(0xE0),
-
-  //Channel mode messages
-  ChannelMode(0xB8),//seems to not be used
-
-  //System exlcusive messages
-  SysEx(0xF0),  SysExPkt(0xF7), 
-  //SysRealTime(0xF8), SysStartCurrSeq(0xFA), SysContCurrSeq(0xFB), SysStop(0xFC),	//these are probably not present, and definitely not relevant
-
-  //MIDI file-only messages
-  FileMetaEvent(0xFF);
-	
-	private int value; 
-	private static Map<Integer, MidiCommand> map = new HashMap<Integer, MidiCommand>(); 
-	static { for (MidiCommand enumV : MidiCommand.values()) { map.put(enumV.value, enumV);}}
-	private MidiCommand(int _val){value = _val;} 
-	public int getVal(){return value;} 	
-	public static MidiCommand getVal(int idx){return map.get(idx);}
-	public static int getNumVals(){return map.size();}						//get # of values in enum			
-};
-
-//MIDI file meta-event codes
-enum MidiMeta {
-  SeqNumber(0x0), Text(0x1), Copyright(0x2), TrackTitle(0x3), TrackInstName(0x4), Lyric(0x5), Marker(0x6), CuePoint(0x7),
-  ChPrefix(0x20), Port(0x21), EndTrack(0x2F), SetTempo(0x51), SMPTEOffset(0x54), TimeSig(0x58), KeySig(0x59), SeqSpecific(0x7F);
-	
-	private int value; 
-	private static Map<Integer, MidiMeta> map = new HashMap<Integer, MidiMeta>(); 
-	static { for (MidiMeta enumV : MidiMeta.values()) { map.put(enumV.value, enumV);}}
-	private MidiMeta(int _val){value = _val;} 
-	public int getVal(){return value;} 	
-	public static MidiMeta getVal(int idx){return map.get(idx);}
-	public static int getNumVals(){return map.size();}						//get # of values in enum			
-
-};
-
 
 
 

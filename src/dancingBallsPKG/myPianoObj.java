@@ -7,7 +7,7 @@ import dancingBallsPKG.enums.noteValType;
 
 
 public class myPianoObj{
-	public static DancingBalls pa;
+	//public static DancingBalls pa;
 	//starting offset for piano upper left corner(relative to upper left corner of owning window)
 	public static final int[] pianoStPxl = new int[] {0,40};
 	//dimensions of piano keys, for display and mouse-checking
@@ -39,8 +39,7 @@ public class myPianoObj{
 	//window size modifiers
 	public static final float gridYMult = 1.0f/67.0f, gridXMult = .5625f * gridYMult;
 	
-	public myPianoObj(DancingBalls _p, int[] _winFillClr, float[] _winDim){
-		pa = _p;
+	public myPianoObj(int[] _winFillClr, float[] _winDim){
 		winFillClr = new int[_winFillClr.length]; for(int i=0;i<_winFillClr.length;++i){winFillClr[i]=_winFillClr[i];}
 		updateGridXandY(_winDim);
 	}
@@ -73,13 +72,13 @@ public class myPianoObj{
 		for(int i =0; i < numWhiteKeys; ++i){
 			pianoWKeyDims[i] = new float[]{0,stY,whiteKeyWidth,keyY};	
 			int iMod = i % noteValType.wKeyVals.length;
-			pianoWNotes[i] = new NoteData(pa,noteValType.wKeyVals[iMod], octave, pianoWKeyDims[i]);
+			pianoWNotes[i] = new NoteData(noteValType.wKeyVals[iMod], octave, pianoWKeyDims[i]);
 			if(noteValType.wKeyVals[iMod] == noteValType.C){	octave--;}
 			allNotes[allNoteIDX--] = pianoWNotes[i];
 			pianoKeyCtrYLocs[keyIdx--] = pianoWKeyDims[i][1] +  halfWHi;
 			if((iMod != 4) && (iMod != 0) && (i != numWhiteKeys-1)&& (i != 0)){//determine which keys get black keys
 				pianoBKeyDims[blkKeyCnt] = new float[]{0,stY+(keyY-bkModY),bWide,bHigh};
-				pianoBNotes[blkKeyCnt] = new NoteData(pa,noteValType.bKeyVals[blkKeyCnt%noteValType.bKeyVals.length], octave, pianoBKeyDims[blkKeyCnt]);
+				pianoBNotes[blkKeyCnt] = new NoteData(noteValType.bKeyVals[blkKeyCnt%noteValType.bKeyVals.length], octave, pianoBKeyDims[blkKeyCnt]);
 				allNotes[allNoteIDX--] = pianoBNotes[blkKeyCnt];
 				pianoKeyCtrYLocs[keyIdx--] = pianoBKeyDims[blkKeyCnt][1] +  halfBHi;
 				blkKeyCnt++;
@@ -178,7 +177,7 @@ public class myPianoObj{
 	 * @param lvlsPerPKey map sorted on volume levels, with value being piano key of frequency with that volume
 	 */
 	
-	private void dispSingleKeyLvlLine(Float dispLvl, Integer pianoKeyIdx, int[] clr) {
+	private void dispSingleKeyLvlLine(DancingBalls pa, Float dispLvl, Integer pianoKeyIdx, int[] clr) {
 		pa.pushMatrix();pa.pushStyle();
 		pa.translate(0,pianoKeyCtrYLocs[pianoKeyIdx],0);
 		pa.setStroke(clr, 255);				
@@ -201,7 +200,7 @@ public class myPianoObj{
 	}	
 		
 	//scaleFact is ratio of max level seen so far for current song, so that bars won't go off screen
-	public void drawPianoBandRes( ConcurrentSkipListMap<Float, Integer> lvlsPerPKey, float scaleFact, int barWidth, int clrIdx, int transForNums) {		
+	public void drawPianoBandRes(DancingBalls pa, ConcurrentSkipListMap<Float, Integer> lvlsPerPKey, float scaleFact, int barWidth, int clrIdx, int transForNums) {		
 		if((lvlsPerPKey.size() > 0) && (lvlsPerPKey.firstKey()>0)) {
 			//float maxSqrtLvl = maxLvl/barWidth;// pa.sqrt(maxLvl)/barWidth;
 			pa.pushMatrix();pa.pushStyle();
@@ -211,13 +210,13 @@ public class myPianoObj{
 				if(freqLvl == 0) {break;}
 				float dispLvl = barWidth * freqLvl /scaleFact;//pa.log(freqLvl+1);//freqLvl/maxSqrtLvl;//( pa.sqrt(freqLvl)/maxSqrtLvl);			
 				int pianoKeyIdx = lvlsPerPKey.get(freqLvl);
-				dispSingleKeyLvlLine(dispLvl,pianoKeyIdx, isBlackKey(pianoKeyIdx) ? getBarColor(bkKeyBarClrs,clrIdx) : getBarColor(wkKeyBarClrs,clrIdx));
+				dispSingleKeyLvlLine(pa, dispLvl,pianoKeyIdx, isBlackKey(pianoKeyIdx) ? getBarColor(bkKeyBarClrs,clrIdx) : getBarColor(wkKeyBarClrs,clrIdx));
 			}				
 			pa.popStyle();pa.popMatrix();
 		}		
 	}//showPianoNotes
 	//draw current # of frames on for each key
-	public void drawNumFramesOn(int[] numFramesOn) {
+	public void drawNumFramesOn(DancingBalls pa, int[] numFramesOn) {
 		pa.pushMatrix();pa.pushStyle();
 		pa.translate(pianoWKeyDims[0][2],0,0);
 		float txtY = pianoWKeyDims[0][3]*.25f;
@@ -232,7 +231,7 @@ public class myPianoObj{
 	}//drawNumFramesOn
 	
 	//draw current lvl for each key
-	public void drawKeyLvlVals(ConcurrentSkipListMap<Float, Integer> lvlsPerPKey) {
+	public void drawKeyLvlVals(DancingBalls pa, ConcurrentSkipListMap<Float, Integer> lvlsPerPKey) {
 		pa.pushMatrix();pa.pushStyle();
 		pa.translate(pianoWKeyDims[0][2],0,0);
 		float txtY = pianoWKeyDims[0][3]*.25f;
@@ -246,7 +245,7 @@ public class myPianoObj{
 		pa.popStyle();pa.popMatrix();		
 	}//drawNumFramesOn	
 	//draw scrolling melody candidates - begin at edge of piano
-	public void drawMelodyCands(ConcurrentSkipListMap<Integer, ConcurrentSkipListMap<Float, Integer>> cands, int curTimeFromStart, float width, int transForNums) {
+	public void drawMelodyCands(DancingBalls pa, ConcurrentSkipListMap<Integer, ConcurrentSkipListMap<Float, Integer>> cands, int curTimeFromStart, float width, int transForNums) {
 		pa.pushMatrix();pa.pushStyle();
 		pa.translate(pianoWKeyDims[0][2],0,0);
 		float objWidth = 5.0f, objHWidth = .5f*objWidth;
@@ -277,19 +276,19 @@ public class myPianoObj{
 	}//drawMelodyCands
 	
 	//call with small range array from each individual thread
-	public void drawPlayedNote(ConcurrentSkipListMap<Float, Integer> lvlsPerPKey, float bandThresh, int clrIdx, int numShown) {
+	public void drawPlayedNote(DancingBalls pa, ConcurrentSkipListMap<Float, Integer> lvlsPerPKey, float bandThresh, int clrIdx, int numShown) {
 		if((lvlsPerPKey.size() > 0) && (lvlsPerPKey.firstKey() > bandThresh)) {
 			int idx = 0;	
 			float highestLevel = lvlsPerPKey.firstKey();
 			for(Float freqLvl : lvlsPerPKey.keySet()) {	
 				if(freqLvl < pa.epsValCalc) {break;}
-				drawNoteCircle(lvlsPerPKey.get(freqLvl), idx++, freqLvl, highestLevel, clrIdx);
+				drawNoteCircle(pa, lvlsPerPKey.get(freqLvl), idx++, freqLvl, highestLevel, clrIdx);
 				if (idx > numShown-1) {break;}
 			}			
 		}		
 	}//drawPlayedNote
 	
-	public void drawNoteNames() {
+	public void drawNoteNames(DancingBalls pa) {
 		pa.pushMatrix();pa.pushStyle();
 		pa.strokeWeight(1.0f);		
 		//white keys		
@@ -309,7 +308,7 @@ public class myPianoObj{
 		pa.popStyle();pa.popMatrix();				
 	}//drawNoteNames
 
-	public void drawMe(boolean drawNotes){
+	public void drawMe(DancingBalls pa, boolean drawNotes){
 		//needs to be in 2D
 		pa.pushMatrix();pa.pushStyle();
 		pa.setColorValFill(DancingBalls.gui_Red);	pa.setColorValStroke(DancingBalls.gui_Black);
@@ -338,11 +337,11 @@ public class myPianoObj{
 			pa.popStyle();pa.popMatrix();		
 		}
 		pa.popStyle();pa.popMatrix();	
-		if(drawNotes) {drawNoteNames();	}
+		if(drawNotes) {drawNoteNames(pa);	}
 	}//draw graphical rep of piano
 	
 	//str is what order note is = 0 is strongest, 1 is next strongest, etc.
-	public void drawNoteCircle(int idx, int ord, float str, float maxStr, int clrIdx) {
+	public void drawNoteCircle(DancingBalls pa, int idx, int ord, float str, float maxStr, int clrIdx) {
 		pa.pushMatrix();pa.pushStyle();
 		if(str == maxStr) {
 			//pa.setColorValFill(clr1, 255);
@@ -368,18 +367,16 @@ public class myPianoObj{
 
 //class to hold note data for piano display
 class NoteData{
-	public static DancingBalls pa;
+
 	noteValType name;
 	String nameOct;
 	int octave;
 	float[] dims;
-	public NoteData(DancingBalls _pa,noteValType _nType, int _octave, float[] _dims) {
-		pa = _pa;
+	public NoteData(noteValType _nType, int _octave, float[] _dims) {
 		name = _nType;
 		octave = _octave;
 		nameOct = "" + name+octave;
 		dims = _dims;
 	}
-	
 	
 }//NoteData class

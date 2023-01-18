@@ -869,30 +869,30 @@ public class myAudioManager {
 				//dispPiano.drawKeyLvlVals(lvlsPerPKey[ftIDX]);
 				int transForNum = 0;
 				if((maxLvl >= pa.epsValCalc) && !(showAllBandRes)) {//don't show piano results if showing all band res
-					if(showMelodyTrail) {dispPiano.drawMelodyCands(melodyCandidates[ftIDX], curTimeFromStartSmpl, win.rectDim[2], transForNum);}
+					if(showMelodyTrail) {dispPiano.drawMelodyCands(pa, melodyCandidates[ftIDX], curTimeFromStartSmpl, win.rectDim[2], transForNum);}
 					if(showDFTRes) {//use single frequency DFT mechanism
 						if(dftThdResToShow == 2) {//win.getPrivFlags(DancingBallWin.showEachOctave)) {
 							for(int i=0;i<perThLvlPerKey.length;++i) {
 								float minAudThresPerThd = audThreshold * perThLvlPerKey[i].firstKey();
-								dispPiano.drawPlayedNote(perThLvlPerKey[i], minAudThresPerThd, i, numNotesToShow);
-								if(!showMelodyTrail){	dispPiano.drawPianoBandRes(perThLvlPerKey[i], scaleFactor,barWidth, i, transForNum);}
+								dispPiano.drawPlayedNote(pa, perThLvlPerKey[i], minAudThresPerThd, i, numNotesToShow);
+								if(!showMelodyTrail){	dispPiano.drawPianoBandRes(pa, perThLvlPerKey[i], scaleFactor,barWidth, i, transForNum);}
 							}						
 						} else if (dftThdResToShow == 1) { //perThLvlBandsPerKey
 							for(int i=0;i<perThLvlBandsPerKey.length;++i) {
 								float minAudThresPerBand = audThreshold * perThLvlBandsPerKey[i].firstKey();
-								dispPiano.drawPlayedNote(perThLvlBandsPerKey[i], minAudThresPerBand, i, numNotesToShow);
-								if(!showMelodyTrail){	dispPiano.drawPianoBandRes(perThLvlBandsPerKey[i],scaleFactor, barWidth, i, transForNum);}
+								dispPiano.drawPlayedNote(pa, perThLvlBandsPerKey[i], minAudThresPerBand, i, numNotesToShow);
+								if(!showMelodyTrail){	dispPiano.drawPianoBandRes(pa, perThLvlBandsPerKey[i],scaleFactor, barWidth, i, transForNum);}
 							}
 						} else {
-							dispPiano.drawPlayedNote(lvlsPerPKey[ftIDX], 0.0f, 7, numNotesToShow);	
+							dispPiano.drawPlayedNote(pa, lvlsPerPKey[ftIDX], 0.0f, 7, numNotesToShow);	
 							if(!showMelodyTrail){//not showing melody trail - show per key levels
-								dispPiano.drawPianoBandRes( lvlsPerPKey[ftIDX],scaleFactor, barWidth,  7, transForNum);
+								dispPiano.drawPianoBandRes(pa, lvlsPerPKey[ftIDX],scaleFactor, barWidth,  7, transForNum);
 							} 					
 						}//draw results for dft				
 					} else {//showing fft res			
-						dispPiano.drawPlayedNote(lvlsPerPKey[ftIDX], 0.0f ,6, numNotesToShow);
+						dispPiano.drawPlayedNote(pa, lvlsPerPKey[ftIDX], 0.0f ,6, numNotesToShow);
 						if(!showMelodyTrail){//not showing melody trail - show per key levels
-							dispPiano.drawPianoBandRes( lvlsPerPKey[ftIDX], scaleFactor,barWidth,  6, transForNum);
+							dispPiano.drawPianoBandRes(pa, lvlsPerPKey[ftIDX], scaleFactor,barWidth,  6, transForNum);
 						} 				
 					}//use FFT mechanism
 				}//if((maxLvl >= pa.epsValCalc) && !(showAllBandRes)) 

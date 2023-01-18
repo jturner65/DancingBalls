@@ -3,6 +3,7 @@ package dancingBallsPKG.enums;
 import java.util.HashMap;
 import java.util.Map;
 
+
 //desciptor of score environment variable either key signature, time signature or tempo
 public enum scoreEnvVal{
 	keySig(0),timeSig(1),tempo(2);

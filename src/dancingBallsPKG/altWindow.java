@@ -55,7 +55,7 @@ public class altWindow extends Base_DispWindow {
 	@Override
 	protected void initMe() {
 		//piano to display on size of window
-		dispPiano = new myPianoObj(pa, fillClr, rectDim);		//start with 52 white keys (full keyboard)
+		dispPiano = new myPianoObj(fillClr, rectDim);		//start with 52 white keys (full keyboard)
 		//called once
 		initPrivFlags(numPrivFlags);
 		//this window is runnable
@@ -178,7 +178,7 @@ public class altWindow extends Base_DispWindow {
 	protected void drawOnScreenStuffPriv(float modAmtMillis) {
 		//draw all 2d screen data here, super-imposed over background
 		if (getPrivFlags(showPianoKbd)){
-			dispPiano.drawMe(true);//change to local boolean flag if want to control whether notes are shown
+			dispPiano.drawMe(pa, true);//change to local boolean flag if want to control whether notes are shown
 		}
 	}
 
