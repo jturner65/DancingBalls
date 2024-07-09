@@ -75,7 +75,7 @@ public abstract class Base_DispWindow {
 	
 	//UI objects in this window
 	//GUI Objects
-	public myGUIObj[] guiObjs;	
+	public myGUIObj[] guiObjs_Numeric;	
 	public int msClkObj, msOvrObj;												//myGUIObj object that was clicked on  - for modification, object mouse moved over
 	public float[] uiClkCoords;												//subregion of window where UI objects may be found
 	public static final double uiWidthMult = 9;							//multipler of size of label for width of UI components, when aligning components horizontally
@@ -421,7 +421,7 @@ public abstract class Base_DispWindow {
 //	public void resizeUIRegion(float scaleY, int numGUIObjs){
 //		//re-size where UI objects should be drawn - vertical scale only currently
 //		double [] curUIVals = new double[this.guiStVals.length];
-//		for(int i=0;i<curUIVals.length;++i){	curUIVals[i] = guiObjs[i].getVal();	}
+//		for(int i=0;i<curUIVals.length;++i){	curUIVals[i] = guiObjs_Numeric[i].getVal();	}
 //		
 //		uiClkCoords[1]=calcDBLOffsetScale(uiClkCoords[1],scaleY,topOffY);
 //		uiClkCoords[3]=calcDBLOffsetScale(uiClkCoords[3],scaleY,topOffY);
@@ -437,17 +437,17 @@ public abstract class Base_DispWindow {
 		//myGUIObj tmp; 
 //		if(getFlags(uiObjsAreVert]){		//vertical stack of UI components - clickable region x is unchanged, y changes with # of objects
 		float stClkY = uiClkCoords[1];
-		for(int i =0; i< guiObjs.length; ++i){
-			guiObjs[i] = buildGUIObj(i,guiObjNames[i],guiStVals[i], guiMinMaxModVals[i], guiBoolVals[i], new double[]{uiClkCoords[0], stClkY, uiClkCoords[2], stClkY+yOff},off);
+		for(int i =0; i< guiObjs_Numeric.length; ++i){
+			guiObjs_Numeric[i] = buildGUIObj(i,guiObjNames[i],guiStVals[i], guiMinMaxModVals[i], guiBoolVals[i], new double[]{uiClkCoords[0], stClkY, uiClkCoords[2], stClkY+yOff},off);
 			stClkY += yOff;
 		}
 		uiClkCoords[3] = stClkY;	
 //		} else {			//horizontal row of UI components - clickable region y is unchanged, x changes with # of objects
 //			double stClkX = uiClkCoords[0];
 //			double UICompWidth;
-//			for(int i =0; i< guiObjs.length; ++i){
+//			for(int i =0; i< guiObjs_Numeric.length; ++i){
 //				UICompWidth = (uiWidthMult + (guiBoolVals[i][1] ? 1 : 0)) * guiObjNames[i].length();
-//				guiObjs[i] = buildGUIObj(i,guiObjNames[i],guiStVals[i], guiMinMaxModVals[i], guiBoolVals[i], new double[]{stClkX, uiClkCoords[1], stClkX+UICompWidth , uiClkCoords[3]},off);
+//				guiObjs_Numeric[i] = buildGUIObj(i,guiObjNames[i],guiStVals[i], guiMinMaxModVals[i], guiBoolVals[i], new double[]{stClkX, uiClkCoords[1], stClkX+UICompWidth , uiClkCoords[3]},off);
 //				stClkX += UICompWidth;
 //			}
 //			uiClkCoords[2] = stClkX;	
@@ -464,13 +464,13 @@ public abstract class Base_DispWindow {
 		sb.append("ui_idx: ");
 		sb.append(idx);
 		sb.append(" |name: ");
-		sb.append(guiObjs[idx].name);
+		sb.append(guiObjs_Numeric[idx].name);
 		sb.append(" |value: ");
-		sb.append(guiObjs[idx].getVal());
+		sb.append(guiObjs_Numeric[idx].getVal());
 		sb.append(" |flags: ");
-		for(int i =0;i<guiObjs[idx].numFlags; ++i){
+		for(int i =0;i<guiObjs_Numeric[idx].numFlags; ++i){
 			sb.append(" ");
-			sb.append((guiObjs[idx].getFlags(i) ? "true" : "false"));
+			sb.append((guiObjs_Numeric[idx].getFlags(i) ? "true" : "false"));
 		}
 		return sb.toString().trim();		
 		
@@ -484,9 +484,9 @@ public abstract class Base_DispWindow {
 		int uiIdx = Integer.parseInt(toks[0].split("\\s")[1].trim());
 		//String name = toks[3];
 		double uiVal = Double.parseDouble(toks[2].split("\\s")[1].trim());	
-		guiObjs[uiIdx].setVal(uiVal);
-		for(int i =0;i<guiObjs[uiIdx].numFlags; ++i){
-			guiObjs[uiIdx].setFlags(i, Boolean.parseBoolean(toks[3].split("\\s")[i].trim()));
+		guiObjs_Numeric[uiIdx].setVal(uiVal);
+		for(int i =0;i<guiObjs_Numeric[uiIdx].numFlags; ++i){
+			guiObjs_Numeric[uiIdx].setFlags(i, Boolean.parseBoolean(toks[3].split("\\s")[i].trim()));
 		}	
 		setUIWinVals(uiIdx);//update window's values with UI construct's values
 	}//setValFromFileStr
@@ -508,7 +508,7 @@ public abstract class Base_DispWindow {
 	protected ArrayList<String> hndlFileSave(){
 		ArrayList<String> res = new ArrayList<String>();
 		res.add(name);
-		for(int i=0;i<guiObjs.length;++i){	res.add(getStrFromUIObj(i));}		
+		for(int i=0;i<guiObjs_Numeric.length;++i){	res.add(getStrFromUIObj(i));}		
 		//bound for custom components
 		res.add(name + "_custUIComps");
 		//call indiv handler
@@ -596,7 +596,7 @@ public abstract class Base_DispWindow {
 	//draw ui objects
 	public void drawGUIObjs(){	
 		pa.pushMatrix();pa.pushStyle();	
-		for(int i =0; i<guiObjs.length; ++i){guiObjs[i].draw();}
+		for(int i =0; i<guiObjs_Numeric.length; ++i){guiObjs_Numeric[i].draw();}
 		pa.popStyle();pa.popMatrix();
 	}
 	
@@ -927,7 +927,7 @@ public abstract class Base_DispWindow {
 	public boolean handleMouseMove(int mouseX, int mouseY){
 		if(!getFlags(showIDX)){return false;}
 		if((getFlags(showIDX))&& (msePtInUIRect(mouseX, mouseY))){//in clickable region for UI interaction
-			for(int j=0; j<guiObjs.length; ++j){if(guiObjs[j].checkIn(mouseX, mouseY)){	msOvrObj=j;return true;	}}
+			for(int j=0; j<guiObjs_Numeric.length; ++j){if(guiObjs_Numeric[j].checkIn(mouseX, mouseY)){	msOvrObj=j;return true;	}}
 		}
 		myPoint mouseClickIn3D = pa.c.getMseLoc(sceneCtrVal);
 		if(hndlMouseMoveIndiv(mouseX, mouseY, mouseClickIn3D)){return true;}
@@ -941,12 +941,12 @@ public abstract class Base_DispWindow {
 	public boolean handleMouseClick(int mouseX, int mouseY, int mseBtn){
 		boolean mod = false;
 		if((getFlags(showIDX))&& (msePtInUIRect(mouseX, mouseY))){//in clickable region for UI interaction
-			for(int j=0; j<guiObjs.length; ++j){
-				if(guiObjs[j].checkIn(mouseX, mouseY)){	
+			for(int j=0; j<guiObjs_Numeric.length; ++j){
+				if(guiObjs_Numeric[j].checkIn(mouseX, mouseY)){	
 					if(pa.flags[pa.shiftKeyPressed]){//allows for click-mod
 						float mult = mseBtn * -2.0f + 1;	//+1 for left, -1 for right btn	
 						//pa.outStr2Scr("Mult : " + (mult *pa.clickValModMult()));
-						guiObjs[j].clkModVal(mult * pa.clickValModMult());
+						guiObjs_Numeric[j].clkModVal(mult * pa.clickValModMult());
 						setFlags(uiObjMod,true);
 					} //else {										//has drag mod
 					msClkObj=j;
@@ -981,7 +981,7 @@ public abstract class Base_DispWindow {
 		
 			//any generic dragging stuff - need flag to determine if trajectory is being entered		
 			//modify object that was clicked in by mouse motion
-			if(msClkObj!=-1){	guiObjs[msClkObj].modVal((mouseX-pmouseX)+(mouseY-pmouseY)*-(pa.flags[pa.shiftKeyPressed] ? 50.0f : 5.0f));setFlags(uiObjMod, true); return true;}		
+			if(msClkObj!=-1){	guiObjs_Numeric[msClkObj].modVal((mouseX-pmouseX)+(mouseY-pmouseY)*-(pa.flags[pa.shiftKeyPressed] ? 50.0f : 5.0f));setFlags(uiObjMod, true); return true;}		
 			if(getFlags(drawingTraj)){ 		//if drawing trajectory has started, then process it
 				//pa.outStr2Scr("drawing traj");
 				myPoint pt =  getMsePoint(mouseX, mouseY);
@@ -1007,7 +1007,7 @@ public abstract class Base_DispWindow {
 	public void handleMouseRelease(){
 		if(!getFlags(showIDX)){return;}
 		if(getFlags(uiObjMod)){
-			for(int i=0;i<guiObjs.length;++i){if(guiObjs[i].getFlags(myGUIObj.usedByWinsIDX)){setUIWinVals(i);}}
+			for(int i=0;i<guiObjs_Numeric.length;++i){if(guiObjs_Numeric[i].getFlags(myGUIObj.usedByWinsIDX)){setUIWinVals(i);}}
 			setFlags(uiObjMod, false);
 			msClkObj = -1;	
 		}//some object was clicked - pass the values out to all windows
@@ -1076,7 +1076,7 @@ public abstract class Base_DispWindow {
 	public String[] getDebugData(){
 		ArrayList<String> res = new ArrayList<String>();
 		List<String>tmp;
-		for(int j = 0; j<guiObjs.length; j++){tmp = Arrays.asList(guiObjs[j].getStrData());res.addAll(tmp);}
+		for(int j = 0; j<guiObjs_Numeric.length; j++){tmp = Arrays.asList(guiObjs_Numeric[j].getStrData());res.addAll(tmp);}
 		return res.toArray(new String[0]);	
 	}
 	
@@ -1142,7 +1142,7 @@ public abstract class Base_DispWindow {
 	}
 		
 	//updates values in UI with programatic changes 
-	protected boolean setWinToUIVals(int UIidx, double val){return val == guiObjs[UIidx].setVal(val);}
+	protected boolean setWinToUIVals(int UIidx, double val){return val == guiObjs_Numeric[UIidx].setVal(val);}
 
 	//UI controlled debug functionality
 	public abstract void clickDebug(int btnNum);
@@ -1390,7 +1390,7 @@ class mySideBarMenu extends Base_DispWindow{
 		
 		minBtnClkY = (pa.numFlagsToShow+3) * yOff + clkFlgsStY;										//start of buttons from under boolean flags	
 		initUIClickCoords(rectDim[0] + .1f * rectDim[2],minBtnClkY + (guiBtnRowNames.length * 2.0f) * yOff,rectDim[0] + .99f * rectDim[2],0);//last val over-written by actual value in buildGuiObjs
-		guiObjs = new myGUIObj[numGUIObjs];			//list of modifiable gui objects
+		guiObjs_Numeric = new myGUIObj[numGUIObjs];			//list of modifiable gui objects
 		if(0!=numGUIObjs){
 			buildGUIObjs(guiObjNames,guiStVals,guiMinMaxModVals,guiBoolVals, new double[]{xOff,yOff});
 		} else {
@@ -1461,20 +1461,20 @@ class mySideBarMenu extends Base_DispWindow{
 		switch(UIidx){
 //		//set lcl/global vals
 //		case gIDX_UIElem2List 		: {
-////			int sel = (int)guiObjs[UIidx].getVal() % keySigs.length;
+////			int sel = (int)guiObjs_Numeric[UIidx].getVal() % keySigs.length;
 ////			if (sel != Base_DispWindow.glblKeySig.keyIdx){for(int i=1; i<pa.dispWinFrames.length; ++i){pa.dispWinFrames[i].setGlobalKeySigVal(sel);} pa.setFlags(pa.forceInKey,false); }			
 //			break;}
 //		case gIDX_UIElem3 	: 
 //		case gIDX_UIElem3List 	: {
-////			int tsDenom = timeSigDenom[(int)guiObjs[gIDX_UIElem3List].getVal() %timeSigDenom.length],
-////					tsNum = (int)guiObjs[gIDX_TimeSigNum].getVal();
+////			int tsDenom = timeSigDenom[(int)guiObjs_Numeric[gIDX_UIElem3List].getVal() %timeSigDenom.length],
+////					tsNum = (int)guiObjs_Numeric[gIDX_TimeSigNum].getVal();
 ////			durType dType = pa.getDurTypeForNote(tsDenom);			
 ////			if((dType != glblBeatNote) || (glblTimeSig.beatPerMeas != tsNum) || (glblTimeSig.beatNote != tsDenom)){			
 ////				for(int i=1; i<pa.dispWinFrames.length; ++i){pa.dispWinFrames[i].setGlobalTimeSigVal(tsNum,tsDenom, dType);} 
 ////			}
 //			break;}
 //		case gIDX_UIElem1			: {
-//			float tmpTempo = (float)guiObjs[UIidx].getVal();
+//			float tmpTempo = (float)guiObjs_Numeric[UIidx].getVal();
 ////			if(PApplet.abs(tmpTempo - glblTempo) > pa.feps){for(int i=1; i<pa.dispWinFrames.length; ++i){pa.dispWinFrames[i].setGlobalTempoVal(tmpTempo);}}
 //			break;}
 		}			

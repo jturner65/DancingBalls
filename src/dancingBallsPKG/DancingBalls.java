@@ -19,7 +19,7 @@ import ddf.minim.ugens.*;
 
 public class DancingBalls extends PApplet{
 
-	public String prjNmLong = "Dancing Balls Project", prjNmShrt = "DancingBalls";
+	public final String prjNmLong = "Dancing Balls Project", prjNmShrt = "DancingBalls";
 	public String authorString = "John Turner";
 	//don't use sphere background for this program
 	private boolean useSphereBKGnd = true;
@@ -74,7 +74,7 @@ public class DancingBalls extends PApplet{
 		colorMode(RGB, 255, 255, 255, 255);
 		frameRate(frate);
 		if(useSphereBKGnd) {
-			setBkgndSphere();
+			drawBkgndSphere();
 		} else {
 			setBkgrnd();
 		}
@@ -83,7 +83,7 @@ public class DancingBalls extends PApplet{
 		//initOnce();
 	}// setup
 	
-	private void setBkgndSphere() {
+	private void drawBkgndSphere() {
 		sphereDetail(100);
 		//TODO move to window to set up specific background for each different "scene" type
 		PImage bgrndTex = loadImage("bkgrndTex.jpg");
@@ -94,7 +94,7 @@ public class DancingBalls extends PApplet{
 		//TODO move to Base_DispWindow
 		background(bground[0],bground[1],bground[2],bground[3]);		
 		shape(bgrndSphere);	
-	}//setBkgndSphere
+	}//drawBkgndSphere
 	
 	public void setBkgrnd(){
 		if(useSphereBKGnd) {shape(bgrndSphere);} else {background(bground[0],bground[1],bground[2],bground[3]);	}
@@ -444,7 +444,7 @@ public class DancingBalls extends PApplet{
 
 	public void initDispWins(){
 		//float popUpWinHeight = PopUpWinOpenFraction * height;		//how high is the InstEdit window when shown
-		//instanced window dimensions when open and closed - only showing 1 open at a time
+		//instanced window dims when open and closed - only showing 1 open at a time - and init cam vals
 		winRectDimOpen[disp1stWinIDX] =  new float[]{menuWidth, 0,width-menuWidth,height};			
 		winRectDimOpen[disp2ndWinIDX] =   new float[]{menuWidth, 0,width-menuWidth,height};				
 		//hidden

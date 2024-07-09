@@ -160,17 +160,17 @@ public class DancingBallWin extends Base_DispWindow {
 		case mp3Song : {			
 			setLabel(getFlagAraIdxOfBool(playMP3Vis), "Playing MP3", "Stopped MP3");			
 			setLabel(getFlagAraIdxOfBool(calcSingleFreq), "Lvls via Indiv Freq", "Lvls via FFT");
-			guiObjs[gIDX_curSong].setDispText("MP3 Clip");
+			guiObjs_Numeric[gIDX_curSong].setDispText("MP3 Clip");
 			break;}
 		case midiSong :{
 			setLabel(getFlagAraIdxOfBool(playMP3Vis), "Playing Midi", "Stopped Midi");
 			setLabel(getFlagAraIdxOfBool(calcSingleFreq), "DFT levels", "Actual Midi lvls");
-			guiObjs[gIDX_curSong].setDispText("Midi Clip");
+			guiObjs_Numeric[gIDX_curSong].setDispText("Midi Clip");
 			break;}
 		default : {//default to mp3 song
 			setLabel(getFlagAraIdxOfBool(playMP3Vis), "Playing MP3", "Stopped MP3");			
 			setLabel(getFlagAraIdxOfBool(calcSingleFreq), "Lvls via Indiv Freq", "Lvls via FFT");			
-			guiObjs[gIDX_curSong].setDispText("MP3 Clip");
+			guiObjs_Numeric[gIDX_curSong].setDispText("MP3 Clip");
 			break;}
 		}		
 	}//updateButtons
@@ -376,7 +376,7 @@ public class DancingBallWin extends Base_DispWindow {
 		};						//per-object  list of boolean flags
 		
 		//since horizontal row of UI comps, uiClkCoords[2] will be set in buildGUIObjs		
-		guiObjs = new myGUIObj[numGUIObjs];			//list of modifiable gui objects
+		guiObjs_Numeric = new myGUIObj[numGUIObjs];			//list of modifiable gui objects
 		if(numGUIObjs > 0){
 			buildGUIObjs(guiObjNames,guiStVals,guiMinMaxModVals,guiBoolVals,new double[]{xOff,yOff});			//builds a horizontal list of UI comps
 		}
@@ -386,7 +386,7 @@ public class DancingBallWin extends Base_DispWindow {
 //	//setup UI object for song slider
 //	private void setupGUI_XtraObjs() {
 //		double stClkY = uiClkCoords[3], sizeClkY = 3*yOff;
-//		guiObjs[songTransIDX] = new myGUIBar(pa, this, songTransIDX, "MP3 Transport for ", 
+//		guiObjs_Numeric[songTransIDX] = new myGUIBar(pa, this, songTransIDX, "MP3 Transport for ", 
 //				new myVector(0, stClkY,0), new myVector(uiClkCoords[2], stClkY+sizeClkY,0),
 //				new double[] {0.0, 1.0,0.1}, 0.0, new boolean[]{false, false, true}, new double[]{xOff,yOff});	
 //		
@@ -397,7 +397,7 @@ public class DancingBallWin extends Base_DispWindow {
 	
 	@Override
 	protected void setUIWinVals(int UIidx) {
-		float val = (float)guiObjs[UIidx].getVal();
+		float val = (float)guiObjs_Numeric[UIidx].getVal();
 		float oldVal = uiVals[UIidx];
 		//int ival = (int)val;
 		if(val != uiVals[UIidx]){//if value has changed...
@@ -426,7 +426,7 @@ public class DancingBallWin extends Base_DispWindow {
 				resetDancerDisplacement();
 				zoneMmbrToShow = ((int)val) % ball.getZoneSize(zoneToShow);
 				//reset UI display value to be zoneMmbrToShow
-				guiObjs[UIidx].setVal(zoneMmbrToShow);
+				guiObjs_Numeric[UIidx].setVal(zoneMmbrToShow);
 				break;}
 			case gIDX_curSongDir :{//changing current song type
 				//change song type
@@ -437,14 +437,14 @@ public class DancingBallWin extends Base_DispWindow {
 				//change current song bank value to be legal within song list for this type
 				uiVals[gIDX_curSongBank] %= myAudioManager.songList[curSongDir].length;
 				//change song list dropdown max to be this bank's song list length-1
-				guiObjs[gIDX_curSongBank].setNewMax(myAudioManager.songList[curSongDir].length-1);
+				guiObjs_Numeric[gIDX_curSongBank].setNewMax(myAudioManager.songList[curSongDir].length-1);
 				//change current song
 				boolean changed = audMgr.changeCurrentSong(curSongDir,(int)uiVals[gIDX_curSongBank],(int)uiVals[gIDX_curSong]);//changeCurrentSong((int)val);	
 				if(!changed) {//return to previous value
 					uiVals[gIDX_curSongDir] = oldVal;
 					curSongDir=(int)uiVals[gIDX_curSongDir];
 					uiVals[gIDX_curSongBank] %= myAudioManager.songList[curSongDir].length;
-					guiObjs[gIDX_curSongBank].setNewMax(myAudioManager.songList[curSongDir].length-1);
+					guiObjs_Numeric[gIDX_curSongBank].setNewMax(myAudioManager.songList[curSongDir].length-1);
 				}
 				ball.resetConfig();	
 				break;}
@@ -458,13 +458,13 @@ public class DancingBallWin extends Base_DispWindow {
 				//change current song idx value to be legal within song list for this bank
 				uiVals[gIDX_curSong] %= myAudioManager.songList[curSongDir][curSongBank].length;
 				//change song list dropdown max to be this bank's song list length-1
-				guiObjs[gIDX_curSong].setNewMax(myAudioManager.songList[curSongDir][curSongBank].length-1);
+				guiObjs_Numeric[gIDX_curSong].setNewMax(myAudioManager.songList[curSongDir][curSongBank].length-1);
 				boolean changed = audMgr.changeCurrentSong(curSongDir,curSongBank,(int)uiVals[gIDX_curSong]);
 				if(!changed) {//if song wasn't changed, go back to old bank value
 					uiVals[gIDX_curSongBank] = oldVal;
 					curSongBank = (int)uiVals[gIDX_curSongBank];
 					uiVals[gIDX_curSong] %= myAudioManager.songList[curSongDir][curSongBank].length;
-					guiObjs[gIDX_curSong].setNewMax(myAudioManager.songList[curSongDir][curSongBank].length-1);
+					guiObjs_Numeric[gIDX_curSong].setNewMax(myAudioManager.songList[curSongDir][curSongBank].length-1);
 				}
 				ball.resetConfig();	
 				break;}

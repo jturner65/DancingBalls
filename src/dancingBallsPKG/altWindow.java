@@ -128,7 +128,7 @@ public class altWindow extends Base_DispWindow {
 		};						//per-object  list of boolean flags
 		
 		//since horizontal row of UI comps, uiClkCoords[2] will be set in buildGUIObjs		
-		guiObjs = new myGUIObj[numGUIObjs];			//list of modifiable gui objects
+		guiObjs_Numeric = new myGUIObj[numGUIObjs];			//list of modifiable gui objects
 		if(numGUIObjs > 0){
 			buildGUIObjs(guiObjNames,guiStVals,guiMinMaxModVals,guiBoolVals,new double[]{xOff,yOff});			//builds a horizontal list of UI comps
 		}
@@ -138,7 +138,7 @@ public class altWindow extends Base_DispWindow {
 	//all ui objects should have an entry here to show how they should interact
 	@Override
 	protected void setUIWinVals(int UIidx) {
-		float val = (float)guiObjs[UIidx].getVal();
+		float val = (float)guiObjs_Numeric[UIidx].getVal();
 		float oldVal = uiVals[UIidx];
 		//int ival = (int)val;
 		if(val != uiVals[UIidx]){//if value has changed...
