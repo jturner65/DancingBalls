@@ -63,7 +63,7 @@ public class myClrRamp {
 	
 	//convert to ramp local coords
 	public myPoint transToRamp(myPoint p){	return myPoint._mult(p, pa.P(1.0f/scaleVals[0],1.0f/scaleVals[1],1.0f/scaleVals[2]) );	}
-	//public myPoint transFromRamp(myPoint p){	return myPoint._sub(myPoint._mult(p, pa.P(1.0f/scaleVals[0],1.0f/scaleVals[1],1.0f/scaleVals[2]) ), pa.P(pa.sceneCtrVals[pa.sceneIDX]));	}
+	//public myPoint transFromRamp(myPoint p){	return myPoint._sub(myPoint._mult(p, pa.P(1.0f/scaleVals[0],1.0f/scaleVals[1],1.0f/scaleVals[2]) ), pa.P(pa.sceneOriginVals[pa.sceneIDX]));	}
 	//raycast from mouse to see if clicking on clickable object
 	public int checkClickLoc(myPoint clickLoc, myVector mseDirVec){
 		myPoint rmpSpcClkLoc = transToRamp(clickLoc);	

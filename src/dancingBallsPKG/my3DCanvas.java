@@ -200,7 +200,7 @@ public class my3DCanvas {
 			p.show(myPoint.ZEROPT,3);
 			p.drawText(""+dfCtr+ "|fr:"+p.frameRate,4, 15, 4,0);
 			p.scale(1.5f,1.5f,1.5f);
-			//drawText(""+text_value_at_Cursor,4, -8, 4,0);getMseLoc(sceneCtrVals[sceneIDX])
+			//drawText(""+text_value_at_Cursor,4, -8, 4,0);getMseLoc(sceneOriginVals[sceneIDX])
 			p.popStyle();
 			p.popMatrix();		
 	}//drawMseEdge		

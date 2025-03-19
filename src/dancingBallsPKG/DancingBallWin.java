@@ -575,8 +575,8 @@ public class DancingBallWin extends Base_DispWindow {
 
 	@Override
 	protected void drawMe(float animTimeMod) {
-//		curMseLookVec = pa.c.getMse2DtoMse3DinWorld(pa.sceneCtrVals[pa.sceneIDX]);			//need to be here
-//		curMseLoc3D = pa.c.getMseLoc(pa.sceneCtrVals[pa.sceneIDX]);
+//		curMseLookVec = pa.c.getMse2DtoMse3DinWorld(pa.sceneOriginVals[pa.sceneIDX]);			//need to be here
+//		curMseLoc3D = pa.c.getMseLoc(pa.sceneOriginVals[pa.sceneIDX]);
 		//int stVal = pa.millis(); //takes 0 millis to process audio data
 		//if(getPrivFlags(playMP3Vis)) {
 			boolean updateBall = audMgr.processAudioData(animTimeMod);//get next set of audio data to process
@@ -736,11 +736,11 @@ public class DancingBallWin extends Base_DispWindow {
 	@Override
 	protected void hndlMouseRelIndiv() {}
 	@Override
-	protected void endShiftKeyI() {}
+	protected void endShiftKey_Indiv() {}
 	@Override
-	protected void endAltKeyI() {}
+	protected void endAltKey_Indiv() {}
 	@Override
-	protected void endCntlKeyI() {}
+	protected void endCntlKey_Indiv() {}
 	@Override
 	protected void addSScrToWinIndiv(int newWinKey){}
 	@Override

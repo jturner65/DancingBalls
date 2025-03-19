@@ -122,7 +122,7 @@ public abstract class Base_DispWindow {
 
 	protected myVector focusTar;							//target of focus - used in translate to set where the camera is looking - allow for modification
 	protected myVector sceneFcsVal;							//set this value  to be default target of focus	
-	protected myPoint sceneCtrVal;							//set this value to be different display center translations -to be used to calculate mouse offset in world for pick
+	protected myPoint sceneOriginVal;							//set this value to be different display center translations -to be used to calculate mouse offset in world for pick
 	
 	//to control how much is shown in the window - if stuff extends off the screen and for 2d window
 	public myScrollBars[] scbrs;
@@ -180,7 +180,7 @@ public abstract class Base_DispWindow {
 		setFlags(is3DWin, thisIs3D);
 		setFlags(canChgView, viewCanChange);
 		sceneFcsVal = new myVector(_baseFcs);
-		sceneCtrVal = new myPoint(_ctr);
+		sceneOriginVal = new myPoint(_ctr);
 		focusTar = new myVector(_baseFcs);		
 	}
 	
@@ -755,7 +755,7 @@ public abstract class Base_DispWindow {
 		drawMe(animTimeMod);			//call instance class's draw
 		if(getFlags(canDrawTraj)){
 			pa.pushMatrix();				pa.pushStyle();	
-			drawTraj3D(animTimeMod, myPoint._add(sceneCtrVal,focusTar));			
+			drawTraj3D(animTimeMod, myPoint._add(sceneOriginVal,focusTar));			
 			pa.popStyle();pa.popMatrix();
 			if(getFlags(showTrajEditCrc)){drawClkCircle();}
 		}				//if this window accepts a drawn trajectory, then allow it to be displayed
@@ -929,7 +929,7 @@ public abstract class Base_DispWindow {
 		if((getFlags(showIDX))&& (msePtInUIRect(mouseX, mouseY))){//in clickable region for UI interaction
 			for(int j=0; j<guiObjs_Numeric.length; ++j){if(guiObjs_Numeric[j].checkIn(mouseX, mouseY)){	msOvrObj=j;return true;	}}
 		}
-		myPoint mouseClickIn3D = pa.c.getMseLoc(sceneCtrVal);
+		myPoint mouseClickIn3D = pa.c.getMseLoc(sceneOriginVal);
 		if(hndlMouseMoveIndiv(mouseX, mouseY, mouseClickIn3D)){return true;}
 		msOvrObj = -1;
 		return false;
@@ -958,7 +958,7 @@ public abstract class Base_DispWindow {
 		if(getFlags(closeable)){mod = checkClsBox(mouseX, mouseY);}							//check if trying to close or open the window via click, if possible
 		if(!getFlags(showIDX)){return mod;}
 		if(!mod){
-			myPoint mouseClickIn3D = pa.c.getMseLoc(sceneCtrVal);
+			myPoint mouseClickIn3D = pa.c.getMseLoc(sceneOriginVal);
 			mod = hndlMouseClickIndiv(mouseX, mouseY,mouseClickIn3D, mseBtn);
 		}			//if nothing triggered yet, then specific instancing window implementation stuff
 		if((!mod) && (msePtInRect(mouseX, mouseY, this.rectDim)) && (getFlags(canDrawTraj))){ 
@@ -997,7 +997,7 @@ public abstract class Base_DispWindow {
 			else {
 				if((!pa.ptInRange(mouseX, mouseY, rectDim[0], rectDim[1], rectDim[0]+rectDim[2], rectDim[1]+rectDim[3]))){return false;}	//if not drawing or editing a trajectory, force all dragging to be within window rectangle
 				//pa.outStr2Scr("before handle indiv drag traj for window : " + this.name);
-				myPoint mouseClickIn3D = pa.c.getMseLoc(sceneCtrVal);
+				myPoint mouseClickIn3D = pa.c.getMseLoc(sceneOriginVal);
 				mod = hndlMouseDragIndiv(mouseX, mouseY,pmouseX, pmouseY,mouseClickIn3D,mseDragInWorld,mseBtn);		//handle specific, non-trajectory functionality for implementation of window
 			}
 		}
@@ -1022,18 +1022,18 @@ public abstract class Base_DispWindow {
 	public void endShiftKey(){
 		if(!getFlags(showIDX)){return;}
 		//
-		endShiftKeyI();
+		endShiftKey_Indiv();
 	}
 	public void endAltKey(){
 		if(!getFlags(showIDX)){return;}
 		if(getFlags(drawingTraj)){this.tmpDrawnTraj.endDrawObj(getMsePoint(pa.Mouse()));}	
-		endAltKeyI();
+		endAltKey_Indiv();
 		this.tmpDrawnTraj = null;
 	}	
 	public void endCntlKey(){
 		if(!getFlags(showIDX)){return;}
 		//
-		endCntlKeyI();
+		endCntlKey_Indiv();
 	}	
 			
 	//drawn trajectory stuff	
@@ -1167,9 +1167,9 @@ public abstract class Base_DispWindow {
 	
 	protected abstract void hndlMouseRelIndiv();
 	
-	protected abstract void endShiftKeyI();
-	protected abstract void endAltKeyI();
-	protected abstract void endCntlKeyI();
+	protected abstract void endShiftKey_Indiv();
+	protected abstract void endAltKey_Indiv();
+	protected abstract void endCntlKey_Indiv();
 	
 	//ui init routines
 	protected abstract void setupGUIObjsAras();	
@@ -1607,11 +1607,11 @@ class mySideBarMenu extends Base_DispWindow{
 	@Override
 	protected void initTrajStructs() {}
 	@Override
-	protected void endShiftKeyI() {}
+	protected void endShiftKey_Indiv() {}
 	@Override
-	protected void endAltKeyI() {}
+	protected void endAltKey_Indiv() {}
 	@Override
-	protected void endCntlKeyI() {}
+	protected void endCntlKey_Indiv() {}
 	@Override
 	protected void closeMe() {}
 	@Override

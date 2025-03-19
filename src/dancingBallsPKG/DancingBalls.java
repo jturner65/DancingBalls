@@ -221,8 +221,8 @@ public class DancingBalls extends PApplet{
 	//if should show problem # i
 		public boolean isShowingWindow(int i){return flags[(i+this.showUIMenu)];}//showUIMenu is first flag of window showing flags
 		public void drawUI(float modAmtMillis){					
-			//for(int i =1; i<numDispWins; ++i){if ( !(dispWinFrames[i].dispFlags[Base_DispWindow.is3DWin])){dispWinFrames[i].draw(sceneCtrVals[sceneIDX]);}}
-			//dispWinFrames[0].draw(sceneCtrVals[sceneIDX]);
+			//for(int i =1; i<numDispWins; ++i){if ( !(dispWinFrames[i].dispFlags[Base_DispWindow.is3DWin])){dispWinFrames[i].draw(sceneOriginVals[sceneIDX]);}}
+			//dispWinFrames[0].draw(sceneOriginVals[sceneIDX]);
 			for(int i =1; i<numDispWins; ++i){dispWinFrames[i].drawHeader(modAmtMillis);}
 			//menu always idx 0
 			dispWinFrames[0].draw2D(modAmtMillis);
@@ -304,7 +304,7 @@ public class DancingBalls extends PApplet{
 		setFlags(mouseClicked, true);
 		if(mouseButton == LEFT){			mouseClicked(0);} 
 		else if (mouseButton == RIGHT) {	mouseClicked(1);}
-		//for(int i =0; i<numDispWins; ++i){	if (dispWinFrames[i].handleMouseClick(mouseX, mouseY,c.getMseLoc(sceneCtrVals[sceneIDX]))){	return;}}
+		//for(int i =0; i<numDispWins; ++i){	if (dispWinFrames[i].handleMouseClick(mouseX, mouseY,c.getMseLoc(sceneOriginVals[sceneIDX]))){	return;}}
 	}// mousepressed	
 	
 	private void mouseClicked(int mseBtn){ for(int i =0; i<numDispWins; ++i){if (dispWinFrames[i].handleMouseClick(mouseX, mouseY,mseBtn)){return;}}}
@@ -466,7 +466,7 @@ public class DancingBalls extends PApplet{
 			//init focus and scene center variables for each window
 
 			int scIdx = dispWinIs3D[i] ? 1 : 0;
-			dispWinFrames[i].finalInit(dispWinIs3D[i], canMoveView[i], sceneCtrValsBase[scIdx], sceneFcsValsBase[scIdx]);
+			dispWinFrames[i].finalInit(dispWinIs3D[i], canMoveView[i], sceneOriginValsBase[scIdx], sceneFcsValsBase[scIdx]);
 			dispWinFrames[i].setTrajColors(winTrajFillClrs[i], winTrajStrkClrs[i]);
 			dispWinFrames[i].setRtSideUIBoxClrs(new int[]{255,255,255,255},new int[]{0,0,0,255});
 		}	
@@ -534,7 +534,7 @@ public class DancingBalls extends PApplet{
 			new myVector(0,0,0)
 	};
 	//2D, 3D
-	private myPoint[] sceneCtrValsBase = new myPoint[]{				//set these values to be different display center translations -
+	private myPoint[] sceneOriginValsBase = new myPoint[]{				//set these values to be different display center translations -
 		new myPoint(0,0,0),										// to be used to calculate mouse offset in world for pick
 		new myPoint(-gridDimX/2.0,-gridDimY/2.0,-gridDimZ/2.0)
 	};
