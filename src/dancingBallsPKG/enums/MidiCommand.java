@@ -19,10 +19,12 @@ public enum MidiCommand {
 	FileMetaEvent(0xFF);
 	
 	private int value; 
-	private static Map<Integer, MidiCommand> map = new HashMap<Integer, MidiCommand>(); 
-	static { for (MidiCommand enumV : MidiCommand.values()) { map.put(enumV.value, enumV);}}
+	private static Map<Integer, MidiCommand> valmap = new HashMap<Integer, MidiCommand>();
+	private static Map<Integer, MidiCommand> map = new HashMap<Integer, MidiCommand>();
+	static { for (MidiCommand enumV : MidiCommand.values()) { valmap.put(enumV.value, enumV); map.put(enumV.ordinal(), enumV);}}
 	private MidiCommand(int _val){value = _val;} 
 	public int getVal(){return value;} 	
-	public static MidiCommand getVal(int idx){return map.get(idx);}
-	public static int getNumVals(){return map.size();}						//get # of values in enum			
+	public static MidiCommand getEnumByIndex(int idx){return map.get(idx);}
+	public static MidiCommand getEnumFromValue(int value){return valmap.get(value);}
+	public static int getNumVals(){return valmap.size();}						//get # of values in enum			
 };

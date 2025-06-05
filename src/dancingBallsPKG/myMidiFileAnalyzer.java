@@ -46,14 +46,14 @@ public class myMidiFileAnalyzer {
 		    midiSong =  new myMidiSongData(this,format, sequence);				
 		}
 		catch( InvalidMidiDataException ex ){
-			System.out.println( "This file is not a valid midi file : "+ fileListing.filePath+": format : " + format + "\t | msg : "+ex.getMessage() );
+			System.out.println("This file is not a valid midi file : "+ fileListing.filePath+": format : " + format + "\t | msg : "+ex.getMessage() );
 		    sequence = null;
 		    format  = null;
 		    loadedSeq = false;
 		    midiSong = null;				
 			return false;}
 		catch( IOException ex ) { 
-			System.out.println( "Had a problem accessing this midi file : "+ fileListing.filePath+":\t"+ex.getMessage() );
+			System.out.println("Had a problem accessing this midi file : "+ fileListing.filePath+":\t"+ex.getMessage() );
 		    sequence = null;
 		    format  = null;
 		    loadedSeq = false;

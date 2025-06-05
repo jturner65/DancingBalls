@@ -72,7 +72,7 @@ public class altWindow extends Base_DispWindow {
 	}//
 	//initialize all UI buttons here
 	@Override
-	public void initAllPrivBtns() {
+	public void initAllUIButtons() {
 		//give true labels, false labels and specify the indexes of the booleans that should be tied to UI buttons
 		truePrivFlagNames = new String[]{			//needs to be in order of privModFlgIdxs
 				"Debugging","Hide Piano"

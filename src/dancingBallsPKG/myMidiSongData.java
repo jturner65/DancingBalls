@@ -390,7 +390,7 @@ class myMidiTrackData {
 //				}
 				chansMapped.put(chan,true);
 				
-				MidiCommand cmd = MidiCommand.getVal(command);
+				MidiCommand cmd = MidiCommand.getEnumFromValue(command);
 				//check if enabling a note - sometimes note off == note on with dat2 (vel) == 0.  modify so that this is the case
 				if((cmd == MidiCommand.NoteOn) || (cmd == MidiCommand.NoteOff)) {
 //					nValType notev = nValType.getVal((dat1 % 12));
@@ -475,7 +475,7 @@ class myMidiTrackData {
 						case ChanTouch : {
 							//When a key is held down after being pressed, some synthesisers send the pressure, repeatedly 
 							//if it varies, until the key is released, but do not distinguish pressure on different keys 
-							//played simultaneously and held down. This is referred to as “monophonic” or “channel” aftertouch 
+							//played simultaneously and held down. This is referred to as ï¿½monophonicï¿½ or ï¿½channelï¿½ aftertouch 
 							//(the latter indicating it applies to the Channel as a whole, not individual note numbers on that channel). 
 							//The pressure Value (0 to 127) is typically taken to apply to the last note played, but instruments 
 							//are not guaranteed to behave in this manner. 							
@@ -502,7 +502,7 @@ class myMidiTrackData {
 				
 			} else {		//sysex or file meta event - across all channels.  ignore all?
 				command = status;	
-				MidiCommand cmd = MidiCommand.getVal(command);
+				MidiCommand cmd = MidiCommand.getEnumFromValue(command);
 				if(cmd == MidiCommand.FileMetaEvent) {
 					//String res = 
 							procMetaEvents(msgBytes, command, stTime);
@@ -633,7 +633,7 @@ class myMidiTrackData {
 	private String procMetaEvents(byte[] msgBytes, int command, long stTime) {
 		//used for string data encoded in midi msg
 		int typeByte = (int)(msgBytes[1] & 0xFF);
-		MidiMeta type = MidiMeta.getVal(typeByte);
+		MidiMeta type = MidiMeta.getEnumFromValue(typeByte);
 		if(null==type) {
 			//unknown midi meta events - some of the midi files access unknown meta events - codes 0x0C (12) , 0x1F(31), 0x62(98), 0x64(100), 0x6C(108)
 			//assuming these meta events are irrelevant to our purposes so ignoring them
@@ -754,7 +754,7 @@ class myMidiTrackData {
 //	//				Click gives the number of MIDI clocks per metronome click, and NotesQ the number of 32nd notes in the nominal MIDI quarter 
 //	//				note time of 24 clocks (8 for the default MIDI quarter note definition).
 					int num = (int)(msgBytes[msgStIdx] & 0xFF);
-					noteDurType denom = noteDurType.getVal((int)(msgBytes[msgStIdx+1] & 0xFF));
+					noteDurType denom = noteDurType.getEnumFromValue((int)(msgBytes[msgStIdx+1] & 0xFF));
 					int click = (int)(msgBytes[msgStIdx+2] & 0xFF);
 					int noteQ = (int)(msgBytes[msgStIdx+3] & 0xFF);
 					btsAsChar = "Time Sig :  " + num + " beats per measure, " + denom + " gets the beat. Click : " + click + " midi clocks per click; and " + noteQ + " 32nd notes per MIDI qtr note time (24 clocks)";
@@ -775,7 +775,7 @@ class myMidiTrackData {
 					catch(Exception e) {//error in encoded key sig - assume c maj
 						ksByteVal = 0;
 					}
-					keySigVals keySigVal = keySigVals.getVal(ksByteVal);
+					keySigVals keySigVal = keySigVals.getEnumByIndex(ksByteVal);
 //						if(keySigVal == null) {
 //							System.out.println("Null Keysig val | " + (int)(msgBytes[msgStIdx]));						
 //						}
@@ -989,7 +989,7 @@ class midiNoteData implements Comparable<midiNoteData>{
 	
 	//_mDat is midi note value, _vol is midi volume.  
 	public midiNoteData(int _mDat,int _chan, int _vol, long _stTime) {
-		midiData=_mDat;channel=_chan;note = noteValType.getVal((midiData % 12));octave = midiData / 12 -1;stTime=_stTime;
+		midiData=_mDat;channel=_chan;note = noteValType.getEnumFromValue((midiData % 12));octave = midiData / 12 -1;stTime=_stTime;
 		noteVol = new ConcurrentSkipListMap<Integer, Integer>();
 		noteDur = 0;
 		noteVol.put(0,_vol);

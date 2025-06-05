@@ -126,7 +126,7 @@ public class DancingBallWin extends Base_DispWindow {
 	
 	@Override
 	//initialize all private-flag based UI buttons here - called by base class
-	public void initAllPrivBtns(){
+	public void initAllUIButtons(){
 		truePrivFlagNames = new String[]{								//needs to be in order of privModFlgIdxs
 				"Debugging","Mod DelT By FRate","Random Ball Verts","Showing Vert Norms","Showing Zones", 
 				"Stim Zone and Mate","Mass-Spring Ball", "Dancing", 

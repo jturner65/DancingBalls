@@ -422,8 +422,8 @@ class myMidiSongHandler extends mySongHandler{
 				songTickLen = mfa.tickLen;
 				ticksPerMillis = songTickLen/(1.0f*songLength);			
 			}
-			catch( MidiUnavailableException ex ){ System.out.println( "No default sequencer." );return false;}
-			catch( InvalidMidiDataException ex ){System.out.println( "The mid file was not a midi file." );return false;}
+			catch( MidiUnavailableException ex ){ System.out.println("No default sequencer." );return false;}
+			catch( InvalidMidiDataException ex ){System.out.println("The mid file was not a midi file." );return false;}
 			return true;
 		} else {
 			return false;

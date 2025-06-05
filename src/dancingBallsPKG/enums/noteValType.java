@@ -15,7 +15,7 @@ public enum noteValType {
 	public static final noteValType[] wKeyVals = new noteValType[] {C, B, A, G, F,E,D};
 	public static final noteValType[] bKeyVals = new noteValType[] {As, Gs, Fs, Ds, Cs};	
 	private int value; 
-	private static Map<Integer, noteValType> valMap = new HashMap<Integer, noteValType>(); 
+	private static Map<Integer, noteValType> map = new HashMap<Integer, noteValType>(); 
 	//array of naturals decreased by a sharp in y on grid
 	private static Map<noteValType, Boolean> hasSharps = new HashMap<noteValType, Boolean>();
 	//array of naturals decreased by a flat in y on grid
@@ -24,7 +24,7 @@ public enum noteValType {
 	private static Map<noteValType, Boolean> isNaturalNotes = new HashMap<noteValType, Boolean>(); 
 	static { 
 	    for (noteValType enumV : noteValType.values()) {	
-	    	valMap.put(enumV.value, enumV);
+	    	map.put(enumV.value, enumV);
 	    	hasSharps.put(enumV, false);
 			hasFlats.put(enumV, false);
 			isNaturalNotes.put(enumV, true);
@@ -45,9 +45,10 @@ public enum noteValType {
 		hasSharps.put(G, true);
 	}
 	private noteValType(int _val){value = _val;} 
-	public int getVal(){return value;}
-	public static noteValType getVal(int idx){return valMap.get(idx);}
-	public static int getNumVals(){return valMap.size();}						//get # of values in enum
+	public int getVal(){return value;}	
+	public static noteValType getEnumByIndex(int idx){return map.get(idx);}
+	public static noteValType getEnumFromValue(int idx){return map.get(idx);}
+	public static int getNumVals(){return map.size();}						//get # of values in enum
 	
 	public boolean chkHasSharps(){return hasSharps.get(this);}
 	public boolean chkHasFlats(){return hasFlats.get(this);}

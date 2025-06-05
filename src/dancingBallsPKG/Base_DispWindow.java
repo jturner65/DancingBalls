@@ -20,9 +20,12 @@ public abstract class Base_DispWindow {
 	public int trajFillClrCnst, trajStrkClrCnst;
 	public float[] rectDim, closeBox, rectDimClosed, mseClickCrnr;	
 
-	public static final float xOff = 20 , yOff = 18.0f * (DancingBalls.txtSz/12.0f), btnLblYOff = 2 * yOff, rowStYOff = yOff*.15f;
+	public static final float xOff = DancingBalls.getTextSize();
+	public static final float yOff = DancingBalls.getTextHeightOffset();
+	public static final float btnLblYOff = 2 * yOff;
+	public static final float rowStYOff = yOff*.15f;
 	public static final int topOffY = 40;			//offset values to render boolean menu on side of screen - offset at top before drawing
-	public static final float clkBxDim = 10;//size of interaction/close window box in pxls
+	public static final float clkBxDim = DancingBalls.getClkBoxDim();
 	
 	public int pFlagIdx;					//the flags idx in the PApplet that controls this window - use -1 for none	
 	private int[] dispFlags;	
@@ -159,7 +162,7 @@ public abstract class Base_DispWindow {
 		setupGUIObjsAras();				//setup all ui objects and record final y value in sidebar menu for UI Objects in this window
 		
 		privBtnsToClear = new ArrayList<Integer>();
-		initAllPrivBtns();
+		initAllUIButtons();
 		initMe();
 		
 		initRtSideMenuBox();
@@ -468,7 +471,7 @@ public abstract class Base_DispWindow {
 		sb.append(" |value: ");
 		sb.append(guiObjs_Numeric[idx].getVal());
 		sb.append(" |flags: ");
-		for(int i =0;i<guiObjs_Numeric[idx].numFlags; ++i){
+		for(int i =0;i<myGUIObj.numFlags; ++i){
 			sb.append(" ");
 			sb.append((guiObjs_Numeric[idx].getFlags(i) ? "true" : "false"));
 		}
@@ -485,7 +488,7 @@ public abstract class Base_DispWindow {
 		//String name = toks[3];
 		double uiVal = Double.parseDouble(toks[2].split("\\s")[1].trim());	
 		guiObjs_Numeric[uiIdx].setVal(uiVal);
-		for(int i =0;i<guiObjs_Numeric[uiIdx].numFlags; ++i){
+		for(int i =0;i<myGUIObj.numFlags; ++i){
 			guiObjs_Numeric[uiIdx].setFlags(i, Boolean.parseBoolean(toks[3].split("\\s")[i].trim()));
 		}	
 		setUIWinVals(uiIdx);//update window's values with UI construct's values
@@ -558,7 +561,7 @@ public abstract class Base_DispWindow {
 			pa.setFill(clrAra, 255); 
 			pa.setStroke(clrAra, 255);
 		} else {
-			pa.setColorValFill(pa.gui_DarkGray); 
+			pa.setColorValFill(DancingBalls.gui_DarkGray); 
 			pa.noStroke();	
 		}
 		pa.sphere(5);
@@ -603,7 +606,7 @@ public abstract class Base_DispWindow {
 	//draw all boolean-based buttons for this window
 	public void drawClickableBooleans() {	
 		pa.pushMatrix();pa.pushStyle();	
-		pa.setColorValFill(pa.gui_Black);
+		pa.setColorValFill(DancingBalls.gui_Black);
 		if(getFlags(useRndBtnClrs)){
 			for(int i =0; i<privModFlgIdxs.length; ++i){//prlFlagRects dispBttnAtLoc(String txt, float[] loc, int[] clrAra)
 				if(getPrivFlags(privModFlgIdxs[i]) ){									dispBttnAtLoc(truePrivFlagNames[i],privFlagBtns[i],privFlagColors[i]);			}
@@ -624,7 +627,7 @@ public abstract class Base_DispWindow {
 	//draw any custom menu objects for sidebar menu
 	public abstract void drawCustMenuObjs();
 	
-	public abstract void initAllPrivBtns();
+	public abstract void initAllUIButtons();
 	
 	//////////////////////
 	//camera stuff
@@ -900,12 +903,9 @@ public abstract class Base_DispWindow {
 	//check if mouse location is in UI buttons, and handle button click if so
 	protected boolean checkUIButtons(int mouseX, int mouseY){
 		boolean mod = false;
-		int mx, my;
 		//keep checking -see if clicked in UI buttons (flag-based buttons)
 		for(int i = 0;i<privFlagBtns.length;++i){//rectDim[0], rectDim[1]  mseClickCrnr
-			//mx = (int)(mouseX - rectDim[0]); my = (int)(mouseY - rectDim[1]);
-			mx = (int)(mouseX - mseClickCrnr[0]); my = (int)(mouseY - mseClickCrnr[1]);
-			mod = msePtInRect(mx, my, privFlagBtns[i]); 
+			mod = msePtInRect(mouseX, mouseY, privFlagBtns[i]); 
 			//pa.outStr2Scr("Handle mouse click in window : "+ ID + " : (" + mouseX+","+mouseY+") : "+mod + ": btn rect : "+privFlagBtns[i][0]+","+privFlagBtns[i][1]+","+privFlagBtns[i][2]+","+privFlagBtns[i][3]);
 			if (mod){ 
 				setPrivFlags(privModFlgIdxs[i],!getPrivFlags(privModFlgIdxs[i])); 
@@ -926,7 +926,7 @@ public abstract class Base_DispWindow {
 	protected myPoint getMsePoint(int mouseX, int mouseY){return getFlags(Base_DispWindow.is3DWin) ? getMsePtAs3DPt(mouseX, mouseY) : pa.P(mouseX,mouseY,0);}
 	public boolean handleMouseMove(int mouseX, int mouseY){
 		if(!getFlags(showIDX)){return false;}
-		if((getFlags(showIDX))&& (msePtInUIRect(mouseX, mouseY))){//in clickable region for UI interaction
+		if((getFlags(showIDX))&& (msePtInUIClckCoords(mouseX, mouseY))){//in clickable region for UI interaction
 			for(int j=0; j<guiObjs_Numeric.length; ++j){if(guiObjs_Numeric[j].checkIn(mouseX, mouseY)){	msOvrObj=j;return true;	}}
 		}
 		myPoint mouseClickIn3D = pa.c.getMseLoc(sceneOriginVal);
@@ -936,11 +936,11 @@ public abstract class Base_DispWindow {
 	}//handleMouseMove
 	
 	public boolean msePtInRect(int x, int y, float[] r){return ((x > r[0])&&(x <= r[0]+r[2])&&(y > r[1])&&(y <= r[1]+r[3]));}	
-	public boolean msePtInUIRect(int x, int y){return ((x > uiClkCoords[0])&&(x <= uiClkCoords[2])&&(y > uiClkCoords[1])&&(y <= uiClkCoords[3]));}	
+	public boolean msePtInUIClckCoords(int x, int y){return ((x > uiClkCoords[0])&&(x <= uiClkCoords[2])&&(y > uiClkCoords[1])&&(y <= uiClkCoords[3]));}	
 
 	public boolean handleMouseClick(int mouseX, int mouseY, int mseBtn){
 		boolean mod = false;
-		if((getFlags(showIDX))&& (msePtInUIRect(mouseX, mouseY))){//in clickable region for UI interaction
+		if((getFlags(showIDX))&& (msePtInUIClckCoords(mouseX, mouseY))){//in clickable region for UI interaction
 			for(int j=0; j<guiObjs_Numeric.length; ++j){
 				if(guiObjs_Numeric[j].checkIn(mouseX, mouseY)){	
 					if(pa.flags[pa.shiftKeyPressed]){//allows for click-mod
@@ -1351,7 +1351,7 @@ class mySideBarMenu extends Base_DispWindow{
 	
 	@Override
 	//initialize all private-flag based UI buttons here - called by base class
-	public void initAllPrivBtns(){
+	public void initAllUIButtons(){
 		truePrivFlagNames = new String[]{								//needs to be in order of flags
 		};
 		falsePrivFlagNames = new String[]{			//needs to be in order of flags
@@ -1710,8 +1710,8 @@ class myScrollBars{
 	}
 	public void drawMe(){
 		pa.pushMatrix(); pa.pushStyle();
-		pa.setColorValFill(pa.gui_LightGray);
-		pa.setColorValStroke(pa.gui_Black);
+		pa.setColorValFill(DancingBalls.gui_LightGray);
+		pa.setColorValStroke(DancingBalls.gui_Black);
 		pa.strokeWeight(1.0f);
 		pa.rect(vScrlDims);
 		pa.rect(hScrlDims);

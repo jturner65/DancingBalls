@@ -87,8 +87,8 @@ public class myGUIObj {
 		else if(val>maxVal){val = maxVal;}
 		return val;		
 	}
-	public int valAsInt(){return (int)(val) ;}
-	public float valAsFloat(){return (float)( val);}
+	public int getValueAsInt(){return (int)(val) ;}
+	public float getValueAsFloat(){return (float)( val);}
 	
 	public boolean checkIn(float _clkx, float _clky){return (_clkx > start.x)&&(_clkx < end.x)&&(_clky > start.y)&&(_clky < end.y);}
 	public void draw(){

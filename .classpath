@@ -1,7 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
-	<classpathentry kind="src" path="src"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.8"/>
+	<classpathentry kind="src" path="src">
+		<attributes>
+			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="DancingBalls/libs/processing_new/windows-amd64"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="src" path="libs/processing_new/windows-amd64"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.8">
+		<attributes>
+			<attribute name="module" value="true"/>
+		</attributes>
+	</classpathentry>
 	<classpathentry kind="lib" path="libs/jblas-1.2.4.jar"/>
 	<classpathentry kind="lib" path="libs/jl1.0.1.jar"/>
 	<classpathentry kind="lib" path="libs/jsminim.jar"/>
@@ -9,20 +18,8 @@
 	<classpathentry kind="lib" path="libs/mp3spi1.9.5.jar"/>
 	<classpathentry kind="lib" path="libs/tritonus_aos.jar"/>
 	<classpathentry kind="lib" path="libs/tritonus_share.jar"/>
-	<classpathentry kind="lib" path="libs/processing/core.jar"/>
-	<classpathentry kind="lib" path="libs/processing/gluegen-rt.jar"/>
-	<classpathentry kind="lib" path="libs/processing/gluegen-rt-natives-linux-aarch64.jar"/>
-	<classpathentry kind="lib" path="libs/processing/gluegen-rt-natives-linux-amd64.jar"/>
-	<classpathentry kind="lib" path="libs/processing/gluegen-rt-natives-linux-arm.jar"/>
-	<classpathentry kind="lib" path="libs/processing/gluegen-rt-natives-macos-aarch64.jar"/>
-	<classpathentry kind="lib" path="libs/processing/gluegen-rt-natives-macos-x86_64.jar"/>
-	<classpathentry kind="lib" path="libs/processing/gluegen-rt-natives-windows-amd64.jar"/>
-	<classpathentry kind="lib" path="libs/processing/jogl-all.jar"/>
-	<classpathentry kind="lib" path="libs/processing/jogl-all-natives-linux-aarch64.jar"/>
-	<classpathentry kind="lib" path="libs/processing/jogl-all-natives-linux-amd64.jar"/>
-	<classpathentry kind="lib" path="libs/processing/jogl-all-natives-linux-arm.jar"/>
-	<classpathentry kind="lib" path="libs/processing/jogl-all-natives-macos-aarch64.jar"/>
-	<classpathentry kind="lib" path="libs/processing/jogl-all-natives-macos-x86_64.jar"/>
-	<classpathentry kind="lib" path="libs/processing/jogl-all-natives-windows-amd64.jar"/>
+	<classpathentry kind="lib" path="libs/processing_new/core.jar"/>
+	<classpathentry kind="lib" path="libs/processing_new/gluegen-rt.jar"/>
+	<classpathentry kind="lib" path="libs/processing_new/jogl-all.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

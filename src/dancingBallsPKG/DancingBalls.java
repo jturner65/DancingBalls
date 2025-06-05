@@ -31,6 +31,15 @@ public class DancingBalls extends PApplet{
 	public AudioRecorder recorder;	
 	public int OutTyp = Minim.STEREO;
 	
+	/**
+	 * Multiple of screen height that font size should be
+	 */
+	public static final float fontSizeScale = .0075f;
+	/**
+	 * point size of text; is some multiple of screen height. Should be able to support modification
+	 */	
+	private static int _txtSize;
+	
 	//global values for minim/audio stuff
 	public final int glbBufrSize = 1024;// * 16;
 	
@@ -65,10 +74,15 @@ public class DancingBalls extends PApplet{
 	    if (passedArgs != null) {	    	PApplet.main(PApplet.concat(appletArgs, passedArgs));  } else {	    	PApplet.main(appletArgs);	    }
 	}
 	public void settings(){
+
 		float displayRatio = displayWidth/(1.0f*displayHeight);
 		float newWidth = (displayRatio > 1.77777778f) ?  displayWidth * 1.77777778f/displayRatio : displayWidth;	
-		size((int)(newWidth*.95f), (int)(displayHeight*.92f),P3D);		
+		int winDispWidth = (int)(newWidth*.95f);
+
+		size(winDispWidth, (int)(displayHeight*.92f),P3D);		
 		noSmooth();
+		// set initial text size
+		_txtSize = (int) (displayHeight * fontSizeScale);
 	}		
 	public void setup() {
 		colorMode(RGB, 255, 255, 255, 255);
@@ -97,7 +111,8 @@ public class DancingBalls extends PApplet{
 	}//drawBkgndSphere
 	
 	public void setBkgrnd(){
-		if(useSphereBKGnd) {shape(bgrndSphere);} else {background(bground[0],bground[1],bground[2],bground[3]);	}
+		background(bground[0],bground[1],bground[2],bground[3]);
+		if(useSphereBKGnd) {shape(bgrndSphere);}
 	}//setBkgrnd
 	
 	//build audio specific constructs
@@ -504,8 +519,6 @@ public class DancingBalls extends PApplet{
 		glblLastSimFrameTime,					//begin of last draw
 		glblStartProgTime;						//start of program
 	
-	//size of printed text (default is 12)
-	public static final int txtSz = 10;
 	//mouse wheel sensitivity
 	public static final float mouseWhlSens = 20.0f;
 	
@@ -726,7 +739,7 @@ public class DancingBalls extends PApplet{
 		//camVals = new float[]{width/2.0f, height/2.0f, (height/2.0f) / tan(PI/6.0f), width/2.0f, height/2.0f, 0, 0, 1, 0};
 		camVals = new float[]{0, 0, (height/2.0f) / tan(PI/6.0f), 0, 0, 0, 0,1,0};
 		showInfo = true;
-		textSize(txtSz);
+		textSize(_txtSize);
 		outStr2Scr("Current sketchPath " + sketchPath());
 		textureMode(NORMAL);			
 		rectMode(CORNER);	
@@ -743,7 +756,79 @@ public class DancingBalls extends PApplet{
 		flags = new boolean[numFlags];
 		for (int i = 0; i < numFlags; ++i) { flags[i] = false;}	
 		((mySideBarMenu)dispWinFrames[dispMenuIDX]).initPFlagColors();			//init sidebar window flags
-	}		
+	}
+	
+	///////////////////////////////////////
+	// UI text/display dims based on text size
+	/**
+	 * Get size of text as fraction of display height.
+	 * @return
+	 */
+	public static final int getTextSize() {return _txtSize;}
+	/**
+	 * size of interaction/close window box in pxls
+	 * @return
+	 */
+	public static final float getClkBoxDim() {		return getTextSize();	}
+	
+	/**
+	 * Height of a line of text. Also used as a width of an average character
+	 */
+	public static final float getTextHeightOffset() {		return 1.25f * getTextSize();	}
+	
+	/**
+	 * Based on textSize but slightly smaller for purely label/read only text
+	 * @return
+	 */
+	public static final float getLabelTextHeightOffset() {		return 1.1f * getTextSize();	}
+	
+	/**
+	 * Base right side text menu per-line height offset
+	 */
+	public static final float getRtSideTxtHeightOffset(){		return getLabelTextHeightOffset();	}
+	
+	/**
+	 * Right side menu y values
+	 * 		idx 0 : current y value for text (changes with each frame)
+	 * 		idx 1 : per-line y offset for grouped text
+	 * 		idx 2 : per-line y offset for title-to-group text (small space)
+	 * 		idx 3 : per-line y offset for text that is not grouped (slightly larger)
+	 */
+	public static final float[] getRtSideYOffVals() {
+		float rtSideTxtHeightOff = getRtSideTxtHeightOffset();
+		return new float[] {0, rtSideTxtHeightOff, 1.2f * rtSideTxtHeightOff, 1.5f * rtSideTxtHeightOff};
+	}
+
+	/**
+	 * X Dimension offset for text
+	 */
+	public static final float getXOffset() {		return getTextHeightOffset();	}
+
+	/**
+	 * Half of X Dimension offset for text
+	 */
+	public static final float getXOffsetHalf() {		return 0.5f * getXOffset();	}
+	
+	
+	/**
+	 * Offset for starting a new row in Y
+	 */
+	public static final float getRowStYOffset() {		return 0.15f * getTextHeightOffset();	}
+	
+	/**
+	 * The Y distance between 2 successive buttons
+	 * @return
+	 */
+	public static final float getBtnLabelYOffset() {		return 2.0f * getTextHeightOffset(); 	}
+
+	/**
+	 * array of x,y offsets for UI objects that have a prefix graphical element
+	 * @return
+	 */
+	public static final double[] getUIOffset() {		return new double[] { getXOffset(), getTextHeightOffset() };	}	
+	
+	///////////////////////////////////////
+	//End UI text/display dims based on text size	
 	
 	//address all flag-setting here, so that if any special cases need to be addressed they can be
 	public void setFlags(int idx, boolean val ){

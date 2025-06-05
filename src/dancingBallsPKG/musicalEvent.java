@@ -44,7 +44,7 @@ class musicalNote extends musicalEvent{
 		super(_stTime);
 		//_midiVal is int value of note - idx 1 in msgbytes
 		midiVal = _midiVal;
-		note = noteValType.getVal((midiVal % 12));
+		note = noteValType.getEnumFromValue((midiVal % 12));
 		octave = midiVal / 12 - 1;//middle C (C4) is midi val 60
 		channel = _chan;
 	}
