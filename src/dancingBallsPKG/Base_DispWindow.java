@@ -844,7 +844,7 @@ public abstract class Base_DispWindow {
 	}//clearPrivBtns()
 	//add a button to clear after next draw
 	
-	protected void addPrivBtnToClear(int idx) {
+	protected void addPrivSwitchToClear(int idx) {
 		privBtnsToClear.add(idx);
 	}
 	

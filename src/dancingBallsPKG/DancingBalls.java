@@ -70,7 +70,7 @@ public class DancingBalls extends PApplet{
 ///////////////	
 	//////////////////////////////////////////////// code
 	public static void main(String[] passedArgs) {
-	    String[] appletArgs = new String[] { "dancingBallsPKG.DancingBalls" };
+	    String[] appletArgs = new String[]{"dancingBallsPKG.DancingBalls" };
 	    if (passedArgs != null) {	    	PApplet.main(PApplet.concat(appletArgs, passedArgs));  } else {	    	PApplet.main(appletArgs);	    }
 	}
 	public void settings(){
@@ -605,7 +605,7 @@ public class DancingBalls extends PApplet{
 	///////////////////////////////////
 	// window related variables	
 	public String[] winTitles = new String[]{"","3D Dancing Ball","Alternate Window"},
-			winDescr = new String[] {"", "Ball in 3D dancing to music","Alternate Window"};
+			winDescr = new String[]{"", "Ball in 3D dancing to music","Alternate Window"};
 	//individual display/HUD windows for gui/user interaction
 	public Base_DispWindow[] dispWinFrames;
 	//idx's in dispWinFrames for each window

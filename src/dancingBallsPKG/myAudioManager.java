@@ -93,7 +93,7 @@ public class myAudioManager {
 	public static float audThreshold = .55f;
 	
 	//TODO : replace with audio manager
-	public static String[] songDirList = new String[] {"Midi", "Audio"};	
+	public static String[] songDirList = new String[]{"Midi", "Audio"};	
 	public static String[][] songBanks = new String[][] {{"Midi"},{"Piano Scales","Piano Songs", "Misc Songs", "Bach Cello", "Piano Notes"}};
 	//list of song names
 	public static String[][][] songList = new String[][][]{

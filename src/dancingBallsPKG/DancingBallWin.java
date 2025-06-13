@@ -70,13 +70,13 @@ public class DancingBallWin extends Base_DispWindow {
 	
 	/////////
 	//ui button names -empty will do nothing
-	public String[] menuDbgBtnNames = new String[] {"Ball Debug", "Check Memory", "Dbg 3", "Dbg 4"};//must have literals for every button or ignored
-	public String[] menuFuncBtnNames = new String[] {"Init AudIO","Load Midi", "Proc/Save Midi", "Cust Func 3", "Cust Func 4"};//must have literals for every button or ignored
+	public String[] menuDbgBtnNames = new String[]{"Ball Debug", "Check Memory", "Dbg 3", "Dbg 4"};//must have literals for every button or ignored
+	public String[] menuFuncBtnNames = new String[]{"Init AudIO","Load Midi", "Proc/Save Midi", "Cust Func 3", "Cust Func 4"};//must have literals for every button or ignored
 	
 	
-	public String[] dftResTypeToShow = new String[] {"Global","Per Zone","Per Thread"};
+	public String[] dftResTypeToShow = new String[]{"Global","Per Zone","Per Thread"};
 	//0:per sample, all harms, 1 : per sample, fund only, 2:all samples, fund only
-	public String[] dftCalcTypeToUse = new String[] {"Per Smpl, All Harms","Per Smpl, Fund Only", "All Samples, Fund Only"};
+	public String[] dftCalcTypeToUse = new String[]{"Per Smpl, All Harms","Per Smpl, Fund Only", "All Samples, Fund Only"};
 
 	public float timeStepMult = 1.0f;													//multiplier to modify timestep to make up for lag
 	
