@@ -7,7 +7,7 @@ import java.util.Map;
 public enum keySigVals {
 	CMaj,GMaj,DMaj,Amaj,EMaj,BMaj,FsMaj,CsMaj,GsMaj,DsMaj,AsMaj,Fmaj; 
 	
-	private static final String[] _typeExplanation = new String[] {
+	private static final String[] _typeExplanation = new String[]{
 		"C Major : 0 #'s", "G Major : 1 #",
 		"D Major : 2 #'s", "A Major : 3 #'s",
 		"E Major : 4 #'s", "B Major : 5 #'s",

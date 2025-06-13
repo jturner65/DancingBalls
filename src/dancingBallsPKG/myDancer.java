@@ -86,7 +86,7 @@ public abstract class myDancer {
 }// abstract class myDancer 
 
 class myDancingSnowman extends myDancer {	
-	public String[] objNames = new String[] {"Head","Torso","Butt","Left Hand","Right Hand"};
+	public String[] objNames = new String[]{"Head","Torso","Butt","Left Hand","Right Hand"};
 	
 	public ConcurrentSkipListMap<String, myDancingBall> snowman;
 	

@@ -25,11 +25,11 @@ public class altWindow extends Base_DispWindow {
 			songType
 	};			//values of 8 ui-controlled quantities
 	public final int numGUIObjs = uiVals.length;	
-	public String[] songTypeList = new String[] {"Classical","Dance","Jazz"};
+	public String[] songTypeList = new String[]{"Classical","Dance","Jazz"};
 	/////////
 	//ui button names -empty will do nothing, otherwise add custom labels for debug and custom functionality names
-	public String[] menuDbgBtnNames = new String[] {};
-	public String[] menuFuncBtnNames = new String[] {};
+	public String[] menuDbgBtnNames = new String[]{};
+	public String[] menuFuncBtnNames = new String[]{};
 
 	//////////////
 	// local/ui interactable boolean buttons

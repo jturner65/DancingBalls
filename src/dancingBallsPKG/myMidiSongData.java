@@ -13,7 +13,7 @@ import dancingBallsPKG.enums.noteValType;
 
 public class myMidiSongData {
 	//general midi patch names for program change
-	public static final String[] GMPatches = new String[] {
+	public static final String[] GMPatches = new String[]{
 			"Acoustic Grand Piano","Bright Acoustic Piano","Electric Grand Piano","Honky-tonk Piano", 
 			"Electric Piano 1","Electric Piano 2","Harpsichord","Clavinet","Celesta","Glockenspiel","Music Box", 
 			"Vibraphone","Marimba","Xylophone","Tubular Bells","Dulcimer","Drawbar Organ","Percussive Organ", 
