@@ -292,7 +292,7 @@ abstract class myDrawnObject {
     //flags about type of operation that uses interpolation being done
     public int lnI_Typ,                                //what interpolation type will this curve use for line operations (tuck, find myPoint at ratio of length, etc) 
                 sbI_Typ,                            //interp type for subdivision
-                swI_Typ;                            //what kind of interpolation will be used for this curve as it is swemyPoint around axis (if this is a closed sweep-poly)
+                swI_Typ;                            //what kind of interpolation will be used for this curve as it is swept around axis (if this is a closed sweep-poly)
     
     //flags about which interpolation type should be done
     public final int linear_int = 0,                //denotes linear interpolation 
