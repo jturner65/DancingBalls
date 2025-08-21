@@ -181,7 +181,7 @@ public class DancingBalls extends PApplet{
             draw3D_solve3D(modAmtMillis);
             c.buildCanvas();            
             //if(canShow3DBox[curFocusWin]){drawBoxBnds();}
-            if(dispWinFrames[curFocusWin].chkDrawMseRet()){            c.drawMseEdge();    }            
+            if(dispWinFrames[curFocusWin].getDrawMseEdge()){            c.drawMseEdge();    }            
             popStyle();popMatrix(); 
         } else {    //either/or 2d window
             //2d windows paint window box so background is always cleared
@@ -486,7 +486,7 @@ public class DancingBalls extends PApplet{
             dispWinFrames[i].setRtSideUIBoxClrs(new int[]{255,255,255,255},new int[]{0,0,0,255});
         }    
         //set initial state to be true - show info window
-        setFlags(showRtSideMenu, true);
+        setFlags(showRtSideInfoDisp, true);
 
     }//initDispWins
     
@@ -572,7 +572,7 @@ public class DancingBalls extends PApplet{
     //simulation
     public final int runSim                = 9;            //run simulation
     public final int singleStep            = 10;            //run single sim step
-    public final int showRtSideMenu        = 11;            //display the right side info menu for the current window, if it supports that display
+    public final int showRtSideInfoDisp        = 11;            //display the right side info menu for the current window, if it supports that display
     public final int flipDrawnTraj      = 12;            //whether or not to flip the direction of the drawn trajectory
     //window control
     public final int showUIMenu         = 13;            //whether or not to show sidebar menu
@@ -587,7 +587,7 @@ public class DancingBalls extends PApplet{
         saveAnim,
         runSim,
         singleStep,
-        showRtSideMenu
+        showRtSideInfoDisp
         );
     
     public final int numFlagsToShow = flagsToShow.size();
@@ -846,7 +846,7 @@ public class DancingBalls extends PApplet{
                 if(val==false) {for(int i=1; i<dispWinFrames.length;++i){if(isShowingWindow(i)) {dispWinFrames[i].stopMe();}}}
                 break;}
             case singleStep            : {break;}////anything special for single step    
-            case showRtSideMenu        : {for(int i =1; i<dispWinFrames.length;++i){dispWinFrames[i].setRtSideInfoWinSt(val);}break;}    //set value for every window - to show or not to show info window
+            case showRtSideInfoDisp        : {for(int i =1; i<dispWinFrames.length;++i){dispWinFrames[i].setRtSideInfoWinSt(val);}break;}    //set value for every window - to show or not to show info window
             //case flipDrawnTraj        : { dispWinFrames[dispPianoRollIDX].rebuildDrawnTraj();break;}                        //whether or not to flip the drawn melody trajectory, width-wise
             case flipDrawnTraj        : { for(int i =1; i<dispWinFrames.length;++i){dispWinFrames[i].rebuildAllDrawnTrajs();}break;}                        //whether or not to flip the drawn melody trajectory, width-wise
             case showUIMenu         : { dispWinFrames[dispMenuIDX].setFlags(Base_DispWindow.showIDX,val);    break;}                                            //whether or not to show the main ui window (sidebar)            

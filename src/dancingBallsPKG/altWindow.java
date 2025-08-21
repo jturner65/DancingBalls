@@ -137,7 +137,7 @@ public class altWindow extends Base_DispWindow {
     
     //all ui objects should have an entry here to show how they should interact
     @Override
-    protected void setUIWinVals(int UIidx) {
+    protected void updateOwnerWithUIVal(int UIidx) {
         float val = (float)guiObjs_Numeric[UIidx].getVal();
         float oldVal = uiVals[UIidx];
         //int ival = (int)val;

@@ -165,7 +165,7 @@ public abstract class Base_DispWindow {
         initAllUIButtons();
         initMe();
         
-        initRtSideMenuBox();
+        initRtSideInfoDispBox();
         setClosedBox();
         mseClickCrnr = new float[2];        //this is offset for click to check buttons in x and y - since buttons for all menus will be in menubar, this should be the upper left corner of menubar - upper left corner of rect 
         mseClickCrnr[0] = 0;
@@ -173,7 +173,7 @@ public abstract class Base_DispWindow {
         if(getFlags(hasScrollBars)){scbrs = new myScrollBars[numSubScrInWin];    for(int i =0; i<numSubScrInWin;++i){scbrs[i] = new myScrollBars(pa, this);}}
     }//initThisWin
     
-    private void initRtSideMenuBox() {
+    private void initRtSideInfoDispBox() {
         //initialize right side info display window
         float boxWidth = 1.2f*rectDim[0];
         UIRtSideRectBox = new float[] {rectDim[2]-boxWidth,0,boxWidth, rectDim[3]};        
@@ -491,7 +491,7 @@ public abstract class Base_DispWindow {
         for(int i =0;i<myGUIObj.numFlags; ++i){
             guiObjs_Numeric[uiIdx].setFlags(i, Boolean.parseBoolean(toks[3].split("\\s")[i].trim()));
         }    
-        setUIWinVals(uiIdx);//update window's values with UI construct's values
+        updateOwnerWithUIVal(uiIdx);//update window's values with UI construct's values
     }//setValFromFileStr
 
     //take loaded params and process - stIdx will be idx of this window's name - move forward 1 to start on objects
@@ -581,7 +581,7 @@ public abstract class Base_DispWindow {
     }
     
     //whether or not to draw the mouse reticle/rgb(xyz) projection/edge to eye
-    public boolean chkDrawMseRet(){        return getFlags(drawMseEdge);    }
+    public boolean getDrawMseEdge(){        return getFlags(drawMseEdge);    }
     
     protected void drawTraj(float animTimeMod){
         pa.pushMatrix();pa.pushStyle();    
@@ -1007,7 +1007,7 @@ public abstract class Base_DispWindow {
     public void handleMouseRelease(){
         if(!getFlags(showIDX)){return;}
         if(getFlags(uiObjMod)){
-            for(int i=0;i<guiObjs_Numeric.length;++i){if(guiObjs_Numeric[i].getFlags(myGUIObj.usedByWinsIDX)){setUIWinVals(i);}}
+            for(int i=0;i<guiObjs_Numeric.length;++i){if(guiObjs_Numeric[i].getFlags(myGUIObj.usedByWinsIDX)){updateOwnerWithUIVal(i);}}
             setFlags(uiObjMod, false);
             msClkObj = -1;    
         }//some object was clicked - pass the values out to all windows
@@ -1173,7 +1173,7 @@ public abstract class Base_DispWindow {
     
     //ui init routines
     protected abstract void setupGUIObjsAras();    
-    protected abstract void setUIWinVals(int UIidx);        //set prog values from ui
+    protected abstract void updateOwnerWithUIVal(int UIidx);        //set prog values from ui
     protected abstract String getUIListValStr(int UIidx, int validx);
     protected abstract void processTrajIndiv(myDrawnSmplTraj drawnTraj);
     
@@ -1457,7 +1457,7 @@ class mySideBarMenu extends Base_DispWindow{
     }//dispUIListObj
     //uses passed time
     @Override //only send new values if actually new values
-    protected void setUIWinVals(int UIidx){
+    protected void updateOwnerWithUIVal(int UIidx){
         switch(UIidx){
 //        //set lcl/global vals
 //        case gIDX_UIElem2List         : {

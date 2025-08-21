@@ -396,7 +396,7 @@ public class DancingBallWin extends Base_DispWindow {
 //    }
     
     @Override
-    protected void setUIWinVals(int UIidx) {
+    protected void updateOwnerWithUIVal(int UIidx) {
         float val = (float)guiObjs_Numeric[UIidx].getVal();
         float oldVal = uiVals[UIidx];
         //int ival = (int)val;
